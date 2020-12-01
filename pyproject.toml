@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "python-project-template"
+name = "multinav"
 version = "0.1.0"
 description = "A Python project template."
 authors = ["MarcoFavorito <marco.favorito@gmail.com>"]

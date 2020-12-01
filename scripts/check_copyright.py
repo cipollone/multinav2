@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2020 Marco Favorito
+# Copyright 2020 Roberto Cipollone, Marco Favorito
 #
 # ------------------------------
 #
-# This file is part of python-project-template.
+# This file is part of multinav.
 #
-# python-project-template is free software: you can redistribute it and/or modify
+# multinav is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# python-project-template is distributed in the hope that it will be useful,
+# multinav is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License
-# along with python-project-template.  If not, see <https://www.gnu.org/licenses/>.
+# along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 
 """
@@ -40,24 +40,24 @@ from pathlib import Path
 HEADER_REGEX_STR = r"""(#!/usr/bin/env python3
 )?# -\*- coding: utf-8 -\*-
 #
-# Copyright 2020 Marco Favorito
+# Copyright 2020 Roberto Cipollone, Marco Favorito
 #
 # ------------------------------
 #
-# This file is part of python-project-template\.
+# This file is part of multinav\.
 #
-# python-project-template is free software: you can redistribute it and/or modify
+# multinav is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # \(at your option\) any later version\.
 #
-# python-project-template is distributed in the hope that it will be useful,
+# multinav is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE\.  See the
 # GNU Lesser General Public License for more details\.
 #
 # You should have received a copy of the GNU Lesser General Public License
-# along with python-project-template\.  If not, see <https://www\.gnu\.org/licenses/>\.
+# along with multinav\.  If not, see <https://www\.gnu\.org/licenses/>\.
 #
 """
 HEADER_REGEX = re.compile(HEADER_REGEX_STR)
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     python_files = filter(
         lambda x: x not in exclude_files,
         itertools.chain(
-            Path("python-project-template").glob("**/*.py"),
+            Path("multinav").glob("**/*.py"),
             Path("tests").glob("**/*.py"),
             Path("scripts").glob("**/*.py"),
         ),

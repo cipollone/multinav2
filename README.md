@@ -1,39 +1,39 @@
 <h1 align="center">
-  <b>(yet another) Python project template</b>
+  <b>Multinav</b>
 </h1>
 
 <p align="center">
-  <a href="https://pypi.org/project/python-project-template">
-    <img alt="PyPI" src="https://img.shields.io/pypi/v/python-project-template">
+  <a href="https://pypi.org/project/multinav">
+    <img alt="PyPI" src="https://img.shields.io/pypi/v/multinav">
   </a>
-  <a href="https://pypi.org/project/python-project-template">
-    <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/python-project-template" />
-  </a>
-  <a href="">
-    <img alt="PyPI - Status" src="https://img.shields.io/pypi/status/python-project-template" />
+  <a href="https://pypi.org/project/multinav">
+    <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/multinav" />
   </a>
   <a href="">
-    <img alt="PyPI - Implementation" src="https://img.shields.io/pypi/implementation/python-project-template">
+    <img alt="PyPI - Status" src="https://img.shields.io/pypi/status/multinav" />
   </a>
   <a href="">
-    <img alt="PyPI - Wheel" src="https://img.shields.io/pypi/wheel/python-project-template">
+    <img alt="PyPI - Implementation" src="https://img.shields.io/pypi/implementation/multinav">
   </a>
-  <a href="https://github.com/marcofavorito/python-project-template/blob/master/LICENSE">
-    <img alt="GitHub" src="https://img.shields.io/github/license/marcofavorito/python-project-template">
+  <a href="">
+    <img alt="PyPI - Wheel" src="https://img.shields.io/pypi/wheel/multinav">
+  </a>
+  <a href="https://github.com/marcofavorito/multinav/blob/master/LICENSE">
+    <img alt="GitHub" src="https://img.shields.io/github/license/marcofavorito/multinav">
   </a>
 </p>
 <p align="center">
   <a href="">
-    <img alt="test" src="https://github.com/marcofavorito/python-project-template/workflows/test/badge.svg">
+    <img alt="test" src="https://github.com/marcofavorito/multinav/workflows/test/badge.svg">
   </a>
   <a href="">
-    <img alt="lint" src="https://github.com/marcofavorito/python-project-template/workflows/lint/badge.svg">
+    <img alt="lint" src="https://github.com/marcofavorito/multinav/workflows/lint/badge.svg">
   </a>
   <a href="">
-    <img alt="docs" src="https://github.com/marcofavorito/python-project-template/workflows/docs/badge.svg">
+    <img alt="docs" src="https://github.com/marcofavorito/multinav/workflows/docs/badge.svg">
   </a>
-  <a href="https://codecov.io/gh/marcofavorito/python-project-template">
-    <img alt="codecov" src="https://codecov.io/gh/marcofavorito/python-project-template/branch/master/graph/badge.svg?token=FG3ATGP5P5">
+  <a href="https://codecov.io/gh/marcofavorito/multinav">
+    <img alt="codecov" src="https://codecov.io/gh/marcofavorito/multinav/branch/master/graph/badge.svg?token=FG3ATGP5P5">
   </a>
 </p>
 <p align="center">
@@ -52,13 +52,17 @@
 </p>
 
 
-Yet another Python project template.
+## Preliminaries
 
-## Install
-
-(TODO replace) To install the package from PyPI:
+- Install Poetry:
 ```
-pip install python_project_template
+pip install poetry
+```
+
+- Set up the virtual environment. 
+
+```
+poetry shell && poetry install
 ```
 
 ## Tests
@@ -84,10 +88,9 @@ and then go to [http://localhost:8000](http://localhost:8000)
 
 ## License
 
-python-project-template is released under the GNU Lesser General Public License v3.0 or later (LGPLv3+).
-
-Copyright 2020 Marco Favorito
+TBD
 
 ## Authors
 
-- [Marco Favorito](https://marcofavorito.github.io/)
+- [Roberto Cipollone](https://github.com/cipollone)
+- [Marco Favorito](https://marcofavorito.me/)
