@@ -1,6 +1,6 @@
 site_name: My Docs
-repo_name: 'marcofavorito/python-project-template'
-repo_url: https://github.com/marcofavorito/python-project-template
+repo_name: 'marcofavorito/multinav'
+repo_url: https://github.com/marcofavorito/multinav
 
 nav:
 - Home: index.md

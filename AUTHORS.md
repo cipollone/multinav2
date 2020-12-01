@@ -2,7 +2,8 @@
 
 ## Maintainers
 
-* [Marco Favorito](https://github.com/marcofavorito) <[favorito@diag.uniroma1.it](mailto:favorito@diag.uniroma1.it)>
+- [Roberto Cipollone](https://github.com/cipollone)
+- [Marco Favorito](https://marcofavorito.me/)
 
 ## Contributors
 
