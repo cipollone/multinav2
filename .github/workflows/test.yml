@@ -24,7 +24,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run:  pip install tox poetry
+      run:  |
+        pip install tox poetry
+        ./scripts/install-poetry-dependencies.sh
     - name: Unit tests and coverage
       run: |
         tox -e py${{ matrix.python-version }}

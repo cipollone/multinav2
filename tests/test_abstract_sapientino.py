@@ -32,7 +32,7 @@ from multinav.helpers.gym import Transition, Transitions
 
 def test_abstract_sapientino():
     """Test abstract Sapientino."""
-    env = AbstractSapientino(5)
+    env = AbstractSapientino(5, failure_probability=0.0)
     assert env.nA == 7
     assert env.nS == 6
     assert env.reset() == env.initial_state == 0

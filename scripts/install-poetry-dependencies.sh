@@ -11,6 +11,6 @@ function install_poetry_dependency(){
 }
 
 install_poetry_dependency third_party/temprl
-
+install_poetry_dependency third_party/gym-sapientino
 
 set +e
