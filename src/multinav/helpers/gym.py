@@ -1,26 +1,28 @@
+"""This module contains helpers related to OpenAI Gym."""
 import shutil
 from copy import deepcopy
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple
 
 import gym
-from PIL import Image
 from graphviz import Digraph
 from gym import Wrapper
 from gym.envs.toy_text.discrete import DiscreteEnv
+from PIL import Image
 
 State = int
 Action = int
 Probability = float
 Reward = float
 Done = bool
-Transitions = Dict[State, Dict[Action, List[Tuple[Probability, State, Reward, Done]]]]
+Transition = Tuple[Probability, State, Reward, Done]
+Transitions = Dict[State, Dict[Action, List[Transition]]]
 
 
 def from_discrete_env_to_graphviz(
-        env: "MyDiscreteEnv",
-        state2str: Callable[[int], str] = lambda s: str(s),
-        action2str: Callable[[int], str] = lambda a: str(a)
+    env: "MyDiscreteEnv",
+    state2str: Callable[[int], str] = lambda s: str(s),
+    action2str: Callable[[int], str] = lambda a: str(a),
 ) -> Digraph:
     """From discrete environment to graphviz."""
     g = Digraph()
@@ -32,14 +34,18 @@ def from_discrete_env_to_graphviz(
             action_str = action2str(action)
             for (prob, next_state, reward, done) in transitions:
                 taken_transition = False
-                if env.laststate == state and env.lastaction == action and env.s == next_state:
+                if (
+                    env.laststate == state
+                    and env.lastaction == action
+                    and env.s == next_state
+                ):
                     taken_transition = True
                 next_state_str = state2str(next_state)
                 g.edge(
                     state_str,
                     next_state_str,
                     label=f"{action_str}, p={prob}, r={reward}, done={done}",
-                    color="red" if taken_transition else None
+                    color="red" if taken_transition else None,
                 )
 
     if env.laststate is not None:
@@ -50,10 +56,13 @@ def from_discrete_env_to_graphviz(
 
 class MyDiscreteEnv(DiscreteEnv):
     """
+    A custom version of DicreteEnv.
+
     Like DiscreteEnv, but adds:
 
     - 'laststate' for rendering purposes
     - 'available_actions' to get the available action from a state.
+    - 'raise ValueError if action is not available in the current state.
     """
 
     def __init__(self, *args, **kwargs):
@@ -63,26 +72,30 @@ class MyDiscreteEnv(DiscreteEnv):
         self.laststate = None
 
     def reset(self):
+        """Reset the enviornment."""
         self.laststate = None
         return super().reset()
 
     def step(self, a):
+        """Do a step in the enviornment."""
         self.laststate = deepcopy(self.s)
+        if a not in self.available_actions(self.s):
+            raise ValueError(f"Cannot perform action {a} in state {self.s}.")
         return super().step(a)
 
     def _is_legal_state(self, state: State):
         """Check that it is a legal state."""
-        assert 0 <= state < self.nb_states, f"{state} is not a legal state."
+        assert 0 <= state < self.nS, f"{state} is not a legal state."
 
     def _is_legal_action(self, action: Action):
         """Check that it is a legal action."""
-        assert 0 <= action < self.nb_actions, f"{action} is not a legal action."
+        assert 0 <= action < self.nA, f"{action} is not a legal action."
 
     def available_actions(self, state):
         """Get the available action from a state."""
         self._is_legal_state(state)
         actions = set()
-        for action, transitions in self.P.get(state, {}).items():
+        for action, _transitions in self.P.get(state, {}).items():
             actions.add(action)
         return actions
 
@@ -116,6 +129,7 @@ class MyMonitor(Wrapper):
         image.save(str(self._directory / episode_dir / filepath))
 
     def reset(self, **kwargs):
+        """Reset the environment."""
         result = super().reset(**kwargs)
         self._current_step = 0
         self._current_episode += 1
@@ -123,6 +137,7 @@ class MyMonitor(Wrapper):
         return result
 
     def step(self, action):
+        """Do a step in the environment, and record the frame."""
         result = super().step(action)
         self._current_step += 1
         self._save_image()

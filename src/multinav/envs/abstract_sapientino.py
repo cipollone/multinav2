@@ -26,7 +26,13 @@ import io
 import numpy as np
 from PIL import Image
 
-from src.multinav.helpers.gym import from_discrete_env_to_graphviz, MyDiscreteEnv, Action, Transitions, State
+from multinav.helpers.gym import (
+    Action,
+    MyDiscreteEnv,
+    State,
+    Transitions,
+    from_discrete_env_to_graphviz,
+)
 
 
 class AbstractSapientino(MyDiscreteEnv):
@@ -157,6 +163,7 @@ class AbstractSapientino(MyDiscreteEnv):
         return str(state)
 
     def render(self, mode="human"):
+        """Render the environment (only rgb_array mode)."""
         assert mode == "rgb_array"
         graph = from_discrete_env_to_graphviz(
             self, state2str=self._state_to_string, action2str=self._action_to_string
