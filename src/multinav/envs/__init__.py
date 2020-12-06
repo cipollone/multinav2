@@ -20,6 +20,4 @@
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""Multinav project."""
-
-__version__ = "0.1.0"
+"""This package contains the environments."""
