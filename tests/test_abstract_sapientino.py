@@ -67,26 +67,38 @@ def test_abstract_sapientino():
     assert not done
 
 
+class _RewardWrapper(AbstractSapientino):
+    """Add reward when visiting the last color."""
+
+    def _make_transitions(self) -> Transitions:
+        result = super()._make_transitions()
+        target_color = self.nb_colors - 1
+        target_action = self.visit_color
+
+        state = self.state_from_color(target_color)
+        transition = result[state][target_action][0]
+        new_transition = list(transition)
+        new_transition[2] = 1.0
+        new_transition_tuple: Transition = tuple(new_transition)  # type: ignore
+        result[state][target_action] = [new_transition_tuple]
+
+        return result
+
+
 def test_value_iteration():
     """Test value iteration on abstract Sapientino."""
-
-    class _reward_wrapper(AbstractSapientino):
-        """Add reward when visiting the last color."""
-
-        def _make_transitions(self) -> Transitions:
-            result = super()._make_transitions()
-            target_color = self.nb_colors - 1
-            target_action = self.visit_color
-
-            state = self.state_from_color(target_color)
-            transition = result[state][target_action][0]
-            new_transition = list(transition)
-            new_transition[2] = 1.0
-            new_transition_tuple: Transition = tuple(new_transition)  # type: ignore
-            result[state][target_action] = [new_transition_tuple]
-
-            return result
-
-    env = _reward_wrapper(5)
+    env = _RewardWrapper(5, failure_probability=0.0)
     v = value_iteration(env, discount=0.9, max_iterations=200)
     assert np.allclose(v, np.array([9, 8.1, 8.1, 8.1, 8.1, 10.0]))
+
+
+def test_value_iteration_with_fail_prob():
+    """Test value iteration on abstract Sapientino, but with small failure probability."""
+    env = _RewardWrapper(5, failure_probability=0.05)
+    v = value_iteration(env, discount=0.9, max_iterations=100)
+    assert np.allclose(
+        v,
+        np.array(
+            [5.86562511, 5.52781383, 5.52781383, 5.52781383, 5.52781383, 6.5516724]
+        ),
+    )

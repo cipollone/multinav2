@@ -29,6 +29,7 @@ from PIL import Image
 from multinav.helpers.gym import (
     Action,
     MyDiscreteEnv,
+    Probability,
     State,
     Transitions,
     from_discrete_env_to_graphviz,
@@ -38,13 +39,14 @@ from multinav.helpers.gym import (
 class AbstractSapientino(MyDiscreteEnv):
     """Abstract Sapientino environment."""
 
-    def __init__(self, nb_colors: int):
+    def __init__(self, nb_colors: int, failure_probability: float = 0.1):
         """
         Initialize the environment.
 
         :param nb_colors: the number of color to consider.
         """
         self._nb_colors = nb_colors
+        self._failure_probability = failure_probability
         model = self._make_transitions()
         ids = np.zeros(self.nb_states)
         ids[self.initial_state] = 1.0
@@ -54,6 +56,11 @@ class AbstractSapientino(MyDiscreteEnv):
     def nb_colors(self) -> int:
         """Get the number of colors."""
         return self._nb_colors
+
+    @property
+    def fail_prob(self) -> Probability:
+        """Get the failure probability."""
+        return self._failure_probability
 
     @property
     def initial_state(self) -> int:
@@ -128,21 +135,24 @@ class AbstractSapientino(MyDiscreteEnv):
 
             # from the corridor, you can go to any color
             goto_color_action = self.action_goto_color_from_color(color_id)
-            new_transition = (1.0, color_state, 0.0, False)
+            new_transition = (1.0 - self.fail_prob, color_state, 0.0, False)
+            fail_transition = (self.fail_prob, self.initial_state, 0.0, False)
             model.setdefault(self.initial_state, {}).setdefault(
                 goto_color_action, []
-            ).append(new_transition)
+            ).extend([new_transition, fail_transition])
 
             # if you visit a color, you remain in the same state.
-            new_transition = (1.0, color_state, 0.0, False)
-            model.setdefault(color_state, {}).setdefault(self.visit_color, []).append(
-                new_transition
+            new_transition = (1.0 - self.fail_prob, color_state, 0.0, False)
+            fail_transition = (self.fail_prob, color_state, 0.0, False)
+            model.setdefault(color_state, {}).setdefault(self.visit_color, []).extend(
+                [new_transition, fail_transition]
             )
 
             # from any color, you can go back to the corridor.
             new_transition = (1.0, self.initial_state, 0.0, False)
-            model.setdefault(color_state, {}).setdefault(self.goto_corridor, []).append(
-                new_transition
+            fail_transition = (self.fail_prob, color_state, 0.0, False)
+            model.setdefault(color_state, {}).setdefault(self.goto_corridor, []).extend(
+                [new_transition, fail_transition]
             )
 
         return model

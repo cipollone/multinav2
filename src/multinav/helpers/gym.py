@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Tuple
 
 import gym
+import numpy as np
 from graphviz import Digraph
 from gym import Wrapper
 from gym.envs.toy_text.discrete import DiscreteEnv
@@ -33,6 +34,8 @@ def from_discrete_env_to_graphviz(
         for (action, transitions) in env.P.get(state, {}).items():
             action_str = action2str(action)
             for (prob, next_state, reward, done) in transitions:
+                if np.isclose(prob, 0.0):
+                    continue
                 taken_transition = False
                 if (
                     env.laststate == state
