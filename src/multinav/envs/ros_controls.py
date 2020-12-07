@@ -42,6 +42,9 @@ class RosControlsEnv(gym.Env):
     #   Make sure that the other side respects the same actions, signals,
     #   and observation space.
 
+    # Number of actions
+    _n_actions = 5
+
     # Other (non-RL) signals
     _signals = {
         "reset": -1,
@@ -84,14 +87,10 @@ class RosControlsEnv(gym.Env):
             # Send
             Sender.send(self, buff)
 
-    def __init__(self, n_actions):
-        """Initialize.
-
-        :param n_actions: the number of action allowed from the
-            remote ROS Controller.
-        """
+    def __init__(self):
+        """Initialize."""
         # Define spaces
-        self.action_space = gym.spaces.Discrete(n_actions)
+        self.action_space = gym.spaces.Discrete(self._n_actions)
         self.observation_space = gym.spaces.Box(
             low=float("-inf"), high=float("inf"), shape=[5], dtype=np.float32
         )

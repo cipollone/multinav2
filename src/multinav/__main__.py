@@ -4,6 +4,7 @@
 
 import argparse
 
+from multinav import training
 from multinav.envs.ros_controls import RosControlsEnv
 
 
@@ -15,11 +16,13 @@ def main():
 
     # Train an agent
     train_parser = op_group.add_parser("train")
-    train_parser.add_argument("-e", "--env", choices=["ros"],
-        help="Select the environment to train the agent on.")
+    train_parser.add_argument(
+        "-e", "--env", choices=["ros"],
+        help="Select the environment to train the agent on."
+    )
 
     # Test ros
-    test_ros_parser = op_group.add_parser("test-ros")
+    _ = op_group.add_parser("test-ros")
 
     # Parse
     args = parser.parse_args()
@@ -27,11 +30,13 @@ def main():
     # Go
     if args.op is None:
         print(parser.print_help())
+
     if args.op == "test-ros":
         RosControlsEnv.interactive_test()
+
     elif args.op == "train":
-        # TODO
-        pass
+        if args.env == "ros":
+            training.train_on_ros()
 
 
 if __name__ == "__main__":
