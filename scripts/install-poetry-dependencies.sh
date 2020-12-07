@@ -4,8 +4,9 @@ set -e
 
 function install_poetry_dependency(){
     current_directory="$(pwd)"
-    cd "$1" && poetry build && pip install "$(find dist -type f -name "*.whl")"
+    cd "$1" && poetry build
     cd "${current_directory}"
+    poetry run pip install "$(find $1/dist -type f -name "*.whl")"
 }
 
 install_poetry_dependency third_party/temprl

@@ -54,7 +54,14 @@
 
 ## Preliminaries
 
-- Install Poetry:
+Development mode install.
+
+- Clone this repo with:
+```
+git clone --recurse-submodules https://github.com/cipollone/multinav
+```
+
+- Install Poetry, if you don't have it already:
 ```
 pip install poetry
 ```
@@ -62,12 +69,17 @@ pip install poetry
 - Set up the virtual environment. 
 
 ```
-poetry shell && poetry install
+poetry install
 ```
 
 You'll also need to run the following script:
 ```bash 
 ./scripts/install-poetry-dependencies.sh
+```
+
+- Now run parts of this software as:
+```
+poetry run python   # ...
 ```
 
 ## Tests
