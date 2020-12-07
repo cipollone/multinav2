@@ -1,7 +1,7 @@
 """Python utilities."""
 
-from abc import ABCMeta
 import signal
+from abc import ABCMeta
 
 
 class ABCMeta2(ABCMeta):
@@ -25,7 +25,6 @@ class ABCMeta2(ABCMeta):
 
     def __init__(Class, classname, supers, classdict):
         """Save abstract attributes."""
-
         abstract = []
         for attr in dir(Class):
             if isinstance(getattr(Class, attr), AbstractAttribute):
@@ -34,7 +33,6 @@ class ABCMeta2(ABCMeta):
 
     def __call__(Class, *args, **kwargs):
         """Intercept instance creation."""
-
         # Create instance
         instance = ABCMeta.__call__(Class, *args, **kwargs)
 
@@ -70,13 +68,11 @@ class QuitWithResources:
 
     def __init__(self):
         """Don't instantiate."""
-
         raise TypeError("Don't instantiate this class")
 
     @staticmethod
     def close():
         """Close all and quit."""
-
         for _, deleter in QuitWithResources.__deleters.items():
             deleter()
         quit()
@@ -88,7 +84,6 @@ class QuitWithResources:
         :param name: any identifier for this resource.
         :param deleter: callable to be used when closing.
         """
-
         if not QuitWithResources.__initialized:
             signal.signal(
                 signal.SIGINT, lambda sig, frame: QuitWithResources.close())
@@ -101,11 +96,10 @@ class QuitWithResources:
 
     @staticmethod
     def remove(name):
-        """Removes a resource.
+        """Remove a resource.
 
         :param name: identifier of a resource.
         """
-
         if name not in QuitWithResources.__deleters:
             raise ValueError(str(name) + " is not a resource")
 

@@ -1,10 +1,10 @@
 """Sender--Receiver pairs for socket communication."""
 
-import sys
 import queue
+import socket
+import sys
 import threading
 import time
-import socket
 from socketserver import TCPServer, BaseRequestHandler
 
 from multinav.helpers.general import QuitWithResources
@@ -28,7 +28,6 @@ class Sender:
         :param wait: if False, a send() returns immediately; if True,
             send() waits if there are too many messages still to be sent.
         """
-
         # Store
         self.MSG_LENGTH = msg_length
         self._port = port
@@ -43,7 +42,6 @@ class Sender:
 
     def start(self):
         """Start sending messages on queue."""
-
         # Finally close
         def close():
             self.server.server_close()
@@ -63,7 +61,6 @@ class Sender:
         :param data: binary data
         :return: True if the data was correctly pushed to the sending queue
         """
-
         # Checks
         if not isinstance(data, bytes):
             raise TypeError("Can only send bytes")
@@ -85,14 +82,12 @@ class Sender:
 
         def handle_error(self, request, client_address):
             """Stop the server on broken connection."""
-
             print("Broken connection", file=sys.stderr)
             self.server_close()
             self.is_serving = False
 
         def serve_forever(self):
             """Forward."""
-
             self.is_serving = True
             TCPServer.serve_forever(self)
 
@@ -101,7 +96,6 @@ class Sender:
 
         def handle(self):
             """Send."""
-
             while True:
                 data = self.server._data_queue.get(block=True, timeout=None)
                 try:
@@ -126,7 +120,6 @@ class Receiver:
             it no longer accepts new messages. This is only useful with a
             Sender that also waits.
         """
-
         self.MSG_LENGTH = msg_length
         self.ip = ip
         self.port = port
@@ -139,7 +132,6 @@ class Receiver:
 
     def start(self):
         """Start receiving messages to a queue."""
-
         # Connect
         self.sock.connect((self.ip, self.port))
 
@@ -151,7 +143,6 @@ class Receiver:
 
     def _always_receive(self):
         """Continuously receive data; internal use."""
-
         while True:
 
             # Receive a complete message
@@ -181,7 +172,6 @@ class Receiver:
             no new messages
         :raises: ConnectionAbortedError at the end of transmission
         """
-
         if not wait and self._data_queue.empty():
             return None
 

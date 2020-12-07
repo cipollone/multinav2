@@ -25,7 +25,7 @@
 import gym
 import numpy as np
 
-from multinav.helpers.streaming import Sender, Receiver
+from multinav.helpers.streaming import Receiver, Sender
 
 
 class RosControlsEnv(gym.Env):
@@ -61,7 +61,6 @@ class RosControlsEnv(gym.Env):
 
             :return: a numpy vector of the most recent state.
             """
-
             # Receive
             buff = Receiver.receive(self, wait=True)
 
@@ -78,7 +77,6 @@ class RosControlsEnv(gym.Env):
 
             :param action: a scalar action or signal.
             """
-
             # Serialize
             buff = np.array(action, dtype=np.int32).tobytes()
             assert len(buff) == RosControlsEnv.action_msg_len
@@ -92,7 +90,6 @@ class RosControlsEnv(gym.Env):
         :param n_actions: the number of action allowed from the
             remote ROS Controller.
         """
-
         # Define spaces
         self.action_space = gym.spaces.Discrete(n_actions)
         self.observation_space = gym.spaces.Box(
@@ -116,9 +113,10 @@ class RosControlsEnv(gym.Env):
         # Connect now
         self.action_sender.start()
         print("> Serving actions on", self.action_sender.server.server_address)
-        print("> Connecting to ", self.state_receiver.ip, ":",
-              self.state_receiver.port, " for states. (pause)",
-              sep="", end=" "
+        print(
+            "> Connecting to ", self.state_receiver.ip, ":",
+            self.state_receiver.port, " for states. (pause)",
+            sep="", end=" "
         )
         input()
         self.state_receiver.start()
@@ -128,7 +126,6 @@ class RosControlsEnv(gym.Env):
 
         :return: The initial observation.
         """
-
         # Episode vars
         self._time = 0
 
@@ -150,7 +147,6 @@ class RosControlsEnv(gym.Env):
             done (bool): whether the episode has ended
             info (dict): other infos
         """
-
         # Check
         if not 0 <= action < self.action_space.n:
             raise RuntimeError(str(action) + " is not an action.")
@@ -176,8 +172,7 @@ class RosControlsEnv(gym.Env):
 
     @staticmethod
     def interactive_test():
-        """Demonstrates that connection works: this can be deleted."""
-
+        """Demonstrate that connection works: this can be deleted."""
         # Instantiate
         ros_env = RosControlsEnv(5)  # Five actions on iocchi/StageROSGym@1bda032
 
@@ -194,12 +189,10 @@ class RosControlsEnv(gym.Env):
             print(obs, reward, done, info)
 
     def reward_at_state(self, observation):
-        """Returns the reward resulting from one observation of the robot."""
-
+        """Return the reward resulting from one observation of the robot."""
         # Proportional to x because we want it to go left
         return -observation[0]
 
     def is_episode_done(self):
-        """Simple criterion for episode termination."""
-
+        """A simple criterion for episode termination."""
         return self._time > 30
