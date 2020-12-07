@@ -1,7 +1,10 @@
 """Value iteration implementation."""
+from collections import defaultdict
+from typing import Dict
+
 import numpy as np
 
-from multinav.helpers.gym import MyDiscreteEnv
+from multinav.helpers.gym import MyDiscreteEnv, iter_space
 
 
 class _ValueIteration:
@@ -11,19 +14,19 @@ class _ValueIteration:
         self,
         env: MyDiscreteEnv,
         max_iterations: int = 100,
-        eps: float = 1e-5,
+        eps: float = 1e-8,
         discount: float = 0.9,
     ):
         self.env = env
         self.eps = eps
         self.discount = discount
-        self.v = np.random.random(env.nS) * eps
+        self.v = self._new_value_function()
         self.max_iterations = max_iterations
-        self.policy_stable = False
+        self.policy: Dict = {}
 
-    def can_stop(self) -> bool:
-        """Decide if we can stop the main GPI loop."""
-        return self.policy_stable
+    def _new_value_function(self):
+        """Reset value function."""
+        return defaultdict(lambda: np.random.random() * 1e-5)
 
     def __call__(self):
         """Run value iteration against a DiscreteEnv environment."""
@@ -31,13 +34,18 @@ class _ValueIteration:
         iteration = 0
         while not delta < self.eps and iteration < self.max_iterations:
             delta = 0
-            for s in range(len(self.v)):
-                v = self.v[s]
-                new_v = np.max(self._get_next_values(s))
-                self.v[s] = new_v
-                delta = max(delta, abs(v - new_v))
+            next_v = self._new_value_function()
+            for s in iter_space(self.env.observation_space):
+                vs = self.v[s]
+                next_values = self._get_next_values(s)
+                new_vs = max(next_values) if len(next_values) > 0 else 0.0
+                next_v[s] = new_vs
+                delta = max(delta, abs(vs - new_vs))
+            self.v = next_v
             iteration += 1
-        return self.v
+
+        self._compute_optimal_policy()
+        return self.v, self.policy
 
     def _get_next_values(self, state):
         """Get the next value, given state and action."""
@@ -48,8 +56,17 @@ class _ValueIteration:
                     for (p, sp, r, _done) in self.env.P[state][action]
                 ]
             )
-            for action in self.env.available_actions(state)
+            if action in self.env.available_actions(state)
+            else 0.0
+            for action in iter_space(self.env.action_space)
         ]
+
+    def _compute_optimal_policy(self):
+        """Compute optimal policy from value function."""
+        for s in iter_space(self.env.observation_space):
+            action_values = self._get_next_values(s)
+            new_action = np.argmax(action_values) if len(action_values) > 0 else None
+            self.policy[s] = new_action
 
 
 def value_iteration(*args, **kwargs):
