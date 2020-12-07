@@ -813,6 +813,9 @@ tmtags
 [._]ss[a-gi-z]
 [._]sw[a-p]
 
+# Vim local config
+/.vim/
+
 # Session
 Session.vim
 Sessionx.vim

@@ -62,11 +62,13 @@ pip install poetry
 - Set up the virtual environment. 
 
 ```
-poetry shell && poetry install
+poetry install
 ```
 
-You'll also need to run the following script:
+You'll also need to run the following:
 ```bash 
+git submodules init
+git submodules update
 ./scripts/install-poetry-dependencies.sh
 ```
 
