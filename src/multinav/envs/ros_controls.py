@@ -113,9 +113,13 @@ class RosControlsEnv(gym.Env):
         self.action_sender.start()
         print("> Serving actions on", self.action_sender.server.server_address)
         print(
-            "> Connecting to ", self.state_receiver.ip, ":",
-            self.state_receiver.port, " for states. (pause)",
-            sep="", end=" "
+            "> Connecting to ",
+            self.state_receiver.ip,
+            ":",
+            self.state_receiver.port,
+            " for states. (pause)",
+            sep="",
+            end=" ",
         )
         input()
         self.state_receiver.start()
@@ -193,5 +197,5 @@ class RosControlsEnv(gym.Env):
         return -observation[0]
 
     def is_episode_done(self):
-        """A simple criterion for episode termination."""
+        """Check episode termination (dummy criterion)."""
         return self._time > 30

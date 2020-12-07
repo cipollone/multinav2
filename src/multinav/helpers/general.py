@@ -44,7 +44,8 @@ class ABCMeta2(ABCMeta):
         if not_defined:
             raise TypeError(
                 Class.__name__ + ".__init__ did not define these abstract "
-                "attributes:\n" + str(not_defined))
+                "attributes:\n" + str(not_defined)
+            )
 
         return instance
 
@@ -85,8 +86,7 @@ class QuitWithResources:
         :param deleter: callable to be used when closing.
         """
         if not QuitWithResources.__initialized:
-            signal.signal(
-                signal.SIGINT, lambda sig, frame: QuitWithResources.close())
+            signal.signal(signal.SIGINT, lambda sig, frame: QuitWithResources.close())
             QuitWithResources.__initialized = True
 
         if name in QuitWithResources.__deleters:

@@ -11,14 +11,17 @@ from multinav.envs.ros_controls import RosControlsEnv
 def main():
     """Is the main function."""
     parser = argparse.ArgumentParser(
-        description="RL on navigation with different abstractions")
+        description="RL on navigation with different abstractions"
+    )
     op_group = parser.add_subparsers(dest="op", help="What to do")
 
     # Train an agent
     train_parser = op_group.add_parser("train")
     train_parser.add_argument(
-        "-e", "--env", choices=["ros"],
-        help="Select the environment to train the agent on."
+        "-e",
+        "--env",
+        choices=["ros"],
+        help="Select the environment to train the agent on.",
     )
 
     # Test ros

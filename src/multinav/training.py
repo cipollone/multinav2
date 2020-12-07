@@ -16,7 +16,6 @@ def train_on_ros():
     This function is really experimental. It's just used to produce the first
     results.
     """
-
     # Make env
     env = RosControlsEnv()
 

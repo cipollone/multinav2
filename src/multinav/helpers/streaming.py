@@ -5,7 +5,7 @@ import socket
 import sys
 import threading
 import time
-from socketserver import TCPServer, BaseRequestHandler
+from socketserver import BaseRequestHandler, TCPServer
 
 from multinav.helpers.general import QuitWithResources
 
@@ -34,7 +34,8 @@ class Sender:
 
         # Create connection
         self.server = Sender.OneRequestTCPServer(
-            ("0.0.0.0", port), Sender.RequestHandler)
+            ("0.0.0.0", port), Sender.RequestHandler
+        )
 
         # Data to send
         self._data_queue = queue.Queue(self.QUEUE_SIZE if wait else 0)
@@ -46,6 +47,7 @@ class Sender:
         def close():
             self.server.server_close()
             print("\nSender closed")
+
         QuitWithResources.add("Sender:" + str(self._port), close)
 
         thread = threading.Thread(target=self.server.serve_forever)
