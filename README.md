@@ -65,6 +65,11 @@ pip install poetry
 poetry shell && poetry install
 ```
 
+You'll also need to run the following script:
+```bash 
+./scripts/install-poetry-dependencies.sh
+```
+
 ## Tests
 
 To run tests: `tox`

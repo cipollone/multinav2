@@ -20,8 +20,4 @@
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""Main tests."""
-
-
-def test_example():
-    """Test example."""
+"""This package contains the environments."""

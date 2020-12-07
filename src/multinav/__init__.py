@@ -20,6 +20,6 @@
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""A Python project template."""
+"""Multinav project."""
 
 __version__ = "0.1.0"
