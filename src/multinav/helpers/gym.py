@@ -161,7 +161,7 @@ def rollout(
     nb_episodes: int = 1,
     max_steps: int = 10,
     policy=lambda env, state: _random_action,
-    callback=lambda env: None,
+    callback=lambda env, step: None,
 ):
     """
     Do a rollout.
@@ -176,12 +176,12 @@ def rollout(
     env = TimeLimit(env, max_episode_steps=max_steps)
     state = env.reset()
     done = False
-    callback(env)
+    callback(env, (state, 0.0, None, None))
     for _ in range(nb_episodes):
         while not done:
             action = policy(env, state)
             state, reward, done, info = env.step(action)
-            callback(env)
+            callback(env, (state, reward, done, info))
 
 
 @singledispatch
