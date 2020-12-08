@@ -2,6 +2,7 @@
 import itertools
 import random
 import shutil
+import time
 from copy import deepcopy
 from functools import singledispatch
 from pathlib import Path
@@ -152,12 +153,57 @@ class MyMonitor(Wrapper):
         return result
 
 
-def _random_action(env, state):
-    return random.choice(list(env.available_actions(state)))
+class MyStatsRecorder(gym.Wrapper):
+    """Stats recorder."""
+
+    def __init__(self, env: gym.Env):
+        """Initialize stats recorder."""
+        super().__init__(env)
+        self.episode_lengths: List[int] = []
+        self.episode_rewards: List[float] = []
+        self.timestamps: List[int] = []
+        self.steps = None
+        self.total_steps = 0
+        self.rewards = None
+
+    def step(self, action):
+        """Do a step."""
+        state, reward, done, info = super().step(action)
+        self.steps += 1
+        self.total_steps += 1
+        self.rewards += reward
+        self.done = done
+        if done:
+            self.save_complete()
+
+        return state, reward, done, info
+
+    def save_complete(self):
+        """Save episode statistics."""
+        if self.steps is not None:
+            self.episode_lengths.append(self.steps)
+            self.episode_rewards.append(float(self.rewards))
+            self.timestamps.append(time.time())
+
+    def reset(self, **kwargs):
+        """Do reset."""
+        result = super().reset(**kwargs)
+        self.done = False
+        self.steps = 0
+        self.rewards = 0
+        return result
+
+
+def _random_action(env: gym.Env, state):
+    available_actions = getattr(
+        env, "available_actions", lambda _: list(iter_space(env.action_space))
+    )
+    actions = available_actions(state)
+    return random.choice(list(actions))
 
 
 def rollout(
-    env: MyDiscreteEnv,
+    env: gym.Env,
     nb_episodes: int = 1,
     max_steps: int = 10,
     policy=lambda env, state: _random_action,
@@ -174,10 +220,10 @@ def rollout(
     :return: None
     """
     env = TimeLimit(env, max_episode_steps=max_steps)
-    state = env.reset()
-    done = False
-    callback(env, (state, 0.0, None, None))
     for _ in range(nb_episodes):
+        state = env.reset()
+        done = False
+        callback(env, (state, 0.0, done, {}))
         while not done:
             action = policy(env, state)
             state, reward, done, info = env.step(action)
