@@ -19,18 +19,19 @@ class AbstractRB(ABC):
 
     offset = 1
     colors = list(map(str, Colors))[offset:]
-    nb_colors = 3
-    with_beep = False
 
-    @classmethod
-    def get_colors(cls) -> List[str]:
+    def __init__(self, nb_colors: int, with_beep: bool = False):
+        """Initialize the restraining bolt."""
+        self.nb_colors = nb_colors
+        self.with_beep = with_beep
+
+    def get_colors(self) -> List[str]:
         """Get the colors."""
-        return cls.colors[: cls.nb_colors]
+        return self.colors[: self.nb_colors]
 
-    @classmethod
-    def get_labels(cls):
+    def get_labels(self):
         """Get the fluents."""
-        return cls.get_colors() + (["bad_beep"] if cls.with_beep else [])
+        return self.get_colors() + (["bad_beep"] if self.with_beep else [])
 
     @classmethod
     @abstractmethod
@@ -38,15 +39,14 @@ class AbstractRB(ABC):
         """Extract Sapientino fluents."""
         raise NotImplementedError
 
-    @classmethod
-    def make_goal(cls) -> str:
+    def make_goal(self) -> str:
         """
         Define the goal for Sapientino.
 
         :return: the string associated with the goal.
         """
-        labels = AbstractRB.get_colors()
-        if cls.with_beep:
+        labels = self.get_colors()
+        if self.with_beep:
             empty = "!bad_beep & !" + " & !".join(labels)
         else:
             empty = "!" + " & !".join(labels)
@@ -55,16 +55,15 @@ class AbstractRB(ABC):
         f = f.format(regexp)
         return f
 
-    @classmethod
-    def make_sapientino_goal(cls) -> TemporalGoal:
+    def make_sapientino_goal(self) -> TemporalGoal:
         """Make Sapientino goal."""
-        s = AbstractRB.make_goal()
+        s = self.make_goal()
         logging.info(f"Computing {s}")
         return TemporalGoal(
             formula=LDLfParser()(s),
             reward=10.0,
-            labels=set(AbstractRB.get_labels()),
+            labels=set(self.get_labels()),
             reward_shaping=False,
             zero_terminal_state=False,
-            extract_fluents=cls.extract_sapientino_fluents,
+            extract_fluents=self.extract_sapientino_fluents,
         )

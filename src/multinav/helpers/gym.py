@@ -1,17 +1,22 @@
 """This module contains helpers related to OpenAI Gym."""
+import itertools
+import random
 import shutil
 from copy import deepcopy
+from functools import singledispatch
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import gym
 import numpy as np
 from graphviz import Digraph
 from gym import Wrapper
 from gym.envs.toy_text.discrete import DiscreteEnv
+from gym.spaces import Discrete, MultiDiscrete
+from gym.wrappers import TimeLimit
 from PIL import Image
 
-State = int
+State = Any
 Action = int
 Probability = float
 Reward = float
@@ -145,3 +150,55 @@ class MyMonitor(Wrapper):
         self._current_step += 1
         self._save_image()
         return result
+
+
+def _random_action(env, state):
+    return random.choice(list(env.available_actions(state)))
+
+
+def rollout(
+    env: MyDiscreteEnv,
+    nb_episodes: int = 1,
+    max_steps: int = 10,
+    policy=lambda env, state: _random_action,
+    callback=lambda env, step: None,
+):
+    """
+    Do a rollout.
+
+    :param env: the OpenAI Gym environment.
+    :param nb_episodes: the number of rollout episodes.
+    :param max_steps: maximum number of steps per episodes.
+    :param policy: a callable that takes the enviornment and the state and returns the action.
+    :param callback: a callback that takes the environment and it is called at each step.
+    :return: None
+    """
+    env = TimeLimit(env, max_episode_steps=max_steps)
+    state = env.reset()
+    done = False
+    callback(env, (state, 0.0, None, None))
+    for _ in range(nb_episodes):
+        while not done:
+            action = policy(env, state)
+            state, reward, done, info = env.step(action)
+            callback(env, (state, reward, done, info))
+
+
+@singledispatch
+def iter_space(_):
+    """Iterate over a Gym space."""
+    raise NotImplementedError
+
+
+@iter_space.register(Discrete)
+def _(space: Discrete):  # type: ignore
+    """Iterate over a discrete state space."""
+    for i in range(space.n):
+        yield i
+
+
+@iter_space.register(MultiDiscrete)  # type: ignore
+def _(space: MultiDiscrete):
+    """Iterate over a discrete environment."""
+    for i in itertools.product(*map(range, space.nvec)):
+        yield i
