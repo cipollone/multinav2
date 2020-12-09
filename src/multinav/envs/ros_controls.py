@@ -43,7 +43,7 @@ class RosControlsEnv(gym.Env):
     #   and observation space.
 
     # Number of actions
-    _n_actions = 7
+    _n_actions = 6
 
     # Other (non-RL) signals
     _signals = {
@@ -167,17 +167,25 @@ class RosGoalEnv(gym.Wrapper):
     This is currently used for development.
     """
 
-    def __init__(self):
-        """Initialize."""
+    def __init__(self, time_limit):
+        """Initialize.
+
+        :param time_limit: maximum number of timesteps per episode.
+        """
         # Internal environment (transition function only)
         env = RosControlsEnv()
-
-        # Store
         gym.Wrapper.__init__(self, env)
+
+        # Params
+        self._time_limit = time_limit
 
     def reset(self):
         """Episode reset."""
+        # Params
         self._time = 0
+        self._rewarded = False
+
+        # Env
         return self.env.reset()
 
     def step(self, action):
@@ -195,19 +203,24 @@ class RosGoalEnv(gym.Wrapper):
 
     def reward(self, observation, reward):
         """Compute the current reward."""
-        # TODO: just for testing
-        return -observation[0]
+        # Check whether the robot is in a square (exprerimenting)
+        x, y = observation[:2]
+        if 5 < x < 6 and 0 < y < 1 and not self._rewarded:
+            self._rewarded = True
+            return 1.0
+        else:
+            return 0.0
 
     def is_done(self, observation):
         """Return whether the episode should stop."""
-        # TODO: just for testing
-        return self._time >= 20
+        # TODO: maybe something more efficient? Reach the wall or something similar
+        return self._time >= self._time_limit
 
 
 def interactive_test():
-    """Demonstrate that connection works: this can be deleted."""
+    """Demonstrate that connection works: just for development."""
     # Instantiate
-    ros_env = RosGoalEnv()
+    ros_env = RosGoalEnv(time_limit=50)
 
     ros_env.reset()
 
