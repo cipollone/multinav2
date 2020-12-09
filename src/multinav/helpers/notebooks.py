@@ -3,6 +3,7 @@ import io
 from io import BytesIO
 
 import gym
+import matplotlib.pyplot as plt
 import numpy as np
 import PIL
 from IPython.core.display import Image, display
@@ -22,6 +23,13 @@ def display_img_array(ima):
 def print_env(env: gym.Env):
     """Print the OpenAI Gym environment in Jupyter."""
     display_img_array(env.render(mode="rgb_array"))
+
+
+def plot_env(env: gym.Env):
+    """Print the OpenAI Gym environment in Jupyter."""
+    plt.figure()
+    plt.imshow(env.render(mode="rgb_array"))
+    plt.show()
 
 
 def automaton_to_rgb(dfa: DFA, **kwargs):

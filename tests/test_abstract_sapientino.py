@@ -21,13 +21,18 @@
 #
 
 """Tests for Abstract Sapientino."""
+from operator import itemgetter
 
 import numpy as np
 import pytest
 
 from multinav.algorithms.value_iteration import value_iteration
-from multinav.envs.abstract_sapientino import AbstractSapientino
+from multinav.envs.abstract_sapientino import (
+    AbstractSapientino,
+    AbstractSapientinoTemporalGoal,
+)
 from multinav.helpers.gym import Transition, Transitions
+from multinav.restraining_bolts.rb_abstract_sapientino import AbstractSapientinoRB
 
 
 def test_abstract_sapientino():
@@ -88,17 +93,67 @@ class _RewardWrapper(AbstractSapientino):
 def test_value_iteration():
     """Test value iteration on abstract Sapientino."""
     env = _RewardWrapper(5, failure_probability=0.0)
-    v = value_iteration(env, discount=0.9, max_iterations=200)
-    assert np.allclose(v, np.array([9, 8.1, 8.1, 8.1, 8.1, 10.0]))
+    v, policy = value_iteration(env, discount=0.9, max_iterations=200)
+    actual_values = np.array(
+        list(map(itemgetter(1), sorted(v.items(), key=lambda x: x[0])))
+    )
+    expected_values = np.array([9, 8.1, 8.1, 8.1, 8.1, 10])
+    assert np.allclose(actual_values, expected_values)
 
 
 def test_value_iteration_with_fail_prob():
     """Test value iteration on abstract Sapientino, but with small failure probability."""
     env = _RewardWrapper(5, failure_probability=0.05)
-    v = value_iteration(env, discount=0.9, max_iterations=100)
-    assert np.allclose(
-        v,
-        np.array(
-            [5.86562511, 5.52781383, 5.52781383, 5.52781383, 5.52781383, 6.5516724]
-        ),
+    v, policy = value_iteration(env, discount=0.9, max_iterations=100)
+    actual_values = np.array(
+        list(map(itemgetter(1), sorted(v.items(), key=lambda x: x[0])))
     )
+    expected_values = [
+        5.86562511,
+        5.52781383,
+        5.52781383,
+        5.52781383,
+        5.52781383,
+        6.5516724,
+    ]
+    assert np.allclose(actual_values, expected_values)
+
+
+def test_value_iteration_with_rb():
+    """Test value iteration with the restraining bolt."""
+    nb_colors = 3
+    rb = AbstractSapientinoRB(nb_colors)
+    env = AbstractSapientinoTemporalGoal(rb, [nb_colors], dict(failure_probability=0.0))
+    v, policy = value_iteration(env, discount=0.9, max_iterations=200)
+    actual_values = np.array(
+        list(map(itemgetter(1), sorted(v.items(), key=lambda x: x[0])))
+    )
+    expected_values = np.array(
+        [
+            4.3046720115533725,
+            5.904899911553373,
+            2.647284498601486e-14,
+            8.099999911553372,
+            9.999999911553372,
+            0.0,
+            4.782968911553372,
+            5.314409911553372,
+            2.647284498601486e-14,
+            7.289999911553372,
+            9.999999911553372,
+            0.0,
+            3.874204801553371,
+            6.560999911553372,
+            2.647284498601486e-14,
+            7.289999911553372,
+            9.999999911553372,
+            0.0,
+            3.874204801553371,
+            5.314409911553372,
+            2.647284498601486e-14,
+            8.999999911553372,
+            9.999999911553372,
+            0.0,
+        ]
+    )
+    assert np.allclose(actual_values, expected_values)
