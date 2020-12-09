@@ -7,7 +7,7 @@ general logic.
 from stable_baselines import DQN
 from stable_baselines.deepq.policies import MlpPolicy
 
-from multinav.envs.ros_controls import RosControlsEnv
+from multinav.envs.ros_controls import RosGoalEnv
 
 
 def train_on_ros():
@@ -17,7 +17,7 @@ def train_on_ros():
     results.
     """
     # Make env
-    env = RosControlsEnv()
+    env = RosGoalEnv()
 
     # Start library
     model = DQN(MlpPolicy, env, verbose=1)

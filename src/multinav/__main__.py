@@ -5,7 +5,7 @@
 import argparse
 
 from multinav import training
-from multinav.envs.ros_controls import RosControlsEnv
+from multinav.envs.ros_controls import interactive_test
 
 
 def main():
@@ -35,7 +35,7 @@ def main():
         print(parser.print_help())
 
     if args.op == "test-ros":
-        RosControlsEnv.interactive_test()
+        interactive_test()
 
     elif args.op == "train":
         if args.env == "ros":

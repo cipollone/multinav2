@@ -43,7 +43,7 @@ class RosControlsEnv(gym.Env):
     #   and observation space.
 
     # Number of actions
-    _n_actions = 5
+    _n_actions = 7
 
     # Other (non-RL) signals
     _signals = {
@@ -129,9 +129,6 @@ class RosControlsEnv(gym.Env):
 
         :return: The initial observation.
         """
-        # Episode vars
-        self._time = 0
-
         # Send signal
         self.action_sender.send(self._signals["reset"])
 
@@ -154,48 +151,71 @@ class RosControlsEnv(gym.Env):
         if not 0 <= action < self.action_space.n:
             raise RuntimeError(str(action) + " is not an action.")
 
-        self._time += 1
-
         # Execute
         self.action_sender.send(action)
 
         # Read observation
         observation = self.state_receiver.receive()
 
-        # Compute reward and end
-        reward = self.reward_at_state(observation)
-        done = self.is_episode_done()
+        return (observation, 0.0, False, {})
 
-        # Diagnostics
-        info = {"time": self._time}
 
-        return (observation, reward, done, info)
+class RosGoalEnv(gym.Wrapper):
+    """Goals and personalizations on the ROS environment.
 
-    # TODO: the methods below are temporary placeholders used for development
+    Applies a reward function and end-of-episode criterion.
+    This is currently used for development.
+    """
 
-    @staticmethod
-    def interactive_test():
-        """Demonstrate that connection works: this can be deleted."""
-        # Instantiate
-        ros_env = RosControlsEnv(5)  # Five actions on iocchi/StageROSGym@1bda032
+    def __init__(self):
+        """Initialize."""
+        # Internal environment (transition function only)
+        env = RosControlsEnv()
 
-        ros_env.reset()
+        # Store
+        gym.Wrapper.__init__(self, env)
 
-        # Test loop: the agent (you) chooses an action
-        while True:
-            action = int(input("Next action "))
-            if action < 0:
-                ros_env.reset()
-            else:
-                obs, reward, done, info = ros_env.step(action)
+    def reset(self):
+        """Episode reset."""
+        self._time = 0
+        return self.env.reset()
 
-            print(obs, reward, done, info)
+    def step(self, action):
+        """Execute one sep."""
+        # Run the internal environment
+        observation, reward, done, info = self.env.step(action)
 
-    def reward_at_state(self, observation):
-        """Return the reward resulting from one observation of the robot."""
-        # Proportional to x because we want it to go left
+        # Compute
+        self._time += 1
+        reward = self.reward(observation, reward)
+        done = self.is_done(observation)
+        info.update({"time": self._time})
+
+        return observation, reward, done, info
+
+    def reward(self, observation, reward):
+        """Compute the current reward."""
+        # TODO: just for testing
         return -observation[0]
 
-    def is_episode_done(self):
-        """Check episode termination (dummy criterion)."""
-        return self._time > 30
+    def is_done(self, observation):
+        """Return whether the episode should stop."""
+        # TODO: just for testing
+        return self._time >= 20
+
+
+def interactive_test():
+    """Demonstrate that connection works: this can be deleted."""
+    # Instantiate
+    ros_env = RosGoalEnv()
+
+    ros_env.reset()
+
+    # Test loop: the agent (you) chooses an action
+    while True:
+        action = int(input("Next action "))
+        if action < 0:
+            ros_env.reset()
+        else:
+            obs, reward, done, info = ros_env.step(action)
+            print(obs, reward, done, info)
