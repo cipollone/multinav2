@@ -2,6 +2,7 @@
 
 import signal
 from abc import ABCMeta
+from typing import Dict
 
 
 class ABCMeta2(ABCMeta):
@@ -64,7 +65,7 @@ class ABC2(metaclass=ABCMeta2):
 class QuitWithResources:
     """Close the resources when ctrl-c is pressed."""
 
-    __deleters = {}
+    __deleters: Dict = {}
     __initialized = False
 
     def __init__(self):
