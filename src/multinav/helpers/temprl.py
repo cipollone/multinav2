@@ -9,8 +9,10 @@ class MyTemporalGoalWrapper(TemporalGoalWrapper):
     """
     Custom version of TemporalGoalWrapper.
 
-    In particular, it changes the rendering, by concatenating
-    the frame of the environment and the frame of the automata.
+    In particular:
+    - it changes the rendering, by concatenating the frame of the environment
+      and the frame of the automata.
+    - if the agent goes to an automaton accepting state, the training finishes.
     """
 
     def render(self, mode="human", **kwargs):
@@ -44,6 +46,15 @@ class MyTemporalGoalWrapper(TemporalGoalWrapper):
             result = np.append(result, frames[i], axis=1)
 
         return result
+
+    def step(self, action):
+        """Do the step."""
+        state, reward, done, info = super().step(action)
+        for tg in self.temp_goals:
+            if tg.is_true():
+                reward += tg.reward
+        done = all(tg.is_true() for tg in self.temp_goals)
+        return state, reward, done, info
 
 
 def _add_channel(frame: np.ndarray):

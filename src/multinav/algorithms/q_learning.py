@@ -1,10 +1,21 @@
 """Q-Learning implementation."""
 import sys
 from collections import defaultdict
+from functools import partial
 from typing import Any, Dict
 
 import gym
 import numpy as np
+
+
+def _random_action(nb_actions):
+    """Random actions."""
+    return (
+        np.random.randn(
+            nb_actions,
+        )
+        * sys.float_info.epsilon
+    )
 
 
 def q_learning(
@@ -23,12 +34,7 @@ def q_learning(
     """
     t = 0
     nb_actions = env.action_space.n
-    Q: Dict[Any, np.ndarray] = defaultdict(
-        lambda: np.random.randn(
-            nb_actions,
-        )
-        * sys.float_info.epsilon
-    )
+    Q: Dict[Any, np.ndarray] = defaultdict(partial(_random_action, nb_actions))
 
     def choose_action(state):
         if np.random.random() < eps:

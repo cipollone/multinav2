@@ -18,6 +18,8 @@ from gym.spaces.tuple import Tuple as GymTuple
 from gym.wrappers import TimeLimit
 from PIL import Image
 
+from multinav.helpers.temprl import MyTemporalGoalWrapper
+
 State = Any
 Action = int
 Probability = float
@@ -279,5 +281,49 @@ class SingleAgentWrapper(Wrapper):
 
     def step(self, action):
         """Do a step."""
-        result = super().step([action])
-        return result
+        state, reward, done, info = super().step([action])
+        new_state = state[0]
+        return new_state, reward, done, info
+
+    def reset(self, **kwargs):
+        """Do a step."""
+        state = super().reset(**kwargs)
+        new_state = state[0]
+        return new_state
+
+
+class SapientinoTemporalWrapper(MyTemporalGoalWrapper):
+    """Extract robot features from the environment."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the robot wrapper."""
+        super().__init__(*args, **kwargs)
+
+        spaces = self.observation_space.spaces
+        assert len(spaces) == 2
+        robot_space, automata_space = spaces
+        assert isinstance(automata_space, MultiDiscrete)
+        assert isinstance(robot_space, gym.spaces.dict.Dict)
+
+        x_space: Discrete = robot_space.spaces["x"]
+        y_space: Discrete = robot_space.spaces["y"]
+        self.observation_space = MultiDiscrete(
+            [x_space.n, y_space.n, *automata_space.nvec]
+        )
+
+    def _process_state(self, state):
+        """Process the observation."""
+        robot_state, automata_states = state[0], state[1]
+        new_state = (robot_state["x"], robot_state["y"], *automata_states)
+        return new_state
+
+    def step(self, action):
+        """Do a step."""
+        state, reward, done, info = super().step(action)
+        new_done = done or all(tg.is_true() for tg in self.temp_goals)
+        return self._process_state(state), reward, new_done, info
+
+    def reset(self, **_kwargs):
+        """Reset."""
+        state = super().reset(**_kwargs)
+        return self._process_state(state)

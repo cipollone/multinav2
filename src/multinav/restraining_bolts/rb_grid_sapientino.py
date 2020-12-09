@@ -9,8 +9,6 @@ class GridSapientinoRB(AbstractRB):
 
     def extract_sapientino_fluents(self, obs, action) -> PLInterpretation:
         """Extract Sapientino fluents."""
-        assert isinstance(obs, tuple) and len(obs) == 1
-        obs = obs[0]
         color_offset = 1
         is_beep = obs.get("beep") > 0
         color_id = obs.get("color")
