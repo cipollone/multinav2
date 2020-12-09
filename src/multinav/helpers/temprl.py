@@ -29,6 +29,7 @@ class MyTemporalGoalWrapper(TemporalGoalWrapper):
             for tg in self.temp_goals
         ]
         frames = [env_frame] + automata_frames
+        frames = list(_add_channel(frame) for frame in frames)
         max_height = max(map(lambda arr: arr.shape[0], frames))
         # pad all frames with 4 channels of zeros
         for i in range(len(frames)):
@@ -43,3 +44,16 @@ class MyTemporalGoalWrapper(TemporalGoalWrapper):
             result = np.append(result, frames[i], axis=1)
 
         return result
+
+
+def _add_channel(frame: np.ndarray):
+    """
+    Add channel to a frame.
+
+    It might be needed because of different behaviours of the rendering systems.
+    """
+    if frame.shape[2] != 3:
+        return frame
+    layer = np.zeros((350, 360, 1), dtype=np.uint8)
+    layer.fill(255)
+    return np.append(frame, layer, axis=2)

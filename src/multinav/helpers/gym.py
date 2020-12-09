@@ -14,6 +14,7 @@ from graphviz import Digraph
 from gym import Wrapper
 from gym.envs.toy_text.discrete import DiscreteEnv
 from gym.spaces import Discrete, MultiDiscrete
+from gym.spaces.tuple import Tuple as GymTuple
 from gym.wrappers import TimeLimit
 from PIL import Image
 
@@ -206,7 +207,7 @@ def rollout(
     env: gym.Env,
     nb_episodes: int = 1,
     max_steps: int = 10,
-    policy=lambda env, state: _random_action,
+    policy=lambda env, state: _random_action(env, state),
     callback=lambda env, step: None,
 ):
     """
@@ -248,3 +249,35 @@ def _(space: MultiDiscrete):
     """Iterate over a discrete environment."""
     for i in itertools.product(*map(range, space.nvec)):
         yield i
+
+
+class SingleAgentWrapper(Wrapper):
+    """
+    Wrapper for multi-agent OpenAI Gym environment to make it single-agent.
+
+    It adapts a multi-agent OpenAI Gym environment with just one agent
+    to be used as a single agent environment.
+    In particular, this means that if the observation space and the
+    action space are tuples of one space, the new
+    spaces will remove the tuples and return the unique space.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the wrapper."""
+        super().__init__(*args, **kwargs)
+
+        self.observation_space = self._transform_tuple_space(self.observation_space)
+        self.action_space = self._transform_tuple_space(self.action_space)
+
+    def _transform_tuple_space(self, space: GymTuple):
+        """Transform a Tuple space with one element into that element."""
+        assert isinstance(
+            space, GymTuple
+        ), "The space is not an instance of gym.spaces.tuples.Tuple."
+        assert len(space.spaces) == 1, "The tuple space has more than one subspaces."
+        return space.spaces[0]
+
+    def step(self, action):
+        """Do a step."""
+        result = super().step([action])
+        return result
