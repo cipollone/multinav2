@@ -25,7 +25,7 @@ def print_env(env: gym.Env):
     display_img_array(env.render(mode="rgb_array"))
 
 
-def plot_env(env: gym.Env):
+def plot_env(env: gym.Env, *_args, **_kwargs):
     """Print the OpenAI Gym environment in Jupyter."""
     plt.figure()
     plt.imshow(env.render(mode="rgb_array"))

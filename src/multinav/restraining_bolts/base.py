@@ -33,9 +33,8 @@ class AbstractRB(ABC):
         """Get the fluents."""
         return self.get_colors() + (["bad_beep"] if self.with_beep else [])
 
-    @classmethod
     @abstractmethod
-    def extract_sapientino_fluents(cls, obs, action) -> PLInterpretation:
+    def extract_sapientino_fluents(self, obs, action) -> PLInterpretation:
         """Extract Sapientino fluents."""
         raise NotImplementedError
 
