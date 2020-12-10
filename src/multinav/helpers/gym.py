@@ -2,6 +2,7 @@
 import itertools
 import random
 import shutil
+import time
 from copy import deepcopy
 from functools import singledispatch
 from pathlib import Path
@@ -13,8 +14,11 @@ from graphviz import Digraph
 from gym import Wrapper
 from gym.envs.toy_text.discrete import DiscreteEnv
 from gym.spaces import Discrete, MultiDiscrete
+from gym.spaces.tuple import Tuple as GymTuple
 from gym.wrappers import TimeLimit
 from PIL import Image
+
+from multinav.helpers.temprl import MyTemporalGoalWrapper
 
 State = Any
 Action = int
@@ -152,15 +156,60 @@ class MyMonitor(Wrapper):
         return result
 
 
-def _random_action(env, state):
-    return random.choice(list(env.available_actions(state)))
+class MyStatsRecorder(gym.Wrapper):
+    """Stats recorder."""
+
+    def __init__(self, env: gym.Env):
+        """Initialize stats recorder."""
+        super().__init__(env)
+        self.episode_lengths: List[int] = []
+        self.episode_rewards: List[float] = []
+        self.timestamps: List[int] = []
+        self.steps = None
+        self.total_steps = 0
+        self.rewards = None
+
+    def step(self, action):
+        """Do a step."""
+        state, reward, done, info = super().step(action)
+        self.steps += 1
+        self.total_steps += 1
+        self.rewards += reward
+        self.done = done
+        if done:
+            self.save_complete()
+
+        return state, reward, done, info
+
+    def save_complete(self):
+        """Save episode statistics."""
+        if self.steps is not None:
+            self.episode_lengths.append(self.steps)
+            self.episode_rewards.append(float(self.rewards))
+            self.timestamps.append(time.time())
+
+    def reset(self, **kwargs):
+        """Do reset."""
+        result = super().reset(**kwargs)
+        self.done = False
+        self.steps = 0
+        self.rewards = 0
+        return result
+
+
+def _random_action(env: gym.Env, state):
+    available_actions = getattr(
+        env, "available_actions", lambda _: list(iter_space(env.action_space))
+    )
+    actions = available_actions(state)
+    return random.choice(list(actions))
 
 
 def rollout(
-    env: MyDiscreteEnv,
+    env: gym.Env,
     nb_episodes: int = 1,
     max_steps: int = 10,
-    policy=lambda env, state: _random_action,
+    policy=lambda env, state: _random_action(env, state),
     callback=lambda env, step: None,
 ):
     """
@@ -174,10 +223,10 @@ def rollout(
     :return: None
     """
     env = TimeLimit(env, max_episode_steps=max_steps)
-    state = env.reset()
-    done = False
-    callback(env, (state, 0.0, None, None))
     for _ in range(nb_episodes):
+        state = env.reset()
+        done = False
+        callback(env, (state, 0.0, done, {}))
         while not done:
             action = policy(env, state)
             state, reward, done, info = env.step(action)
@@ -202,3 +251,79 @@ def _(space: MultiDiscrete):
     """Iterate over a discrete environment."""
     for i in itertools.product(*map(range, space.nvec)):
         yield i
+
+
+class SingleAgentWrapper(Wrapper):
+    """
+    Wrapper for multi-agent OpenAI Gym environment to make it single-agent.
+
+    It adapts a multi-agent OpenAI Gym environment with just one agent
+    to be used as a single agent environment.
+    In particular, this means that if the observation space and the
+    action space are tuples of one space, the new
+    spaces will remove the tuples and return the unique space.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the wrapper."""
+        super().__init__(*args, **kwargs)
+
+        self.observation_space = self._transform_tuple_space(self.observation_space)
+        self.action_space = self._transform_tuple_space(self.action_space)
+
+    def _transform_tuple_space(self, space: GymTuple):
+        """Transform a Tuple space with one element into that element."""
+        assert isinstance(
+            space, GymTuple
+        ), "The space is not an instance of gym.spaces.tuples.Tuple."
+        assert len(space.spaces) == 1, "The tuple space has more than one subspaces."
+        return space.spaces[0]
+
+    def step(self, action):
+        """Do a step."""
+        state, reward, done, info = super().step([action])
+        new_state = state[0]
+        return new_state, reward, done, info
+
+    def reset(self, **kwargs):
+        """Do a step."""
+        state = super().reset(**kwargs)
+        new_state = state[0]
+        return new_state
+
+
+class SapientinoTemporalWrapper(MyTemporalGoalWrapper):
+    """Extract robot features from the environment."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the robot wrapper."""
+        super().__init__(*args, **kwargs)
+
+        spaces = self.observation_space.spaces
+        assert len(spaces) == 2
+        robot_space, automata_space = spaces
+        assert isinstance(automata_space, MultiDiscrete)
+        assert isinstance(robot_space, gym.spaces.dict.Dict)
+
+        x_space: Discrete = robot_space.spaces["x"]
+        y_space: Discrete = robot_space.spaces["y"]
+        self.observation_space = MultiDiscrete(
+            [x_space.n, y_space.n, *automata_space.nvec]
+        )
+
+    def _process_state(self, state):
+        """Process the observation."""
+        robot_state, automata_states = state[0], state[1]
+        new_state = (robot_state["x"], robot_state["y"], *automata_states)
+        return new_state
+
+    def step(self, action):
+        """Do a step."""
+        state, reward, done, info = super().step(action)
+        new_done = done or all(tg.is_true() for tg in self.temp_goals)
+        return self._process_state(state), reward, new_done, info
+
+    def reset(self, **_kwargs):
+        """Reset."""
+        state = super().reset(**_kwargs)
+        return self._process_state(state)
