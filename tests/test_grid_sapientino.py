@@ -28,13 +28,10 @@ from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core.configurations import SapientinoConfiguration
 
 from multinav.algorithms.q_learning import q_learning
-from multinav.helpers.gym import (
-    MyStatsRecorder,
-    SapientinoTemporalWrapper,
-    SingleAgentWrapper,
-    rollout,
-)
+from multinav.helpers.gym import rollout
 from multinav.restraining_bolts.rb_grid_sapientino import GridSapientinoRB
+from multinav.wrappers.temprl import MyTemporalGoalWrapper
+from multinav.wrappers.utils import MyStatsRecorder, SingleAgentWrapper
 
 
 def test_grid_sapientino_rb_q_learning(disable_debug_logging):
@@ -47,7 +44,7 @@ def test_grid_sapientino_rb_q_learning(disable_debug_logging):
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
     tg = GridSapientinoRB(nb_colors).make_sapientino_goal()
-    env = SapientinoTemporalWrapper(env, [tg])
+    env = MyTemporalGoalWrapper(env, [tg])
     env = TimeLimit(env, max_episode_steps=25)
 
     Q = q_learning(env, nb_episodes=1500)

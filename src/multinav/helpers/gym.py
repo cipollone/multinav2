@@ -1,24 +1,16 @@
 """This module contains helpers related to OpenAI Gym."""
 import itertools
 import random
-import shutil
-import time
 from copy import deepcopy
 from functools import singledispatch
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import gym
 import numpy as np
 from graphviz import Digraph
-from gym import Wrapper
 from gym.envs.toy_text.discrete import DiscreteEnv
 from gym.spaces import Discrete, MultiDiscrete
-from gym.spaces.tuple import Tuple as GymTuple
 from gym.wrappers import TimeLimit
-from PIL import Image
-
-from multinav.helpers.temprl import MyTemporalGoalWrapper
 
 State = Any
 Action = int
@@ -112,91 +104,6 @@ class MyDiscreteEnv(DiscreteEnv):
         return actions
 
 
-class MyMonitor(Wrapper):
-    """A simple monitor."""
-
-    def __init__(self, env: gym.Env, directory: str, force: bool = False):
-        """
-        Initialize the environment.
-
-        :param env: the environment.
-        :param directory: the directory where to save elements.
-        """
-        super().__init__(env)
-
-        self._directory = Path(directory)
-        shutil.rmtree(directory, ignore_errors=force)
-        self._directory.mkdir(exist_ok=False)
-
-        self._current_step = 0
-        self._current_episode = 0
-
-    def _save_image(self):
-        """Save a frame."""
-        array = self.render(mode="rgb_array")
-        image = Image.fromarray(array)
-        episode_dir = f"{self._current_episode:05d}"
-        filepath = f"{self._current_step:05d}.jpeg"
-        (self._directory / episode_dir).mkdir(parents=True, exist_ok=True)
-        image.save(str(self._directory / episode_dir / filepath))
-
-    def reset(self, **kwargs):
-        """Reset the environment."""
-        result = super().reset(**kwargs)
-        self._current_step = 0
-        self._current_episode += 1
-        self._save_image()
-        return result
-
-    def step(self, action):
-        """Do a step in the environment, and record the frame."""
-        result = super().step(action)
-        self._current_step += 1
-        self._save_image()
-        return result
-
-
-class MyStatsRecorder(gym.Wrapper):
-    """Stats recorder."""
-
-    def __init__(self, env: gym.Env):
-        """Initialize stats recorder."""
-        super().__init__(env)
-        self.episode_lengths: List[int] = []
-        self.episode_rewards: List[float] = []
-        self.timestamps: List[int] = []
-        self.steps = None
-        self.total_steps = 0
-        self.rewards = None
-
-    def step(self, action):
-        """Do a step."""
-        state, reward, done, info = super().step(action)
-        self.steps += 1
-        self.total_steps += 1
-        self.rewards += reward
-        self.done = done
-        if done:
-            self.save_complete()
-
-        return state, reward, done, info
-
-    def save_complete(self):
-        """Save episode statistics."""
-        if self.steps is not None:
-            self.episode_lengths.append(self.steps)
-            self.episode_rewards.append(float(self.rewards))
-            self.timestamps.append(time.time())
-
-    def reset(self, **kwargs):
-        """Do reset."""
-        result = super().reset(**kwargs)
-        self.done = False
-        self.steps = 0
-        self.rewards = 0
-        return result
-
-
 def _random_action(env: gym.Env, state):
     available_actions = getattr(
         env, "available_actions", lambda _: list(iter_space(env.action_space))
@@ -208,7 +115,7 @@ def _random_action(env: gym.Env, state):
 def rollout(
     env: gym.Env,
     nb_episodes: int = 1,
-    max_steps: int = 10,
+    max_steps: Optional[int] = None,
     policy=lambda env, state: _random_action(env, state),
     callback=lambda env, step: None,
 ):
@@ -222,7 +129,8 @@ def rollout(
     :param callback: a callback that takes the environment and it is called at each step.
     :return: None
     """
-    env = TimeLimit(env, max_episode_steps=max_steps)
+    if max_steps:
+        env = TimeLimit(env, max_episode_steps=max_steps)
     for _ in range(nb_episodes):
         state = env.reset()
         done = False
@@ -253,77 +161,70 @@ def _(space: MultiDiscrete):
         yield i
 
 
-class SingleAgentWrapper(Wrapper):
+class RewardShaper:
     """
-    Wrapper for multi-agent OpenAI Gym environment to make it single-agent.
+    Reward shaper component.
 
-    It adapts a multi-agent OpenAI Gym environment with just one agent
-    to be used as a single agent environment.
-    In particular, this means that if the observation space and the
-    action space are tuples of one space, the new
-    spaces will remove the tuples and return the unique space.
+    It takes in input:
+    - a value function
+    - a mapping function from low-level to high-level state.
     """
 
-    def __init__(self, *args, **kwargs):
-        """Initialize the wrapper."""
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        value_function: Callable[[Any], float],
+        mapping_function: Callable[[Any], Any],
+        zero_terminal_state: bool = False,
+    ):
+        """
+        Initialize the reward shaping wrapper.
 
-        self.observation_space = self._transform_tuple_space(self.observation_space)
-        self.action_space = self._transform_tuple_space(self.action_space)
+        :param value_function: the value function.
+        :param mapping_function: the mapping function.
+        :param zero_terminal_state: if the terminal state of
+          a trajectory should have potential equal to zero.
+          For details, please see:
+            http://www.ifaamas.org/Proceedings/aamas2017/pdfs/p565.pdf
 
-    def _transform_tuple_space(self, space: GymTuple):
-        """Transform a Tuple space with one element into that element."""
-        assert isinstance(
-            space, GymTuple
-        ), "The space is not an instance of gym.spaces.tuples.Tuple."
-        assert len(space.spaces) == 1, "The tuple space has more than one subspaces."
-        return space.spaces[0]
+        """
+        self.value_function = value_function
+        self.mapping_function = mapping_function
+        self.zero_terminal_state = zero_terminal_state
 
-    def step(self, action):
-        """Do a step."""
-        state, reward, done, info = super().step([action])
-        new_state = state[0]
-        return new_state, reward, done, info
+        self._last_state: Any = None
 
-    def reset(self, **kwargs):
-        """Do a step."""
-        state = super().reset(**kwargs)
-        new_state = state[0]
-        return new_state
+    def reset(self, state):
+        """Reset the environment."""
+        self._last_state = state
+
+    def step(self, state_p, done: bool = False) -> float:
+        """Do a step, and get shaping reward."""
+        previous_state = self.mapping_function(self._last_state)
+        current_state = self.mapping_function(state_p)
+
+        v2, v1 = self.value_function(current_state), self.value_function(previous_state)
+        if done and self.zero_terminal_state:
+            # see http://www.ifaamas.org/Proceedings/aamas2017/pdfs/p565.pdf
+            v2 = 0
+        shaping_reward = v2 - v1
+
+        self._last_state = state_p
+        return shaping_reward
 
 
-class SapientinoTemporalWrapper(MyTemporalGoalWrapper):
-    """Extract robot features from the environment."""
+class NullRewardShaper(RewardShaper):
+    """A reward shaping component that does nothing."""
 
-    def __init__(self, *args, **kwargs):
-        """Initialize the robot wrapper."""
-        super().__init__(*args, **kwargs)
+    @classmethod
+    def _null_value_function(cls, *_args):
+        """Compute a value function that always returns 0.0."""
+        return 0.0
 
-        spaces = self.observation_space.spaces
-        assert len(spaces) == 2
-        robot_space, automata_space = spaces
-        assert isinstance(automata_space, MultiDiscrete)
-        assert isinstance(robot_space, gym.spaces.dict.Dict)
+    @classmethod
+    def _identity_mapping_function(cls, _arg):
+        """Compute the identity mapping function."""
+        return _arg
 
-        x_space: Discrete = robot_space.spaces["x"]
-        y_space: Discrete = robot_space.spaces["y"]
-        self.observation_space = MultiDiscrete(
-            [x_space.n, y_space.n, *automata_space.nvec]
-        )
-
-    def _process_state(self, state):
-        """Process the observation."""
-        robot_state, automata_states = state[0], state[1]
-        new_state = (robot_state["x"], robot_state["y"], *automata_states)
-        return new_state
-
-    def step(self, action):
-        """Do a step."""
-        state, reward, done, info = super().step(action)
-        new_done = done or all(tg.is_true() for tg in self.temp_goals)
-        return self._process_state(state), reward, new_done, info
-
-    def reset(self, **_kwargs):
-        """Reset."""
-        state = super().reset(**_kwargs)
-        return self._process_state(state)
+    def __init__(self):
+        """Initialize."""
+        super().__init__(self._null_value_function, self._identity_mapping_function)

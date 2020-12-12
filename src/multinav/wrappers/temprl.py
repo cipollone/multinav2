@@ -65,6 +65,6 @@ def _add_channel(frame: np.ndarray):
     """
     if frame.shape[2] != 3:
         return frame
-    layer = np.zeros((350, 360, 1), dtype=np.uint8)
+    layer = np.zeros(frame.shape[:-1] + (1,), dtype=np.uint8)
     layer.fill(255)
     return np.append(frame, layer, axis=2)

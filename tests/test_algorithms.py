@@ -26,7 +26,8 @@ from gym.envs.toy_text import FrozenLakeEnv
 from gym.wrappers import TimeLimit
 
 from multinav.algorithms.q_learning import q_learning
-from multinav.helpers.gym import MyStatsRecorder, rollout
+from multinav.helpers.gym import rollout
+from multinav.wrappers.utils import MyStatsRecorder
 
 
 def test_q_learning():

@@ -11,8 +11,6 @@ import numpy as np
 import seaborn as sns
 from pandas import DataFrame
 
-from multinav.helpers.gym import MyStatsRecorder
-
 
 def set_seed(env: gym.Env, seed: int = None):
     """Set seed."""
@@ -31,13 +29,17 @@ class Stats:
     timestamps: List[int] = field(default_factory=list)
 
 
-def stats_from_env(env: MyStatsRecorder) -> Stats:
-    """Get statistics from environment."""
+def stats_from_env(env: gym.Wrapper, prefix: str = "") -> Stats:
+    """
+    Get statistics from environment.
+
+    It works only if some of the wrappers is MyStatsRecorder.
+    """
     return Stats(
-        episode_lengths=env.episode_lengths,
-        episode_rewards=env.episode_rewards,
-        total_steps=env.total_steps,
-        timestamps=env.timestamps,
+        episode_lengths=getattr(env, prefix + "episode_lengths"),
+        episode_rewards=getattr(env, prefix + "episode_rewards"),
+        total_steps=getattr(env, prefix + "total_steps"),
+        timestamps=getattr(env, prefix + "timestamps"),
     )
 
 
