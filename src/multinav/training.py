@@ -5,6 +5,7 @@ general logic.
 """
 
 import os
+
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CheckpointCallback
 from stable_baselines.deepq.policies import MlpPolicy
@@ -28,7 +29,8 @@ def train_on_ros():
 
     # Callbacks
     checkpoint_callback = CheckpointCallback(
-        save_freq=1000, save_path=model_path, name_prefix="model")
+        save_freq=1000, save_path=model_path, name_prefix="model"
+    )
 
     # Define agent
     model = DQN(
@@ -43,7 +45,8 @@ def train_on_ros():
 
     # Behaviour on quit
     QuitWithResources.add(
-        "last_save", lambda: model.save(os.path.join(model_path, "model")))
+        "last_save", lambda: model.save(os.path.join(model_path, "model"))
+    )
 
     # Start
     model.learn(

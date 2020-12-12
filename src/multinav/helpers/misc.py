@@ -15,7 +15,6 @@ from pandas import DataFrame
 
 from multinav.helpers.gym import MyStatsRecorder
 
-
 # Output base dir
 output_base = "outputs"
 
@@ -168,7 +167,7 @@ class Experiment:
         return stats
 
 
-def prepare_directories(
+def prepare_directories(  # noqa: ignore
     env_name, resuming=False, args=None, no_create=False
 ):
     """Prepare the directories where weights and logs are saved.
@@ -195,9 +194,7 @@ def prepare_directories(
     # Delete old ones
     if not resuming:
         if any(os.path.exists(d) for d in dirs):
-            print(
-                "Old logs and models will be deleted. Continue (Y/n)? ",
-                end="")
+            print("Old logs and models will be deleted. Continue (Y/n)? ", end="")
             c = input()
             if c not in ("y", "Y", ""):
                 quit()
@@ -211,19 +208,19 @@ def prepare_directories(
     # Logs and models for the same run are saved in
     #   directories with increasing numbers
     i = 0
-    while (
-        os.path.exists(os.path.join(logs_path, str(i))) or
-        os.path.exists(os.path.join(models_path, str(i)))
+    while os.path.exists(os.path.join(logs_path, str(i))) or os.path.exists(
+        os.path.join(models_path, str(i))
     ):
         i += 1
 
     # Should i return the current?
     if no_create:
-        last_model_path = os.path.join(models_path, str(i-1))
-        last_log_path = os.path.join(logs_path, str(i-1))
+        last_model_path = os.path.join(models_path, str(i - 1))
+        last_log_path = os.path.join(logs_path, str(i - 1))
         if (
-            i == 0 or not os.path.exists(last_log_path) or
-            not os.path.exists(last_model_path)
+            i == 0
+            or not os.path.exists(last_log_path)
+            or not os.path.exists(last_model_path)
         ):
             raise RuntimeError("Dirs should be created first")
         return (last_model_path, last_log_path)
