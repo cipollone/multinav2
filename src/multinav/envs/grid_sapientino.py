@@ -47,7 +47,13 @@ class GridSapientinoRewardShaper(RewardShaper):
 
 
 class RobotFeatures(gym.Wrapper):
-    """Wrapper for Sapientino with temporal goal."""
+    """
+    Wrapper for Sapientino with temporal goal.
+
+    This wrappers extracts coordinate x and y from
+    the dictionary space of SapientinoDictSpace,
+    and flattens the automata spaces.
+    """
 
     def __init__(self, env: gym.Env):
         """Initialize the wrapper."""
