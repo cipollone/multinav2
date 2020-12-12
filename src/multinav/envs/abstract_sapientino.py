@@ -37,8 +37,8 @@ from multinav.helpers.gym import (
     Transitions,
     from_discrete_env_to_graphviz,
 )
-from multinav.helpers.temprl import MyTemporalGoalWrapper
 from multinav.restraining_bolts.base import AbstractRB
+from multinav.wrappers.temprl import MyTemporalGoalWrapper
 
 
 class AbstractSapientino(MyDiscreteEnv):

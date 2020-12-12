@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2019-2020 Marco Favorito, Luca Iocchi
+#
+# ------------------------------
+#
+# This file is part of gym-sapientino.
+#
+# gym-sapientino is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# gym-sapientino is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
+#
 """Value iteration implementation."""
 from collections import defaultdict
 from typing import Dict
@@ -24,9 +45,13 @@ class _ValueIteration:
         self.max_iterations = max_iterations
         self.policy: Dict = {}
 
+    def _random(self):
+        """Random initializer."""
+        return np.random.random() * 1e-5
+
     def _new_value_function(self):
         """Reset value function."""
-        return defaultdict(lambda: np.random.random() * 1e-5)
+        return defaultdict(self._random)
 
     def __call__(self):
         """Run value iteration against a DiscreteEnv environment."""
