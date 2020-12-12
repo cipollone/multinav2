@@ -1,3 +1,7 @@
+# Project dirs
+## Saved models, weights
+/outputs/
+
 
 # Created by https://www.toptal.com/developers/gitignore/api/tex,vim,tags,latex,linux,macos,python,textmate,sublimetext,pycharm+all,intellij+all,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=tex,vim,tags,latex,linux,macos,python,textmate,sublimetext,pycharm+all,intellij+all,visualstudiocode
