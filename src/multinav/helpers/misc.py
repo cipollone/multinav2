@@ -13,9 +13,6 @@ import numpy as np
 import seaborn as sns
 from pandas import DataFrame
 
-
-from multinav.helpers.gym import MyStatsRecorder
-
 # Output base dir
 output_base = "outputs"
 
