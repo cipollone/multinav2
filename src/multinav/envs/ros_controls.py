@@ -219,16 +219,24 @@ class RosGoalEnv(gym.Wrapper):
 
 def interactive_test():
     """Demonstrate that connection works: just for development."""
+    # NOTE: this test may not be appropriate:
+    #   Some parts use ROS time which continues to go on as we wait for input.
+
     # Instantiate
     ros_env = RosGoalEnv(time_limit=50)
 
-    ros_env.reset()
+    obs = ros_env.reset()
+    print("Initial state:", obs)
 
     # Test loop: the agent (you) chooses an action
     while True:
-        action = int(input("Next action "))
+        inp = input("Next action ")
+        if not inp:
+            continue
+        action = int(inp)
         if action < 0:
-            ros_env.reset()
+            obs = ros_env.reset()
+            print("Initial state:", obs)
         else:
             obs, reward, done, info = ros_env.step(action)
             print(obs, reward, done, info)
