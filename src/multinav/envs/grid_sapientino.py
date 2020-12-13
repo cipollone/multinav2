@@ -22,8 +22,6 @@
 """Reward shaping wrapper."""
 from pathlib import Path
 
-import gym
-from gym.spaces import Discrete, MultiDiscrete
 from gym_sapientino.core.types import Colors, color2id
 
 from multinav.helpers.gym import RewardShaper
@@ -44,49 +42,6 @@ class GridSapientinoRewardShaper(RewardShaper):
         """Initialize the Sapientino reward shaper."""
         self.value_function_table = value_function_table
         super().__init__(self._value_function_callable, self._mapping_function)
-
-
-class RobotFeatures(gym.Wrapper):
-    """
-    Wrapper for Sapientino with temporal goal.
-
-    This wrappers extracts coordinate x and y from
-    the dictionary space of SapientinoDictSpace,
-    and flattens the automata spaces.
-    """
-
-    def __init__(self, env: gym.Env):
-        """Initialize the wrapper."""
-        super().__init__(env)
-
-        spaces = self.observation_space.spaces  # type: ignore
-        assert len(spaces) == 2
-        robot_space, automata_space = spaces
-        assert isinstance(automata_space, MultiDiscrete)
-        assert isinstance(robot_space, gym.spaces.dict.Dict)
-
-        x_space: Discrete = robot_space.spaces["x"]
-        y_space: Discrete = robot_space.spaces["y"]
-        self.observation_space = MultiDiscrete(
-            [x_space.n, y_space.n, *automata_space.nvec]
-        )
-
-    def _process_state(self, state):
-        """Process the observation."""
-        robot_state, automata_states = state[0], state[1]
-        new_state = (robot_state["x"], robot_state["y"], *automata_states)
-        return new_state
-
-    def step(self, action):
-        """Do a step."""
-        state, reward, done, info = super().step(action)
-        new_state = self._process_state(state)
-        return new_state, reward, done, info
-
-    def reset(self, **_kwargs):
-        """Reset."""
-        state = super().reset(**_kwargs)
-        return self._process_state(state)
 
 
 def generate_grid(
