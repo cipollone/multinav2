@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2020 Roberto Cipollone, Marco Favorito
+#
+# ------------------------------
+#
+# This file is part of multinav.
+#
+# multinav is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# multinav is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with multinav.  If not, see <https://www.gnu.org/licenses/>.
+#
 """This module contains helpers related to OpenAI Gym."""
 import itertools
 import random
@@ -9,7 +30,7 @@ import gym
 import numpy as np
 from graphviz import Digraph
 from gym.envs.toy_text.discrete import DiscreteEnv
-from gym.spaces import Discrete, MultiDiscrete
+from gym.spaces import Box, Discrete, MultiDiscrete
 from gym.wrappers import TimeLimit
 
 State = Any
@@ -159,6 +180,14 @@ def _(space: MultiDiscrete):
     """Iterate over a discrete environment."""
     for i in itertools.product(*map(range, space.nvec)):
         yield i
+
+
+def combine_boxes(*args: Box) -> Box:
+    """Combine a list of gym.Box spaces into one."""
+    assert all(list(space.shape) == [1] for space in args)
+    lows = np.asarray([space.low[0] for space in args])
+    highs = np.asarray([space.high[0] for space in args])
+    return Box(lows, highs)
 
 
 class RewardShaper:
