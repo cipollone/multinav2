@@ -1,5 +1,27 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2020 Roberto Cipollone, Marco Favorito
+#
+# ------------------------------
+#
+# This file is part of multinav.
+#
+# multinav is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# multinav is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with multinav.  If not, see <https://www.gnu.org/licenses/>.
+#
 """Misc helpers."""
 
+import json
 import multiprocessing
 import os
 import random
@@ -179,8 +201,8 @@ def prepare_directories(  # noqa: ignore
     :param env_name: the actual paths are a composition of `output_base` and
         `env_name`.
     :param resuming: if true, the directories are not deleted.
-    :param args: argsparse.Namespace of arguments. If given, this is saved
-        to 'args' file inside the log directory.
+    :param args: dict of arguments/training parameters. If given, this is saved
+         to 'params.json' file inside the log directory.
     :param no_create: do not touch the files; just return the current paths
         (implies resuming).
     :return: two paths, respectively for models and logs.
@@ -235,6 +257,8 @@ def prepare_directories(  # noqa: ignore
 
     # Save arguments
     if args is not None:
-        raise NotImplementedError("Feature still not used.")
+        args_path = os.path.join(log_path, "params.json")
+        with open(args_path, "w") as f:
+            json.dump(args, f, indent=4)
 
     return (model_path, log_path)

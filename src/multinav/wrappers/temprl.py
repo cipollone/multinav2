@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2020 Roberto Cipollone, Marco Favorito
+#
+# ------------------------------
+#
+# This file is part of multinav.
+#
+# multinav is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# multinav is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with multinav.  If not, see <https://www.gnu.org/licenses/>.
+#
 """Helpers related to TempRL wrappers."""
 import numpy as np
 from temprl.wrapper import TemporalGoalWrapper
@@ -22,6 +43,9 @@ class MyTemporalGoalWrapper(TemporalGoalWrapper):
         It consists in stacking horizontally the
         environment frames and all the automata frames.
         """
+        if mode == "human":
+            super().render(mode)
+            return
         assert mode == "rgb_array", "Only rgb_array mode is supported."
         env_frame = super().render(mode, **kwargs)
         automata_frames = [
