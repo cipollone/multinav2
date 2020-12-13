@@ -23,6 +23,7 @@
 from abc import abstractmethod
 
 import gym
+import numpy as np
 from gym.spaces import Box, Discrete, MultiDiscrete
 
 from multinav.helpers.gym import combine_boxes
@@ -50,6 +51,8 @@ class AbstractRobotFeatures(gym.Wrapper):
         self.robot_space, self.automata_space = spaces
         assert isinstance(self.automata_space, MultiDiscrete)
         assert isinstance(self.robot_space, gym.spaces.dict.Dict)
+
+        self.observation_space = self.compute_observation_space()
 
     @abstractmethod
     def compute_observation_space(self) -> gym.Space:
@@ -121,11 +124,13 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
     def _process_state(self, state):
         """Process the observation."""
         robot_state, automata_states = state[0], state[1]
-        new_state = (
-            robot_state["x"],
-            robot_state["y"],
-            robot_state["velocity"],
-            robot_state["angle"],
-            *automata_states,
+        new_state = np.array(
+            [
+                robot_state["x"],
+                robot_state["y"],
+                robot_state["velocity"],
+                robot_state["angle"],
+                *automata_states,
+            ]
         )
         return new_state

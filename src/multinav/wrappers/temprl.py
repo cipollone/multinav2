@@ -43,6 +43,9 @@ class MyTemporalGoalWrapper(TemporalGoalWrapper):
         It consists in stacking horizontally the
         environment frames and all the automata frames.
         """
+        if mode == "human":
+            super().render(mode)
+            return
         assert mode == "rgb_array", "Only rgb_array mode is supported."
         env_frame = super().render(mode, **kwargs)
         automata_frames = [

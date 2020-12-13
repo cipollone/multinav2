@@ -185,8 +185,8 @@ def _(space: MultiDiscrete):
 def combine_boxes(*args: Box) -> Box:
     """Combine a list of gym.Box spaces into one."""
     assert all(list(space.shape) == [1] for space in args)
-    lows = np.asarray([space.low for space in args])
-    highs = np.asarray([space.high for space in args])
+    lows = np.asarray([space.low[0] for space in args])
+    highs = np.asarray([space.high[0] for space in args])
     return Box(lows, highs)
 
 
