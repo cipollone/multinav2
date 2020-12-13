@@ -16,44 +16,75 @@ from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 
 
-# TODO: resume with args
-def train_on_ros():
-    """Train an agent on ROS.
+def train_on_ros(json_args=None):
+    """Train an agent on the ROS environment.
 
-    This function is really experimental. It's just used to produce the first
-    results.
+    :param json_args: the path (str) of json file of arguments.
     """
+    # Defaults
+    learning_params = dict(
+        episode_time_limit=100,
+        save_freq=1000,
+        learning_starts=5000,
+        total_timesteps=2000000,
+        resume_file=None,
+        log_interval=100,  # In #of episodes
+    )
+    # Settings
+    if json_args:
+        with open(json_args) as f:
+            params = json.load(f)
+        learning_params.update(params)
+
     # Init for outputs
-    model_path, log_path = prepare_directories("ros-stage")
+    resuming = bool(learning_params["resume_file"])
+    model_path, log_path = prepare_directories(
+        env_name="ros-stage",
+        resuming=resuming,
+        args=learning_params,
+    )
 
     # Make env
-    env = RosGoalEnv(time_limit=100)
+    env = RosGoalEnv(
+        time_limit=learning_params["episode_time_limit"],
+    )
 
     # Callbacks
     checkpoint_callback = CustomCheckpointCallback(
-        save_path=model_path, save_freq=1000, name_prefix="dqn"
+        save_path=model_path,
+        save_freq=learning_params["save_freq"],
+        name_prefix="dqn",
     )
 
     # Define agent
-    model = DQN(
-        policy=MlpPolicy,
-        env=env,
-        double_q=True,
-        prioritized_replay=True,
-        learning_starts=5000,
-        tensorboard_log=log_path,
-        verbose=1,
-    )
+    if not resuming:
+        model = DQN(
+            policy=MlpPolicy,
+            env=env,
+            double_q=True,
+            learning_starts=learning_params["learning_starts"],
+            prioritized_replay=True,
+            tensorboard_log=log_path,
+            full_tensorboard_log=True,
+            verbose=1,
+        )
+    else:
+        model, _ = checkpoint_callback.load(
+            path=learning_params["resume_file"],
+            env=env,
+        )
+        # NOTE: probably callbacks and global steps need to be set in library
 
     # Behaviour on quit
     QuitWithResources.add(
-        "last_save", lambda: checkpoint_callback.save(
-            step=checkpoint_callback.num_timesteps)
+        "last_save",
+        lambda: checkpoint_callback.save(step=checkpoint_callback.num_timesteps),
     )
 
     # Start
     model.learn(
-        total_timesteps=2000000,
+        total_timesteps=learning_params["total_timesteps"],
+        log_interval=learning_params["log_interval"],
         callback=checkpoint_callback,
     )
 
@@ -81,10 +112,8 @@ class CustomCheckpointCallback(BaseCallback):
 
         # Store
         self._save_freq = save_freq
-        self._counters_file = os.path.join(
-            save_path, os.path.pardir, "counters.json")
-        self._chkpt_format = os.path.join(
-            save_path, name_prefix + "_{step}")
+        self._counters_file = os.path.join(save_path, os.path.pardir, "counters.json")
+        self._chkpt_format = os.path.join(save_path, name_prefix + "_{step}")
         self._chkpt_extension = ".zip"
 
     def _update_counters(self, filepath, step):
@@ -100,6 +129,7 @@ class CustomCheckpointCallback(BaseCallback):
             with open(self._counters_file) as f:
                 counters = json.load(f)
 
+        filepath = os.path.relpath(filepath)
         counters[filepath] = dict(step=step)
 
         # Save
@@ -114,8 +144,7 @@ class CustomCheckpointCallback(BaseCallback):
         """
         filepath = self._chkpt_format.format(step=step)
         self.model.save(filepath)
-        self._update_counters(
-            filepath=filepath + self._chkpt_extension, step=step)
+        self._update_counters(filepath=filepath + self._chkpt_extension, step=step)
 
     def load(self, path, env):
         """Load the weights from a checkpoint.
@@ -125,6 +154,7 @@ class CustomCheckpointCallback(BaseCallback):
         :return: the model and associated timestep.
         """
         # Restore
+        path = os.path.relpath(path)
         model = DQN.load(load_path=path, env=env)
         print("> Loaded:", path)
 
@@ -136,7 +166,7 @@ class CustomCheckpointCallback(BaseCallback):
         return model, step
 
     def _on_step(self):
-        """Authomatic save."""
+        """Automatic save."""
         if self._save_freq is None:
             return
         if self.num_timesteps % self._save_freq == 0:
