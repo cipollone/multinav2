@@ -4,7 +4,7 @@
 
 import argparse
 
-from multinav import training, testing
+from multinav import testing, training
 from multinav.envs.ros_controls import interactive_test
 
 

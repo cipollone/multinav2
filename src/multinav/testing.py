@@ -16,7 +16,6 @@ def test_on_ros(json_args):
         "resume_file" should point to an existing checkpoint. The other
         parameters must be the one used for training.
     """
-
     with open(json_args) as f:
         learning_params = json.load(f)
 
@@ -28,7 +27,7 @@ def test_on_ros(json_args):
         env_name="ros-stage",
         no_create=True,
     )
-    
+
     # Make env
     ros_env = RosGoalEnv(
         env=RosTerminationEnv(
