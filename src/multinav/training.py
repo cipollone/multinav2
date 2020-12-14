@@ -11,7 +11,7 @@ from stable_baselines import DQN
 from stable_baselines.common.callbacks import BaseCallback
 from stable_baselines.deepq.policies import MlpPolicy
 
-from multinav.envs.ros_controls import RosGoalEnv
+from multinav.envs.ros_controls import RosGoalEnv, RosControlsEnv, RosTerminationEnv
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 
@@ -46,7 +46,10 @@ def train_on_ros(json_args=None):
 
     # Make env
     env = RosGoalEnv(
-        time_limit=learning_params["episode_time_limit"],
+        env=RosTerminationEnv(
+            env=RosControlsEnv(),
+            time_limit=learning_params["episode_time_limit"],
+        )
     )
 
     # Callbacks
