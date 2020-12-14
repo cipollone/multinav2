@@ -9,9 +9,10 @@ import os
 
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import BaseCallback
+from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines.deepq.policies import MlpPolicy
 
-from multinav.envs.ros_controls import RosGoalEnv
+from multinav.envs.ros_controls import RosControlsEnv, RosGoalEnv, RosTerminationEnv
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 
@@ -29,6 +30,11 @@ def train_on_ros(json_args=None):
         total_timesteps=2000000,
         resume_file=None,
         log_interval=100,  # In #of episodes
+        exploration_fraction=0.8,
+        exploration_initial_eps=1.0,
+        exploration_final_eps=0.02,
+        notmoving_limit=12,
+        gamma=0.99,
     )
     # Settings
     if json_args:
@@ -46,7 +52,20 @@ def train_on_ros(json_args=None):
 
     # Make env
     env = RosGoalEnv(
-        time_limit=learning_params["episode_time_limit"],
+        env=RosTerminationEnv(
+            env=RosControlsEnv(),
+            time_limit=learning_params["episode_time_limit"],
+            notmoving_limit=learning_params["notmoving_limit"],
+        )
+    )
+    # Normalize the features
+    env = DummyVecEnv([lambda: env])
+    env = VecNormalize(
+        venv=env,
+        norm_obs=True,
+        norm_reward=False,
+        gamma=learning_params["gamma"],
+        training=True,
     )
 
     # Callbacks
@@ -61,9 +80,13 @@ def train_on_ros(json_args=None):
         model = DQN(
             policy=MlpPolicy,
             env=env,
+            gamma=learning_params["gamma"],
             double_q=True,
             learning_starts=learning_params["learning_starts"],
             prioritized_replay=True,
+            exploration_fraction=learning_params["exploration_fraction"],
+            exploration_final_eps=learning_params["exploration_final_eps"],
+            exploration_initial_eps=learning_params["exploration_initial_eps"],
             tensorboard_log=log_path,
             full_tensorboard_log=True,
             verbose=1,

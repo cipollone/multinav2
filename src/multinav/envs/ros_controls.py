@@ -159,30 +159,73 @@ class RosControlsEnv(gym.Env):
 
         return (observation, 0.0, False, {})
 
+    @staticmethod
+    def linear_velociy_in_obs(observation):
+        """Return the linear velocity from an observation of this env."""
+        return observation[3]
 
-class RosGoalEnv(gym.Wrapper):
-    """Goals and personalizations on the ROS environment.
 
-    Applies a reward function and end-of-episode criterion.
-    This is currently used for development.
-    """
+class RosTerminationEnv(gym.Wrapper):
+    """Assign a criterion for episode termination."""
 
-    def __init__(self, time_limit):
+    def __init__(self, env, time_limit, notmoving_limit=12):
         """Initialize.
 
+        :param env: internal environment.
         :param time_limit: maximum number of timesteps per episode.
+        :param notmoving_limit: maximum number of timesteps that the agent
+            can stand still.
         """
-        # Internal environment (transition function only)
-        env = RosControlsEnv()
-        gym.Wrapper.__init__(self, env)
+        gym.Wrapper.__init__(self, env=env)
 
         # Params
         self._time_limit = time_limit
+        self._not_moving_limit = notmoving_limit
+        self._not_moving_time = 0
+
+    def reset(self):
+        """Episode reset."""
+        self._time = 0
+        self._not_moving_time = 0
+        return self.env.reset()
+
+    def step(self, action):
+        """Execute one step."""
+        # Run the internal environment
+        observation, reward, done, info = self.env.step(action)
+
+        # Compute
+        self._time += 1
+        done = self.is_done(observation)
+        info.update({"time": self._time})
+
+        return observation, reward, done, info
+
+    def is_done(self, observation):
+        """Return whether the episode should stop."""
+        # Terminate if over time
+        time_limited = self._time >= self._time_limit
+
+        # Terminate if not moving for too long
+        linear_vel = RosControlsEnv.linear_velociy_in_obs(observation)
+        if linear_vel < 0.05:
+            self._not_moving_time += 1
+        else:
+            self._not_moving_time = 0
+        notmoving_limited = self._not_moving_time >= self._not_moving_limit
+
+        return time_limited or notmoving_limited
+
+
+class RosGoalEnv(gym.Wrapper):
+    """Assign a goal to the ROS environment.
+
+    Choose a reward for the ROS experiment.
+    """
 
     def reset(self):
         """Episode reset."""
         # Params
-        self._time = 0
         self._rewarded = False
 
         # Env
@@ -194,10 +237,7 @@ class RosGoalEnv(gym.Wrapper):
         observation, reward, done, info = self.env.step(action)
 
         # Compute
-        self._time += 1
         reward = self.reward(observation, reward)
-        done = self.is_done(observation)
-        info.update({"time": self._time})
 
         return observation, reward, done, info
 
@@ -205,16 +245,11 @@ class RosGoalEnv(gym.Wrapper):
         """Compute the current reward."""
         # Check whether the robot is in a square (exprerimenting)
         x, y = observation[:2]
-        if 5 < x < 6 and 0 < y < 1 and not self._rewarded:
+        if 10 < x < 11 and 0 < y < 1 and not self._rewarded:
             self._rewarded = True
             return 1.0
         else:
             return 0.0
-
-    def is_done(self, observation):
-        """Return whether the episode should stop."""
-        # TODO: maybe something more efficient? Reach the wall or something similar
-        return self._time >= self._time_limit
 
 
 def interactive_test():
@@ -223,7 +258,7 @@ def interactive_test():
     #   Some parts use ROS time which continues to go on as we wait for input.
 
     # Instantiate
-    ros_env = RosGoalEnv(time_limit=50)
+    ros_env = RosGoalEnv(env=RosTerminationEnv(env=RosControlsEnv(), time_limit=50))
 
     obs = ros_env.reset()
     print("Initial state:", obs)
