@@ -2,6 +2,7 @@
 from typing import Tuple
 
 import gym
+import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.layers as tf_layers
 from gym.spaces import Box, Discrete
@@ -96,8 +97,8 @@ class ModularPolicy(DQNPolicy):
                     q_action_out, num_outputs=self.n_actions, activation_fn=None
                 )
                 final_action_scores = tf.reshape(
-                    tf.matmul(automaton_onehot, action_scores),
-                    shape=(-1, automaton_space.n),
+                    tf.reduce_sum(tf.matmul(automaton_onehot, action_scores), axis=1),
+                    shape=(-1, self.n_actions),
                 )
 
             q_out = final_action_scores
@@ -106,7 +107,20 @@ class ModularPolicy(DQNPolicy):
         self._setup_init()
 
     def step(self, obs, state=None, mask=None, deterministic=True):
-        pass
+        q_values, actions_proba = self.sess.run(
+            [self.q_values, self.policy_proba], {self.obs_ph: obs}
+        )
+        if deterministic:
+            actions = np.argmax(q_values, axis=1)
+        else:
+            # Unefficient sampling (see original implementation)
+            actions = np.zeros((len(obs),), dtype=np.int64)
+            for action_idx in range(len(obs)):
+                actions[action_idx] = np.random.choice(
+                    self.n_actions, p=actions_proba[action_idx]
+                )
+
+        return actions, q_values, None
 
     def proba_step(self, obs, state=None, mask=None):
-        pass
+        return self.sess.run(self.policy_proba, {self.obs_ph: obs})
