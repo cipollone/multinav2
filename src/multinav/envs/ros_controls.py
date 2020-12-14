@@ -167,17 +167,19 @@ class RosControlsEnv(gym.Env):
 class RosTerminationEnv(gym.Wrapper):
     """Assign a criterion for episode termination."""
 
-    def __init__(self, env, time_limit):
+    def __init__(self, env, time_limit, notmoving_limit=12):
         """Initialize.
 
         :param env: internal environment.
         :param time_limit: maximum number of timesteps per episode.
+        :param notmoving_limit: maximum number of timesteps that the agent
+            can stand still.
         """
         gym.Wrapper.__init__(self, env=env)
 
         # Params
         self._time_limit = time_limit
-        self._not_moving_limit = 15
+        self._not_moving_limit = notmoving_limit
         self._not_moving_time = 0
 
     def reset(self):
