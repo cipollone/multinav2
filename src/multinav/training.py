@@ -92,7 +92,7 @@ def train_on_ros(json_args=None):
             exploration_final_eps=learning_params["exploration_final_eps"],
             exploration_initial_eps=learning_params["exploration_initial_eps"],
             tensorboard_log=log_path,
-            full_tensorboard_log=True,
+            full_tensorboard_log=False,
             verbose=1,
         )
     else:
