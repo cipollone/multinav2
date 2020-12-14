@@ -161,6 +161,7 @@ class RosControlsEnv(gym.Env):
 
     @staticmethod
     def linear_velociy_in_obs(observation):
+        """Return the linear velocity from an observation of this env."""
         return observation[3]
 
 

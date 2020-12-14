@@ -12,7 +12,7 @@ from stable_baselines.common.callbacks import BaseCallback
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines.deepq.policies import MlpPolicy
 
-from multinav.envs.ros_controls import RosGoalEnv, RosControlsEnv, RosTerminationEnv
+from multinav.envs.ros_controls import RosControlsEnv, RosGoalEnv, RosTerminationEnv
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 
