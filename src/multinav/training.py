@@ -35,6 +35,7 @@ def train_on_ros(json_args=None):
         exploration_final_eps=0.02,
         notmoving_limit=12,
         gamma=0.99,
+        learning_rate=5e-4,
     )
     # Settings
     if json_args:
@@ -81,6 +82,7 @@ def train_on_ros(json_args=None):
             policy=MlpPolicy,
             env=env,
             gamma=learning_params["gamma"],
+            learning_rate=learning_params["learning_rate"],
             double_q=True,
             learning_starts=learning_params["learning_starts"],
             prioritized_replay=True,
@@ -92,11 +94,12 @@ def train_on_ros(json_args=None):
             verbose=1,
         )
     else:
-        model, _ = checkpoint_callback.load(
+        model, counters = checkpoint_callback.load(
             path=learning_params["resume_file"],
             env=env,
         )
-        # NOTE: probably callbacks and global steps need to be set in library
+        model.tensorboard_log = log_path
+        model.num_timesteps = counters["step"]
 
     # Behaviour on quit
     QuitWithResources.add(
@@ -109,6 +112,7 @@ def train_on_ros(json_args=None):
         total_timesteps=learning_params["total_timesteps"],
         log_interval=learning_params["log_interval"],
         callback=checkpoint_callback,
+        reset_num_timesteps=not resuming,
     )
 
     # Save weights
