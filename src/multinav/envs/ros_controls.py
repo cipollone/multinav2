@@ -159,6 +159,10 @@ class RosControlsEnv(gym.Env):
 
         return (observation, 0.0, False, {})
 
+    @staticmethod
+    def linear_velociy_in_obs(observation):
+        return observation[3]
+
 
 class RosTerminationEnv(gym.Wrapper):
     """Assign a criterion for episode termination."""
@@ -173,12 +177,15 @@ class RosTerminationEnv(gym.Wrapper):
 
         # Params
         self._time_limit = time_limit
+        self._not_moving_limit = 15
+        self._not_moving_time = 0
 
     def reset(self):
         """Episode reset."""
         self._time = 0
+        self._not_moving_time = 0
         return self.env.reset()
-    
+
     def step(self, action):
         """Execute one step."""
         # Run the internal environment
@@ -190,11 +197,21 @@ class RosTerminationEnv(gym.Wrapper):
         info.update({"time": self._time})
 
         return observation, reward, done, info
-    
+
     def is_done(self, observation):
         """Return whether the episode should stop."""
-        # TODO: maybe something more efficient? Reach the wall or something similar
-        return self._time >= self._time_limit
+        # Terminate if over time
+        time_limited = self._time >= self._time_limit
+
+        # Terminate if not moving for too long
+        linear_vel = RosControlsEnv.linear_velociy_in_obs(observation)
+        if linear_vel < 0.05:
+            self._not_moving_time += 1
+        else:
+            self._not_moving_time = 0
+        notmoving_limited = self._not_moving_time >= self._not_moving_limit
+
+        return time_limited or notmoving_limited
 
 
 class RosGoalEnv(gym.Wrapper):
@@ -225,7 +242,7 @@ class RosGoalEnv(gym.Wrapper):
         """Compute the current reward."""
         # Check whether the robot is in a square (exprerimenting)
         x, y = observation[:2]
-        if 5 < x < 6 and 0 < y < 1 and not self._rewarded:
+        if 10 < x < 11 and 0 < y < 1 and not self._rewarded:
             self._rewarded = True
             return 1.0
         else:
@@ -238,8 +255,7 @@ def interactive_test():
     #   Some parts use ROS time which continues to go on as we wait for input.
 
     # Instantiate
-    ros_env = RosGoalEnv(
-        env=RosTerminationEnv(env=RosControlsEnv(), time_limit=50))
+    ros_env = RosGoalEnv(env=RosTerminationEnv(env=RosControlsEnv(), time_limit=50))
 
     obs = ros_env.reset()
     print("Initial state:", obs)
