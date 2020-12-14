@@ -11,7 +11,7 @@ import pickle
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import BaseCallback
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
-from stable_baselines.deepq.policies import MlpPolicy
+from stable_baselines.deepq.policies import LnMlpPolicy
 
 from multinav.envs.ros_controls import RosControlsEnv, RosGoalEnv, RosTerminationEnv
 from multinav.helpers.general import QuitWithResources
@@ -81,7 +81,7 @@ def train_on_ros(json_args=None):
     # Define agent
     if not resuming:
         model = DQN(
-            policy=MlpPolicy,
+            policy=LnMlpPolicy,
             env=norm_env,
             gamma=learning_params["gamma"],
             learning_rate=learning_params["learning_rate"],
