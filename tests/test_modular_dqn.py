@@ -58,7 +58,7 @@ def test_dqn():
     env = gym.make("MountainCar-v0")
     env = wrapper(env)
     model = DQN(ModularPolicy, env, verbose=1)
-    model.learn(total_timesteps=30000)
+    model.learn(total_timesteps=100000)
 
     env = MyStatsRecorder(env)
     rollout(env, nb_episodes=10, policy=lambda env, state: model.predict(state)[0])

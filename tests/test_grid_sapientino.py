@@ -44,7 +44,7 @@ def test_grid_sapientino_rb_q_learning(disable_debug_logging):
         reward_duplicate_beep=0.0,
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
-    tg = GridSapientinoRB(nb_colors).make_sapientino_goal()
+    tg = GridSapientinoRB(nb_colors).make_sapientino_goal(reward=10.0)
     env = GridRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
     env = TimeLimit(env, max_episode_steps=25)
 
