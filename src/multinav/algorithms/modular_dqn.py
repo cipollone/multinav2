@@ -6,7 +6,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.layers as tf_layers
 from gym.spaces import Box, Discrete
-from stable_baselines.deepq.policies import DQNPolicy
 from gym.spaces import Tuple as GymTuple
 from stable_baselines.deepq.policies import DQNPolicy, FeedForwardPolicy
 
@@ -136,7 +135,6 @@ class ModularPolicy(DQNPolicy):
 
     def proba_step(self, obs, state=None, mask=None):
         return self.sess.run(self.policy_proba, {self.obs_ph: obs})
-
 
 
 # TODO: roberto-my try. Still to run and test in training
