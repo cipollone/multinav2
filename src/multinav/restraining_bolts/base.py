@@ -75,13 +75,13 @@ class AbstractRB(ABC):
         f = f.format(regexp)
         return f
 
-    def make_sapientino_goal(self) -> TemporalGoal:
+    def make_sapientino_goal(self, reward=1.0) -> TemporalGoal:
         """Make Sapientino goal."""
         s = self.make_goal()
         logging.info(f"Computing {s}")
         return TemporalGoal(
             formula=LDLfParser()(s),
-            reward=10.0,
+            reward=reward,
             labels=set(self.get_labels()),
             reward_shaping=False,
             zero_terminal_state=False,

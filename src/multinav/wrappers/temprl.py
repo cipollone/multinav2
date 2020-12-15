@@ -20,7 +20,11 @@
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Helpers related to TempRL wrappers."""
+import gym
 import numpy as np
+from gym import ObservationWrapper
+from gym.spaces import Box
+from gym.spaces import Tuple as GymTuple
 from temprl.wrapper import TemporalGoalWrapper
 
 from multinav.helpers.notebooks import automaton_to_rgb
