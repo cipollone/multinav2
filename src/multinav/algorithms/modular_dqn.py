@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.layers as tf_layers
 from gym.spaces import Box, Discrete
-from stable_baselines.deepq.policies import FeedForwardPolicy
+from stable_baselines.deepq.policies import DQNPolicy, FeedForwardPolicy
 
 
 def split_agent_and_automata(ob_space: Box) -> Tuple[gym.Space, Discrete]:

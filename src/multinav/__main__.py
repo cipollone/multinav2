@@ -20,7 +20,7 @@ def main():
     train_parser.add_argument(
         "-e",
         "--env",
-        choices=["ros"],
+        choices=["ros", "sapientino-cont"],
         help="Select the environment to train the agent on.",
     )
     train_parser.add_argument(
@@ -59,8 +59,7 @@ def main():
         interactive_test()
 
     elif args.op == "train":
-        if args.env == "ros":
-            training.train_on_ros(json_args=args.params)
+        training.train(env=args.env, json_args=args.params)
 
     elif args.op == "test":
         if args.env == "ros":

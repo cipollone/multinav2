@@ -4,26 +4,37 @@ This file is likely to change. I just needed an outer module where to put the
 general logic.
 """
 
+from gym.wrappers import TimeLimit
 import json
 import os
+from pathlib import Path
 import pickle
 
+from gym_sapientino import SapientinoDictSpace
+from gym_sapientino.core.configurations import SapientinoConfiguration, SapientinoAgentConfiguration
+
 from stable_baselines import DQN
-from stable_baselines.common.callbacks import BaseCallback
+from stable_baselines.common.callbacks import BaseCallback, CallbackList
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines.deepq.policies import LnMlpPolicy
 
+from multinav.algorithms.modular_dqn import LnMlpModularPolicy
 from multinav.envs.ros_controls import RosControlsEnv, RosGoalEnv, RosTerminationEnv
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
+from multinav.restraining_bolts.rb_grid_sapientino import GridSapientinoRB
+from multinav.wrappers.sapientino import GridRobotFeatures, ContinuousRobotFeatures
+from multinav.wrappers.temprl import MyTemporalGoalWrapper
+from multinav.wrappers.utils import SingleAgentWrapper
 
 
-def train_on_ros(json_args=None):
+def train(env, json_args=None):
     """Train an agent on the ROS environment.
 
+    :param env: the environment id {"ros", "sapientino-cont"}
     :param json_args: the path (str) of json file of arguments.
     """
-    # Defaults
+    # Defaults. Please use json_args. These might be good just for ros
     learning_params = dict(
         episode_time_limit=100,
         save_freq=1000,
@@ -53,36 +64,39 @@ def train_on_ros(json_args=None):
     )
 
     # Make env
-    ros_env = RosGoalEnv(
-        env=RosTerminationEnv(
-            env=RosControlsEnv(),
-            time_limit=learning_params["episode_time_limit"],
-            notmoving_limit=learning_params["notmoving_limit"],
-        )
-    )
+    if env == "ros":
+        input_env = make_ros_env(learning_params)
+    elif env == "sapientino-cont":
+        input_env = make_sapientino_cont_env(learning_params)
+    else:
+        raise RuntimeError("not a valid environment name")
+
     # Normalize the features
-    venv = DummyVecEnv([lambda: ros_env])
-    norm_env = VecNormalize(
-        venv=venv,
-        norm_obs=True,
-        norm_reward=False,
-        gamma=learning_params["gamma"],
-        training=True,
-    )
+    # TODO: reenable, but before temporal goal!
+    #venv = DummyVecEnv([lambda: input_env])
+    #norm_env = VecNormalize(
+    #    venv=venv,
+    #    norm_obs=True,
+    #    norm_reward=False,
+    #    gamma=learning_params["gamma"],
+    #    training=True,
+    #)
 
     # Callbacks
     checkpoint_callback = CustomCheckpointCallback(
         save_path=model_path,
-        normalizer=norm_env,
+        normalizer=None,   # TODO
         save_freq=learning_params["save_freq"],
         name_prefix="dqn",
     )
+    renderer_callback = RendererCallback()
+    all_callbacks = CallbackList([renderer_callback, checkpoint_callback])
 
     # Define agent
     if not resuming:
         model = DQN(
-            policy=LnMlpPolicy,
-            env=norm_env,
+            policy=LnMlpPolicy, # TODO: use the modified model
+            env=input_env,      # TODO
             gamma=learning_params["gamma"],
             learning_rate=learning_params["learning_rate"],
             double_q=True,
@@ -100,9 +114,10 @@ def train_on_ros(json_args=None):
         model, norm_env, counters = checkpoint_callback.load(
             path=learning_params["resume_file"],
         )
+        # TODO
         # Reapply normalizer to env
-        norm_env.set_venv(venv)
-        model.set_env(norm_env)
+        # norm_env.set_venv(venv)
+        # model.set_env(norm_env)
         # Restore counters
         model.tensorboard_log = log_path
         model.num_timesteps = counters["step"]
@@ -117,12 +132,44 @@ def train_on_ros(json_args=None):
     model.learn(
         total_timesteps=learning_params["total_timesteps"],
         log_interval=learning_params["log_interval"],
-        callback=checkpoint_callback,
+        callback=all_callbacks,
         reset_num_timesteps=not resuming,
     )
 
     # Save weights
     model.save(os.path.join(model_path, "model"))
+
+
+def make_ros_env(learning_params):
+    """Return the ros environment."""
+    input_env = RosGoalEnv(
+        env=RosTerminationEnv(
+            env=RosControlsEnv(),
+            time_limit=learning_params["episode_time_limit"],
+            notmoving_limit=learning_params["notmoving_limit"],
+        )
+    )
+    return input_env
+
+
+def make_sapientino_cont_env(learning_params):
+    """Return sapientino continuous state environment."""
+    nb_colors = 3
+    agent_configuration = SapientinoAgentConfiguration(continuous=True)
+    configuration = SapientinoConfiguration(
+        [agent_configuration],
+        path_to_map=Path("small-sapientino-map.txt"),
+        reward_per_step=-0.01,
+        reward_outside_grid=0.0,
+        reward_duplicate_beep=0.0,
+    )
+    env = SingleAgentWrapper(SapientinoDictSpace(configuration))
+    tg = GridSapientinoRB(nb_colors).make_sapientino_goal()
+    env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
+    env = TimeLimit(env, max_episode_steps=learning_params["episode_time_limit"])
+    print("Temporal goal:", tg._formula)
+
+    return env
 
 
 class CustomCheckpointCallback(BaseCallback):
@@ -222,3 +269,11 @@ class CustomCheckpointCallback(BaseCallback):
             return
         if self.num_timesteps % self._save_freq == 0:
             self.save(step=self.num_timesteps)
+
+
+class RendererCallback(BaseCallback):
+    """Just render at each frame."""
+
+    def _on_step(self):
+        """Do it."""
+        self.training_env.render()
