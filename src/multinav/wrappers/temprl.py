@@ -21,8 +21,9 @@
 #
 """Helpers related to TempRL wrappers."""
 import numpy as np
-from gym.spaces import Box, Tuple as GymTuple
 from gym import ObservationWrapper
+from gym.spaces import Box
+from gym.spaces import Tuple as GymTuple
 from temprl.wrapper import TemporalGoalWrapper
 
 from multinav.helpers.notebooks import automaton_to_rgb

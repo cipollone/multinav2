@@ -84,14 +84,14 @@ def train(env_name, json_args=None):
 
     # Normalize the features
     # TODO: reenable, but before temporal goal!
-    # venv = DummyVecEnv([lambda: input_env])
-    # env = VecNormalize(
-    #    venv=venv,
-    #    norm_obs=True,
-    #    norm_reward=False,
-    #    gamma=learning_params["gamma"],
-    #    training=True,
-    # )
+    # venv = DummyVecEnv([lambda: input_env])   # noqa: E800  (becaue there's
+    # env = VecNormalize(                       # noqa: E800   the todo)
+    #    venv=venv,                             # noqa: E800
+    #    norm_obs=True,                         # noqa: E800
+    #    norm_reward=False,                     # noqa: E800
+    #    gamma=learning_params["gamma"],        # noqa: E800
+    #    training=True,                         # noqa: E800
+    # )                                         # noqa: E800
     env = input_env
 
     # Callbacks
@@ -107,7 +107,7 @@ def train(env_name, json_args=None):
     # Define agent
     if not resuming:
         model = DQN(
-            policy=LnMlpPolicy,  # TODO: use the modified model
+            policy=LnMlpPolicy,  # TODO: use the rb model
             env=env,
             gamma=learning_params["gamma"],
             learning_rate=learning_params["learning_rate"],
@@ -128,8 +128,8 @@ def train(env_name, json_args=None):
         )
         # TODO
         # Reapply normalizer to env
-        # norm_env.set_venv(venv)
-        # model.set_env(norm_env)
+        # norm_env.set_venv(venv)  # noqa: E800  (becaue there's the todo)
+        # model.set_env(norm_env)  # noqa: E800
         # Restore counters
         model.tensorboard_log = log_path
         model.num_timesteps = counters["step"]
@@ -217,6 +217,8 @@ class CustomCheckpointCallback(BaseCallback):
     stable_baselines learning loop.
     If you don't plan to use it as callback, assign the model to self.model.
     """
+
+    # TODO: referring specifically to the normalizer it's ugly
 
     def __init__(self, save_path, normalizer, save_freq=None, name_prefix="model"):
         """Initialize.
