@@ -161,7 +161,7 @@ def make_sapientino_cont_env(learning_params):
     agent_configuration = SapientinoAgentConfiguration(continuous=True)
     configuration = SapientinoConfiguration(
         [agent_configuration],
-        path_to_map=Path("small-sapientino-map.txt"),
+        path_to_map=Path("inputs/sapientino-map.txt"),
         reward_per_step=-0.01,
         reward_outside_grid=0.0,
         reward_duplicate_beep=0.0,
