@@ -59,7 +59,7 @@ def main():
         interactive_test()
 
     elif args.op == "train":
-        training.train(env=args.env, json_args=args.params)
+        training.train(env_name=args.env, json_args=args.params)
 
     elif args.op == "test":
         if args.env == "ros":

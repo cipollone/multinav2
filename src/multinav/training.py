@@ -11,7 +11,10 @@ from pathlib import Path
 import pickle
 
 from gym_sapientino import SapientinoDictSpace
-from gym_sapientino.core.configurations import SapientinoConfiguration, SapientinoAgentConfiguration
+from gym_sapientino.core.configurations import (
+    SapientinoConfiguration,
+    SapientinoAgentConfiguration,
+)
 
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import BaseCallback, CallbackList
@@ -28,13 +31,14 @@ from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
 
-def train(env, json_args=None):
+def train(env_name, json_args=None):
     """Train an agent on the ROS environment.
 
-    :param env: the environment id {"ros", "sapientino-cont"}
+    :param env_name: the environment id {"ros", "sapientino-cont"}
     :param json_args: the path (str) of json file of arguments.
     """
-    # Defaults. Please use json_args. These might be good just for ros
+    # Defaults. Please use json_args, this dict just show the supported fields
+    #  but they must be tuned
     learning_params = dict(
         episode_time_limit=100,
         save_freq=1000,
@@ -45,12 +49,15 @@ def train(env, json_args=None):
         exploration_fraction=0.8,
         exploration_initial_eps=1.0,
         exploration_final_eps=0.02,
-        notmoving_limit=12,
+        notmoving_limit=12,  # Ros only
         gamma=0.99,
         learning_rate=5e-4,
-        angular_speed=10.0,      # Sapientino only here and below
-        max_velocity=20.0,
+        acceleration=0.02,  # Sapientino only here and below
+        angular_acceleration=20.0,
+        max_velocity=0.20,
         min_velocity=0.0,
+        max_angular_vel=40,
+        initial_position=[1, 1],
     )
     # Settings
     if json_args:
@@ -67,28 +74,29 @@ def train(env, json_args=None):
     )
 
     # Make env
-    if env == "ros":
+    if env_name == "ros":
         input_env = make_ros_env(learning_params)
-    elif env == "sapientino-cont":
+    elif env_name == "sapientino-cont":
         input_env = make_sapientino_cont_env(learning_params)
     else:
         raise RuntimeError("not a valid environment name")
 
     # Normalize the features
     # TODO: reenable, but before temporal goal!
-    #venv = DummyVecEnv([lambda: input_env])
-    #norm_env = VecNormalize(
+    # venv = DummyVecEnv([lambda: input_env])
+    # env = VecNormalize(
     #    venv=venv,
     #    norm_obs=True,
     #    norm_reward=False,
     #    gamma=learning_params["gamma"],
     #    training=True,
-    #)
+    # )
+    env = input_env
 
     # Callbacks
     checkpoint_callback = CustomCheckpointCallback(
         save_path=model_path,
-        normalizer=None,   # TODO
+        normalizer=None,  # TODO: readd normalizer?
         save_freq=learning_params["save_freq"],
         name_prefix="dqn",
     )
@@ -98,8 +106,8 @@ def train(env, json_args=None):
     # Define agent
     if not resuming:
         model = DQN(
-            policy=LnMlpPolicy, # TODO: use the modified model
-            env=input_env,      # TODO
+            policy=LnMlpPolicy,  # TODO: use the modified model
+            env=env,
             gamma=learning_params["gamma"],
             learning_rate=learning_params["learning_rate"],
             double_q=True,
@@ -158,16 +166,21 @@ def make_ros_env(learning_params):
 def make_sapientino_cont_env(learning_params):
     """Return sapientino continuous state environment."""
     nb_colors = 3
-    agent_configuration = SapientinoAgentConfiguration(continuous=True)
+    agent_configuration = SapientinoAgentConfiguration(
+        continuous=True,
+        initial_position=learning_params["initial_position"],
+    )
     configuration = SapientinoConfiguration(
         [agent_configuration],
         path_to_map=Path("inputs/sapientino-map.txt"),
         reward_per_step=-0.01,
         reward_outside_grid=0.0,
         reward_duplicate_beep=0.0,
-        angular_speed=learning_params["angular_speed"],
+        acceleration=learning_params["acceleration"],
+        angular_acceleration=learning_params["angular_acceleration"],
         max_velocity=learning_params["max_velocity"],
         min_velocity=learning_params["min_velocity"],
+        max_angular_vel=learning_params["angular_acceleration"],
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
     tg = GridSapientinoRB(nb_colors).make_sapientino_goal()
