@@ -62,8 +62,8 @@ def test_modular_dqn_mountaincar():
     MAX_EPISODE_STEPS = 200.0
     env = gym.make("MountainCar-v0")
     env = wrapper(env)
-    model = DQN(ModularPolicy, env, verbose=1, exploration_final_eps=0.1)
-    model.learn(total_timesteps=30000)
+    model = DQN(ModularPolicy, env, verbose=1)
+    model.learn(total_timesteps=50000)
 
     env = MyStatsRecorder(env)
     rollout(env, nb_episodes=10, policy=lambda env, state: model.predict(state)[0])
