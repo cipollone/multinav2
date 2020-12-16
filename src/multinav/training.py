@@ -4,31 +4,32 @@ This file is likely to change. I just needed an outer module where to put the
 general logic.
 """
 
-from gym.wrappers import TimeLimit
 import json
 import os
-from pathlib import Path
 import pickle
+from pathlib import Path
 
+from flloat.semantics import PLInterpretation
+from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core.configurations import (
-    SapientinoConfiguration,
     SapientinoAgentConfiguration,
+    SapientinoConfiguration,
 )
-
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import BaseCallback, CallbackList
-from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines.deepq.policies import LnMlpPolicy
 
-from multinav.algorithms.modular_dqn import LnMlpModularPolicy
 from multinav.envs.ros_controls import RosControlsEnv, RosGoalEnv, RosTerminationEnv
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
-from multinav.restraining_bolts.rb_grid_sapientino import GridSapientinoRB
-from multinav.wrappers.sapientino import GridRobotFeatures, ContinuousRobotFeatures
+from multinav.restraining_bolts.automata import make_sapientino_goal_with_automata
+from multinav.wrappers.sapientino import ContinuousRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
+
+# TODO: move features extraction in a different module
+# TODO: move callbacks in a different module
 
 
 def train(env_name, json_args=None):
@@ -68,7 +69,7 @@ def train(env_name, json_args=None):
     # Init for outputs
     resuming = bool(learning_params["resume_file"])
     model_path, log_path = prepare_directories(
-        env_name="ros-stage",
+        env_name=env_name,
         resuming=resuming,
         args=learning_params,
     )
@@ -165,11 +166,12 @@ def make_ros_env(learning_params):
 
 def make_sapientino_cont_env(learning_params):
     """Return sapientino continuous state environment."""
-    nb_colors = 3
+    # Define the robot
     agent_configuration = SapientinoAgentConfiguration(
         continuous=True,
         initial_position=learning_params["initial_position"],
     )
+    # Define the environment
     configuration = SapientinoConfiguration(
         [agent_configuration],
         path_to_map=Path("inputs/sapientino-map.txt"),
@@ -183,7 +185,23 @@ def make_sapientino_cont_env(learning_params):
         max_angular_vel=learning_params["angular_acceleration"],
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
-    tg = GridSapientinoRB(nb_colors).make_sapientino_goal()
+
+    # Define the fluent extractor
+    colors = ["red", "green", "blue"]
+
+    def extract_sapientino_fluents(obs, action):
+        """Extract Sapientino fluents."""
+        is_beep = obs.get("beep") > 0
+        color_id = obs.get("color")
+        if is_beep and 0 <= color_id - 1 < len(colors):
+            color = colors[color_id - 1]
+            fluents = {color} if color in colors else set()
+        else:
+            fluents = set()
+        return PLInterpretation(fluents)
+
+    # Define the temporal goal
+    tg = make_sapientino_goal_with_automata(colors, extract_sapientino_fluents)
     env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
     env = TimeLimit(env, max_episode_steps=learning_params["episode_time_limit"])
     print("Temporal goal:", tg._formula)
