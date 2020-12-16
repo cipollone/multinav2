@@ -86,7 +86,7 @@ class TestSapientino4ColorsSquare:
         )
         env = SingleAgentWrapper(SapientinoDictSpace(configuration))
         tg = make_sapientino_goal_with_automata(
-            self.COLORS, self.extract_sapientino_fluents, reward=10.0
+            self.COLORS, self.extract_sapientino_fluents, reward=1.0
         )
         env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
         print(f"Observation space: {env.observation_space}")
