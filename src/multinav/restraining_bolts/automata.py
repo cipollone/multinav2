@@ -34,6 +34,7 @@ from temprl.wrapper import TemporalGoal
 def _make_automaton(colors: Sequence[str]) -> DFA:
     """Make the automaton from a sequence of colors."""
     alphabet = set(map(PLInterpretation, powerset(set(colors))))
+    false_ = PLInterpretation(set())
 
     nb_states = len(colors) + 2
     initial_state = 0
@@ -46,9 +47,10 @@ def _make_automaton(colors: Sequence[str]) -> DFA:
         next_state = current_state + 1
         for symbol in alphabet:
             if c in symbol.true_propositions:
-                transitions.setdefault(current_state, {})[symbol] = sink
-            else:
                 transitions.setdefault(current_state, {})[symbol] = next_state
+            else:
+                transitions.setdefault(current_state, {})[symbol] = sink
+            transitions.setdefault(current_state, {})[false_] = current_state
         current_state = next_state
         states.add(current_state)
 

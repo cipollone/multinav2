@@ -52,7 +52,7 @@ class TestSapientino4ColorsSquare:
      ry |
         |"""
 
-    COLORS = ["red", "green", "blue", "yellow"]
+    COLORS = ["red", "green"]  # "blue", "yellow"]
 
     @pytest.fixture(autouse=True)
     def _disable_debug_logging(self, disable_debug_logging):
@@ -63,8 +63,8 @@ class TestSapientino4ColorsSquare:
         """Extract Sapientino fluents."""
         is_beep = obs.get("beep") > 0
         color_id = obs.get("color")
-        if is_beep and color_id > 0:
-            color = cls.COLORS[color_id]
+        if is_beep and 0 <= color_id - 1 < len(cls.COLORS):
+            color = cls.COLORS[color_id - 1]
             fluents = {color} if color in cls.COLORS else set()
         else:
             fluents = set()
@@ -86,7 +86,7 @@ class TestSapientino4ColorsSquare:
         )
         env = SingleAgentWrapper(SapientinoDictSpace(configuration))
         tg = make_sapientino_goal_with_automata(
-            self.COLORS, self.extract_sapientino_fluents
+            self.COLORS, self.extract_sapientino_fluents, reward=10.0
         )
         env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
         print(f"Observation space: {env.observation_space}")
