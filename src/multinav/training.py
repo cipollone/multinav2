@@ -48,6 +48,9 @@ def train(env, json_args=None):
         notmoving_limit=12,
         gamma=0.99,
         learning_rate=5e-4,
+        angular_speed=10.0,      # Sapientino only here and below
+        max_velocity=20.0,
+        min_velocity=0.0,
     )
     # Settings
     if json_args:
@@ -162,6 +165,9 @@ def make_sapientino_cont_env(learning_params):
         reward_per_step=-0.01,
         reward_outside_grid=0.0,
         reward_duplicate_beep=0.0,
+        angular_speed=learning_params["angular_speed"],
+        max_velocity=learning_params["max_velocity"],
+        min_velocity=learning_params["min_velocity"],
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
     tg = GridSapientinoRB(nb_colors).make_sapientino_goal()
