@@ -99,7 +99,7 @@ def _add_channel(frame: np.ndarray):
 class JoinObservationWrapper(ObservationWrapper):
     """Join an env with single temporal goal to a single observation."""
 
-    def __init__(self, env: gym.Env):
+    def __init__(self, env):
         """Initialize."""
         # Check that the input space is correct
         # It must be a wrapped env with a single temporal goal.
