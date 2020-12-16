@@ -82,29 +82,31 @@ class ModularPolicy(DQNPolicy):
             automaton_feature = tf.reshape(
                 tf.cast(automaton_feature, tf.int64), shape=(-1, 1)
             )
+            final_q_action_out = []
             with tf.variable_scope("action_value"):
-                q_action_out = tf.tile(agent_features, (1, automaton_space.n))
-                for layer_size in layers:
+                for _q in range(automaton_space.n):
+                    q_action_out = agent_features
+                    for layer_size in layers:
+                        q_action_out = tf_layers.fully_connected(
+                            q_action_out,
+                            num_outputs=layer_size,
+                            activation_fn=None,
+                        )
+                        if layer_norm:
+                            q_action_out = tf_layers.layer_norm(
+                                q_action_out, center=True, scale=True
+                            )
+                        q_action_out = act_fun(q_action_out)
+
                     q_action_out = tf_layers.fully_connected(
                         q_action_out,
-                        num_outputs=automaton_space.n * layer_size,
+                        num_outputs=self.n_actions,
                         activation_fn=None,
                     )
-                    if layer_norm:
-                        q_action_out = tf_layers.layer_norm(
-                            q_action_out, center=True, scale=True
-                        )
-                    q_action_out = act_fun(q_action_out)
+                    final_q_action_out.append(q_action_out)
 
-                action_scores = tf_layers.fully_connected(
-                    q_action_out,
-                    num_outputs=automaton_space.n * self.n_actions,
-                    activation_fn=None,
-                )
-                action_scores = tf.reshape(
-                    action_scores, shape=(-1, automaton_space.n, self.n_actions)
-                )
-                indices = automaton_feature
+                indices = tf.reshape(automaton_feature, shape=(-1, 1, 1))
+                action_scores = tf.stack(final_q_action_out, axis=1)
                 final_action_scores = tf.gather_nd(
                     params=action_scores, indices=indices, batch_dims=1
                 )
