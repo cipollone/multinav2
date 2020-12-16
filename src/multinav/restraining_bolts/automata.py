@@ -58,7 +58,8 @@ def _make_automaton(colors: Sequence[str]) -> DFA:
         transitions.setdefault(current_state, {})[symbol] = current_state
         transitions.setdefault(sink, {})[symbol] = sink
 
-    return DFA(states, alphabet, initial_state, {accepting}, transitions)
+    dfa = DFA(states, alphabet, initial_state, {accepting}, transitions)
+    return dfa.trim().complete()
 
 
 def make_sapientino_goal_with_automata(

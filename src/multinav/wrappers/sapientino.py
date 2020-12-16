@@ -117,8 +117,7 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
         #  we could consider different approaches (e.g. a tuple to separate
         #  robot features with automata features.
         composite_space = combine_boxes(
-            # x_space, y_space, velocity_space, angle_space, *automata_space_boxes
-            x_space, y_space, *automata_space_boxes
+            x_space, y_space, velocity_space, angle_space, *automata_space_boxes
         )
         return composite_space
 
@@ -129,8 +128,8 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
             [
                 robot_state["x"],
                 robot_state["y"],
-                # robot_state["velocity"],
-                # robot_state["angle"],
+                robot_state["velocity"],
+                robot_state["angle"],
                 *automata_states,
             ]
         )
