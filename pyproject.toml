@@ -13,11 +13,12 @@ graphviz = "^0.15"
 Pillow = "^8.0.1"
 matplotlib = "^3.3.3"
 stable-baselines = "^2.10.1"
-tensorflow = "1.15.3"
+tensorflow = "~1.15.0"
 sympy = "^1.7"
-flloat = "0.2.0"
+flloat = "^0.2.0"
 seaborn = "^0.11.0"
 gym-sapientino = {git = "https://github.com/whitemech/gym-sapientino.git", branch = "multinav"}
+temprl = {git = "https://github.com/whitemech/temprl.git", branch = "multinav"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0.1"
