@@ -41,7 +41,7 @@ def display_img_array(ima):
     display(Image(bio.getvalue(), format="png"))
 
 
-def print_env(env: gym.Env):
+def print_env(env: gym.Env, *_args):
     """Print the OpenAI Gym environment in Jupyter."""
     display_img_array(env.render(mode="rgb_array"))
 

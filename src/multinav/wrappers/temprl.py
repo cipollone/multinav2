@@ -21,6 +21,9 @@
 #
 """Helpers related to TempRL wrappers."""
 import numpy as np
+from gym import ObservationWrapper
+from gym.spaces import Box
+from gym.spaces import Tuple as GymTuple
 from temprl.wrapper import TemporalGoalWrapper
 
 from multinav.helpers.notebooks import automaton_to_rgb
@@ -92,3 +95,24 @@ def _add_channel(frame: np.ndarray):
     layer = np.zeros(frame.shape[:-1] + (1,), dtype=np.uint8)
     layer.fill(255)
     return np.append(frame, layer, axis=2)
+
+
+class JoinObservationWrapper(ObservationWrapper):
+    """Join an env with single temporal goal to a single observation."""
+
+    def __init__(self, env):
+        """Initialize."""
+        # Check that the input space is correct
+        # It must be a wrapped env with a single temporal goal.
+        assert isinstance(env.observation_space, GymTuple)
+        assert len(env.observation_space) == 2
+        assert isinstance(env.observation_space[1], Box)
+
+        ObservationWrapper.__init__(self, env)
+
+    def observation(self, observation):
+        """Transform the observation."""
+        # NOTE: I know, it's ugly, the DFA state is cast to a float32
+        #   but stable_baselines don't support composite observations at all
+        state = np.array(observation[1], dtype=np.float32)
+        return np.append(observation[0], state, axis=0)

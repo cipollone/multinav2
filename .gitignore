@@ -1,7 +1,8 @@
 # Project dirs
 ## Saved models, weights, temporary parameters
 /outputs/
-/input-parameters.json
+/inputs/
+/notebooks/logs
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/tex,vim,tags,latex,linux,macos,python,textmate,sublimetext,pycharm+all,intellij+all,visualstudiocode
