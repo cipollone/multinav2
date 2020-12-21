@@ -72,14 +72,10 @@ pip install poetry
 poetry install
 ```
 
-You'll also need to run the following script:
-```bash 
-./scripts/install-poetry-dependencies.sh
+- Now you can run parts of this software. For example
 ```
-
-- Now run parts of this software as:
-```
-poetry run python   # ...
+poetry run python path/to/script.py
+poetry run python -m multinav train ...
 ```
 
 ## Tests
