@@ -78,6 +78,9 @@ poetry run python path/to/script.py
 poetry run python -m multinav train ...
 ```
 
+- Note: each time you're working with local dependencies, and you modify them, install the new versions with the script `./scripts/update-local-dependencies.sh`.
+
+
 ## Tests
 
 To run tests: `tox`
