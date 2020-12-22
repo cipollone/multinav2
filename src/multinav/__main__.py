@@ -4,10 +4,10 @@
 
 import argparse
 
-
 # TODO: allow to choose the environment (therefore the associated algorithm)
 # TODO: allow to choose whether with RB or not
 # TODO: Define fluent extraction functions/classes (even if not complete)
+# TODO: normalize the environment features. Look in 736e60d for example.
 
 
 def main():
@@ -31,7 +31,9 @@ def main():
         "Launch a training without this  to generate a skeleton",
     )
     parser.add_argument(
-        "do", choices=["train", "test"], help="What to do",
+        "do",
+        choices=["train", "test"],
+        help="What to do",
     )
 
     # Parse
@@ -40,10 +42,12 @@ def main():
     # Go
     if args.do == "train":
         from multinav import training
+
         training.train(env_name=args.env, json_args=args.params)
 
     elif args.do == "test":
         from multinav import testing
+
         testing.test(env_name=args.env, json_args=args.params)
 
 

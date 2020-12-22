@@ -19,38 +19,37 @@ class RendererCallback(BaseCallback):
 class CustomCheckpointCallback(BaseCallback):
     """Manage model checkpoints.
 
-    This class manages checkpoints, save and restore.
-    It also act as callback class so that it can be used inside
-    stable_baselines learning loop.
-    If you don't plan to use it as callback, assign the model to self.model.
+    This class manages checkpoints, save and restore. It also act as callback
+    class so that it can be used inside stable_baselines learning loop. If you
+    don't plan to use it as callback, assign the model to self.model by
+    yourself before saving.
     """
 
-    # TODO: referring specifically to the normalizer it's ugly. Generic pickable
-
-    def __init__(self, save_path, normalizer, save_freq=None, name_prefix="model"):
+    def __init__(self, save_path, save_freq=None, name_prefix="model", extra=None):
         """Initialize.
 
         :param save_path: model checkpoints path.
-        :param normalizer: a VecNormalize instance.
         :param save_freq: number of steps between each save (None means never).
         :param name_prefix: just a name for the saved weights.
+        :param extra: an optional, additional pickable object that is saved with
+            the main model.
         """
         BaseCallback.__init__(self)
 
         # Store
-        self.normalizer_model = normalizer
         self._save_freq = save_freq
         self._counters_file = os.path.join(save_path, os.path.pardir, "counters.json")
         self._chkpt_format = os.path.join(save_path, name_prefix + "_{step}")
         self._chkpt_extension = ".zip"
-        self._normalizer_format = os.path.join(save_path, "VecNormalize_{step}.pickle")
+        self.extra_model = extra
+        self._extra_format = os.path.join(save_path, "Extra_{step}.pickle")
 
-    def _update_counters(self, filepath, step, normalizer_file):
+    def _update_counters(self, filepath, step, extra_file=None):
         """Update the file of counters with a new entry.
 
         :param filepath: checkpoint that is being saved
         :param step: current global step
-        :param normalizer_file: associated normalizer
+        :param extra_file: associated extra saved model
         """
         counters = {}
 
@@ -60,7 +59,7 @@ class CustomCheckpointCallback(BaseCallback):
                 counters = json.load(f)
 
         filepath = os.path.relpath(filepath)
-        counters[filepath] = dict(step=step, normalizer=normalizer_file)
+        counters[filepath] = dict(step=step, extra=extra_file)
 
         # Save
         with open(self._counters_file, "w") as f:
@@ -75,22 +74,26 @@ class CustomCheckpointCallback(BaseCallback):
         # Save model
         model_path = self._chkpt_format.format(step=step)
         self.model.save(model_path)
-        # Save checkpoint
-        normalizer_path = self._normalizer_format.format(step=step)
-        with open(normalizer_path, "wb") as f:
-            pickle.dump(self.normalizer_model, f)
+        # Save extra
+        if self.extra_model is not None:
+            extra_path = self._extra_format.format(step=step)
+            with open(extra_path, "wb") as f:
+                pickle.dump(self.extra_model, f)
+        else:
+            extra_path = None
 
         self._update_counters(
             filepath=model_path + self._chkpt_extension,
             step=step,
-            normalizer_file=normalizer_path,
+            extra_file=extra_path,
         )
 
     def load(self, path):
         """Load the weights from a checkpoint.
 
         :param path: load checkpoint at this path.
-        :return: the model and associated counters.
+        :return: the model, the extra object (can be None) and associated
+            counters.
         """
         # Restore
         path = os.path.relpath(path)
@@ -102,12 +105,15 @@ class CustomCheckpointCallback(BaseCallback):
             data = json.load(f)
         counters = data[path]
 
-        # Restore normalizer
-        normalizer_path = counters.pop("normalizer")
-        with open(normalizer_path, "rb") as f:
-            normalizer = pickle.load(f)
+        # Load extra
+        extra_path = counters.pop("extra")
+        if extra_path:
+            with open(extra_path, "rb") as f:
+                extra_model = pickle.load(f)
+        else:
+            extra_model = None
 
-        return model, normalizer, counters
+        return model, extra_model, counters
 
     def _on_step(self):
         """Automatic save."""

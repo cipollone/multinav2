@@ -56,7 +56,7 @@ def train(env_name, json_params=None):
             loaded_params = json.load(f)
         params.update(loaded_params)
 
-    # Init for outputs
+    # Init output directories and save params
     resuming = bool(params["resume_file"])
     model_path, log_path = prepare_directories(
         env_name=env_name,
@@ -64,32 +64,18 @@ def train(env_name, json_params=None):
         args=params,
     )
 
-    # Make env
+    # Make environment
     if env_name == "ros":
-        input_env = make_ros_env(params)
-    elif env_name == "sapientino-cont":
-        input_env = make_sapientino_cont_env(params)
+        env = make_ros_env(params=params)
     else:
-        raise RuntimeError("not a valid environment name")
-
-    # Normalize the features
-    # TODO: reenable, but before temporal goal! Or maybe better in model
-    # venv = DummyVecEnv([lambda: input_env])   # noqa: E800  (becaue there's
-    # env = VecNormalize(                       # noqa: E800   the todo)
-    #    venv=venv,                             # noqa: E800
-    #    norm_obs=True,                         # noqa: E800
-    #    norm_reward=False,                     # noqa: E800
-    #    gamma=params["gamma"],                 # noqa: E800
-    #    training=True,                         # noqa: E800
-    # )                                         # noqa: E800
-    env = input_env
+        make_sapientino_cont_env(params=params)  # Just for vulture; still not supported
+        raise RuntimeError("Environment not supported")
 
     # Callbacks
     checkpoint_callback = CustomCheckpointCallback(
         save_path=model_path,
-        normalizer=None,  # TODO: re-add normalizer?
         save_freq=params["save_freq"],
-        name_prefix="dqn",
+        extra=None,
     )
     renderer_callback = RendererCallback()
     all_callbacks = CallbackList([renderer_callback, checkpoint_callback])
@@ -112,6 +98,7 @@ def train(env_name, json_params=None):
             verbose=1,
         )
     else:
+        # TODO: continue here
         # Reload model
         model, _, counters = checkpoint_callback.load(
             path=params["resume_file"],

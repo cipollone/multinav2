@@ -42,14 +42,15 @@ from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
 # TODO: add the distinction between with and without RB
+# TODO: add docstring to make_sapientino_cont_env
 
 
-def make_sapientino_cont_env(learning_params):
+def make_sapientino_cont_env(params):
     """Return sapientino continuous state environment."""
     # Define the robot
     agent_configuration = SapientinoAgentConfiguration(
         continuous=True,
-        initial_position=learning_params["initial_position"],
+        initial_position=params["initial_position"],
     )
     # Define the environment
     configuration = SapientinoConfiguration(
@@ -58,11 +59,11 @@ def make_sapientino_cont_env(learning_params):
         reward_per_step=-0.01,
         reward_outside_grid=0.0,
         reward_duplicate_beep=0.0,
-        acceleration=learning_params["acceleration"],
-        angular_acceleration=learning_params["angular_acceleration"],
-        max_velocity=learning_params["max_velocity"],
-        min_velocity=learning_params["min_velocity"],
-        max_angular_vel=learning_params["angular_acceleration"],
+        acceleration=params["acceleration"],
+        angular_acceleration=params["angular_acceleration"],
+        max_velocity=params["max_velocity"],
+        min_velocity=params["min_velocity"],
+        max_angular_vel=params["angular_acceleration"],
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 
@@ -83,7 +84,7 @@ def make_sapientino_cont_env(learning_params):
     # Define the temporal goal
     tg = make_sapientino_goal_with_automata(colors, extract_sapientino_fluents)
     env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
-    env = TimeLimit(env, max_episode_steps=learning_params["episode_time_limit"])
+    env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
     print("Temporal goal:", tg._formula)
 
     return env

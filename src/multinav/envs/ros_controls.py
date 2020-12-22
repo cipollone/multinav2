@@ -275,28 +275,3 @@ def make_ros_env(params):
         )
     )
     return input_env
-
-
-def interactive_test():
-    """Demonstrate that connection works: just for development."""
-    # NOTE: this test may not be appropriate because the inputs are slow
-    #   but ros runs in real time.
-
-    # Instantiate
-    ros_env = _RosGoalEnv(env=_RosTerminationEnv(env=_RosControlsEnv(), time_limit=50))
-
-    obs = ros_env.reset()
-    print("Initial state:", obs)
-
-    # Test loop: the agent (you) chooses an action
-    while True:
-        inp = input("Next action ")
-        if not inp:
-            continue
-        action = int(inp)
-        if action < 0:
-            obs = ros_env.reset()
-            print("Initial state:", obs)
-        else:
-            obs, reward, done, info = ros_env.step(action)
-            print(obs, reward, done, info)
