@@ -245,12 +245,12 @@ class NullRewardShaper(RewardShaper):
     """A reward shaping component that does nothing."""
 
     @classmethod
-    def _null_value_function(cls, *_args):
+    def _null_value_function(_cls, *_args):
         """Compute a value function that always returns 0.0."""
         return 0.0
 
     @classmethod
-    def _identity_mapping_function(cls, _arg):
+    def _identity_mapping_function(_cls, _arg):
         """Compute the identity mapping function."""
         return _arg
 

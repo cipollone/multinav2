@@ -70,17 +70,6 @@ def stats_from_env(env: gym.Wrapper, prefix: str = "") -> Stats:
     )
 
 
-def plot_stats(stats: Stats):
-    """Plot the stats."""
-    plt.title("Episode lengths")
-    plt.plot(stats.episode_lengths)
-    plt.show()
-
-    plt.title("Episode Rewards")
-    plt.plot(stats.episode_rewards)
-    plt.show()
-
-
 def plot_average_stats(
     stats_list: Sequence[Sequence[Stats]],
     labels: Sequence[str],

@@ -29,7 +29,7 @@ class QuitWithResources:
         :param deleter: callable to be used when closing.
         """
         if not QuitWithResources.__initialized:
-            signal.signal(signal.SIGINT, lambda sig, frame: QuitWithResources.close())
+            signal.signal(signal.SIGINT, lambda _sig, _frame: QuitWithResources.close())
             QuitWithResources.__initialized = True
 
         if name in QuitWithResources.__deleters:
