@@ -4,23 +4,29 @@ import json
 
 from stable_baselines.common.vec_env import DummyVecEnv
 
-from multinav.envs.ros_controls import RosControlsEnv, RosGoalEnv, RosTerminationEnv
+from multinav.envs.ros_controls import make_ros_env
 from multinav.helpers.misc import prepare_directories
 from multinav.training import CustomCheckpointCallback
 
+# TODO: make this work also for sapientino
 
-def test_on_ros(json_args):
+
+def test(env_name, json_params):
     """Run a test on ros environment.
 
-    :param json_args: the path of the json file of arguments.
+    :param env_name: the environment id (see ``multinav --help``)
+    :param json_params: the path of the json file of parameters.
         "resume_file" should point to an existing checkpoint. The other
         parameters must be the one used for training.
     """
-    with open(json_args) as f:
-        learning_params = json.load(f)
+    # Json
+    if not json_params:
+        raise TypeError("You must supply the parameters of the preivous training.")
+    with open(json_params) as f:
+        params = json.load(f)
 
     # Init dirs
-    resuming = bool(learning_params["resume_file"])
+    resuming = bool(params["resume_file"])
     if not resuming:
         raise RuntimeError("Must be resuming to test")
     model_path, _ = prepare_directories(
@@ -29,13 +35,7 @@ def test_on_ros(json_args):
     )
 
     # Make env
-    ros_env = RosGoalEnv(
-        env=RosTerminationEnv(
-            env=RosControlsEnv(),
-            time_limit=learning_params["episode_time_limit"],
-            notmoving_limit=learning_params["notmoving_limit"],
-        )
-    )
+    ros_env = make_ros_env(params)
 
     # Callbacks
     checkpoint_callback = CustomCheckpointCallback(
@@ -46,9 +46,7 @@ def test_on_ros(json_args):
     )
 
     # Reload model
-    model, norm_env, _ = checkpoint_callback.load(
-        path=learning_params["resume_file"],
-    )
+    model, norm_env, _ = checkpoint_callback.load(path=params["resume_file"])
 
     # Reapply normalizer to env
     venv = DummyVecEnv([lambda: ros_env])

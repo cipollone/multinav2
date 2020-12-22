@@ -4,66 +4,47 @@
 
 import argparse
 
-from multinav import testing, training
-from multinav.envs.ros_controls import interactive_test
+
+# TODO: allow to choose the environment (therefore the associated algorithm)
+# TODO: allow to choose whether with RB or not
+# TODO: Define fluent extraction functions/classes (even if not complete)
 
 
 def main():
     """Is the main function."""
     parser = argparse.ArgumentParser(
-        description="RL on navigation with different abstractions"
+        description="RL on navigation environments with different abstractions"
     )
-    op_group = parser.add_subparsers(dest="op", help="What to do")
 
-    # Train an agent
-    train_parser = op_group.add_parser("train")
-    train_parser.add_argument(
+    # Args
+    parser.add_argument(
         "-e",
         "--env",
+        required=True,
         choices=["sapientino-abs", "sapientino-grid", "sapientino-cont", "ros"],
-        help="Select the environment to train the agent on.",
+        help="Select the environment to use",
     )
-    train_parser.add_argument(
+    parser.add_argument(
         "-p",
         "--params",
-        help="Json file of parameters",
+        help="Json file of parameters. "
+        "Launch a training without this  to generate a skeleton",
     )
-
-    # Test an agent
-    test_parser = op_group.add_parser("test")
-    test_parser.add_argument(
-        "-e",
-        "--env",
-        choices=["sapientino-abs", "sapientino-grid", "sapientino-cont", "ros"],
-        required=True,
-        help="Select the environment to train the agent on.",
+    parser.add_argument(
+        "do", choices=["train", "test"], help="What to do",
     )
-    test_parser.add_argument(
-        "-p",
-        "--params",
-        required=True,
-        help="Json file of parameters",
-    )
-
-    # Test ros
-    _ = op_group.add_parser("test-ros")
 
     # Parse
     args = parser.parse_args()
 
     # Go
-    if args.op is None:
-        print(parser.print_help())
-
-    if args.op == "test-ros":
-        interactive_test()
-
-    elif args.op == "train":
+    if args.do == "train":
+        from multinav import training
         training.train(env_name=args.env, json_args=args.params)
 
-    elif args.op == "test":
-        if args.env == "ros":
-            testing.test_on_ros(json_args=args.params)
+    elif args.do == "test":
+        from multinav import testing
+        testing.test(env_name=args.env, json_args=args.params)
 
 
 if __name__ == "__main__":
