@@ -191,7 +191,7 @@ class Experiment:
         return stats
 
 
-def prepare_directories(  # noqa: ignore
+def prepare_directories(  # noqa: C901
     env_name, resuming=False, args=None, no_create=False
 ):
     """Prepare the directories where weights and logs are saved.
