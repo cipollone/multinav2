@@ -20,7 +20,14 @@
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""A Gym environment that controls a remote ROS instance."""
+"""A Gym environment that controls a remote ROS instance.
+
+In this module you can just use make_ros_env(). It defines the complete
+gym.Env. _RosControlsEnv defines just the basic dynamics and transition
+function, _RosTerminationEnv adds some episode termination criterion, and
+_RosGoalEnv defines rewards. make_ros_env combines them to define the
+environment.
+"""
 
 import gym
 import numpy as np
@@ -28,7 +35,7 @@ import numpy as np
 from multinav.helpers.streaming import Receiver, Sender
 
 
-class RosControlsEnv(gym.Env):
+class _RosControlsEnv(gym.Env):
     """Gym environment that controls ROS.
 
     Actions performed on this environment are forwarded to a running ROS
@@ -68,7 +75,7 @@ class RosControlsEnv(gym.Env):
             buff = Receiver.receive(self, wait=True)
 
             # Deserialize
-            assert len(buff) == RosControlsEnv.state_msg_len
+            assert len(buff) == _RosControlsEnv.state_msg_len
             array = np.frombuffer(buff, dtype=np.float32)
             return array
 
@@ -82,7 +89,7 @@ class RosControlsEnv(gym.Env):
             """
             # Serialize
             buff = np.array(action, dtype=np.int32).tobytes()
-            assert len(buff) == RosControlsEnv.action_msg_len
+            assert len(buff) == _RosControlsEnv.action_msg_len
 
             # Send
             Sender.send(self, buff)
@@ -97,12 +104,12 @@ class RosControlsEnv(gym.Env):
         # NOTE: Actually the third is an angle
 
         # Initialize connections
-        self.action_sender = RosControlsEnv.ActionSender(
+        self.action_sender = _RosControlsEnv.ActionSender(
             msg_length=self.action_msg_len,
             port=self.actions_port,
             wait=True,
         )
-        self.state_receiver = RosControlsEnv.StateReceiver(
+        self.state_receiver = _RosControlsEnv.StateReceiver(
             msg_length=self.state_msg_len,
             ip="localhost",
             port=self.states_port,
@@ -165,7 +172,7 @@ class RosControlsEnv(gym.Env):
         return observation[3]
 
 
-class RosTerminationEnv(gym.Wrapper):
+class _RosTerminationEnv(gym.Wrapper):
     """Assign a criterion for episode termination."""
 
     def __init__(self, env, time_limit, notmoving_limit=12):
@@ -207,7 +214,7 @@ class RosTerminationEnv(gym.Wrapper):
         time_limited = self._time >= self._time_limit
 
         # Terminate if not moving for too long
-        linear_vel = RosControlsEnv.linear_velociy_in_obs(observation)
+        linear_vel = _RosControlsEnv.linear_velociy_in_obs(observation)
         if linear_vel < 0.05:
             self._not_moving_time += 1
         else:
@@ -217,7 +224,7 @@ class RosTerminationEnv(gym.Wrapper):
         return time_limited or notmoving_limited
 
 
-class RosGoalEnv(gym.Wrapper):
+class _RosGoalEnv(gym.Wrapper):
     """Assign a goal to the ROS environment.
 
     Choose a reward for the ROS experiment.
@@ -252,13 +259,31 @@ class RosGoalEnv(gym.Wrapper):
             return 0.0
 
 
+def make_ros_env(params):
+    """Define the complete ros environment.
+
+    See the docs of the other classes in this module for futher information.
+    :param params: a dictionary of parameters; see in this function the
+        only ones that are used.
+    :return: an object that respects the gym.Env interface.
+    """
+    input_env = _RosGoalEnv(
+        env=_RosTerminationEnv(
+            env=_RosControlsEnv(),
+            time_limit=params["episode_time_limit"],
+            notmoving_limit=params["notmoving_limit"],
+        )
+    )
+    return input_env
+
+
 def interactive_test():
     """Demonstrate that connection works: just for development."""
-    # NOTE: this test may not be appropriate:
-    #   Some parts use ROS time which continues to go on as we wait for input.
+    # NOTE: this test may not be appropriate because the inputs are slow
+    #   but ros runs in real time.
 
     # Instantiate
-    ros_env = RosGoalEnv(env=RosTerminationEnv(env=RosControlsEnv(), time_limit=50))
+    ros_env = _RosGoalEnv(env=_RosTerminationEnv(env=_RosControlsEnv(), time_limit=50))
 
     obs = ros_env.reset()
     print("Initial state:", obs)

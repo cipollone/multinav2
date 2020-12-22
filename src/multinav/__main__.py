@@ -20,7 +20,7 @@ def main():
     train_parser.add_argument(
         "-e",
         "--env",
-        choices=["ros", "sapientino-cont"],
+        choices=["sapientino-abs", "sapientino-grid", "sapientino-cont", "ros"],
         help="Select the environment to train the agent on.",
     )
     train_parser.add_argument(
@@ -34,7 +34,7 @@ def main():
     test_parser.add_argument(
         "-e",
         "--env",
-        choices=["ros"],
+        choices=["sapientino-abs", "sapientino-grid", "sapientino-cont", "ros"],
         required=True,
         help="Select the environment to train the agent on.",
     )
