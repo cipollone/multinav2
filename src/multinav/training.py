@@ -5,7 +5,6 @@ general logic.
 """
 
 import json
-import os
 
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
@@ -68,81 +67,99 @@ def train(env_name, json_params=None):
 
     # Make environment
     if env_name == "ros":
-        env = make_ros_env(params=params)
-        do_train = train_stable_baselines
+        trainer = TrainStableBaselines(
+            env=make_ros_env(params=params),
+            params=params,
+            model_path=model_path,
+            log_path=log_path,
+        )
     elif env_name == "sapientino-cont":
-        env = make_sapientino_cont_env(params=params)
-        do_train = train_stable_baselines
+        trainer = TrainStableBaselines(
+            env=make_sapientino_cont_env(params=params),
+            params=params,
+            model_path=model_path,
+            log_path=log_path,
+        )
     else:
         raise RuntimeError("Environment not supported")
 
     # Start
-    do_train(
-        env=env,
-        params=params,
-        model_path=model_path,
-        log_path=log_path,
-    )
+    trainer.train()
 
 
-def train_stable_baselines(env, params, model_path, log_path):
-    """Run a training loop for stable baselines.
+class TrainStableBaselines:
+    """Define the agnent and training loop for stable_baselines."""
 
-    :param env: gym environment.
-    :param params: dict of parameters, like `default_parameters`.
-    :param model_path: directory where to save models.
-    :param log_path: directory where to save tensorboard logs.
-    """
-    # Callbacks
-    checkpoint_callback = CustomCheckpointCallback(
-        save_path=model_path,
-        save_freq=params["save_freq"],
-        extra=None,
-    )
-    renderer_callback = RendererCallback()
-    all_callbacks = CallbackList([renderer_callback, checkpoint_callback])
+    def __init__(self, env, params, model_path, log_path):
+        """Initialize.
 
-    # Define agent
-    resuming = bool(params["resume_file"])
-    if not resuming:
-        model = DQN(
-            policy=LnMlpPolicy,
-            env=env,
-            gamma=params["gamma"],
-            learning_rate=params["learning_rate"],
-            double_q=True,
-            learning_starts=params["learning_starts"],
-            prioritized_replay=True,
-            exploration_fraction=params["exploration_fraction"],
-            exploration_final_eps=params["exploration_final_eps"],
-            exploration_initial_eps=params["exploration_initial_eps"],
-            tensorboard_log=log_path,
-            full_tensorboard_log=False,
-            verbose=1,
+        :param env: gym environment.
+        :param params: dict of parameters, like `default_parameters`.
+        :param model_path: directory where to save models.
+        :param log_path: directory where to save tensorboard logs.
+        """
+        # Callbacks
+        checkpoint_callback = CustomCheckpointCallback(
+            save_path=model_path,
+            save_freq=params["save_freq"],
+            extra=None,
         )
-    else:
-        # Reload model
-        model, _, counters = checkpoint_callback.load(
-            path=params["resume_file"],
+        renderer_callback = RendererCallback()
+        all_callbacks = CallbackList([renderer_callback, checkpoint_callback])
+
+        # Define agent
+        resuming = bool(params["resume_file"])
+        if not resuming:
+            model = DQN(
+                policy=LnMlpPolicy,
+                env=env,
+                gamma=params["gamma"],
+                learning_rate=params["learning_rate"],
+                double_q=True,
+                learning_starts=params["learning_starts"],
+                prioritized_replay=True,
+                exploration_fraction=params["exploration_fraction"],
+                exploration_final_eps=params["exploration_final_eps"],
+                exploration_initial_eps=params["exploration_initial_eps"],
+                tensorboard_log=log_path,
+                full_tensorboard_log=False,
+                verbose=1,
+            )
+        else:
+            # Reload model
+            model, _, counters = checkpoint_callback.load(
+                path=params["resume_file"],
+            )
+            # Restore properties
+            model.tensorboard_log = log_path
+            model.num_timesteps = counters["step"]
+            model.set_env(env)
+
+        # Store
+        self.params = params
+        self.resuming = resuming
+        self.saver = checkpoint_callback
+        self.callbacks = all_callbacks
+        self.model = model
+
+    def train(self):
+        """Do train.
+
+        Interrupt at any type with Ctrl-C.
+        """
+        # Behaviour on quit
+        QuitWithResources.add(
+            "last_save",
+            lambda: self.saver.save(step=self.saver.num_timesteps),
         )
-        # Restore properties
-        model.tensorboard_log = log_path
-        model.num_timesteps = counters["step"]
-        model.set_env(env)
 
-    # Behaviour on quit
-    QuitWithResources.add(
-        "last_save",
-        lambda: checkpoint_callback.save(step=checkpoint_callback.num_timesteps),
-    )
+        # Start
+        self.model.learn(
+            total_timesteps=self.params["total_timesteps"],
+            log_interval=self.params["log_interval"],
+            callback=self.callbacks,
+            reset_num_timesteps=not self.resuming,
+        )
 
-    # Start
-    model.learn(
-        total_timesteps=params["total_timesteps"],
-        log_interval=params["log_interval"],
-        callback=all_callbacks,
-        reset_num_timesteps=not resuming,
-    )
-
-    # Save weights
-    model.save(os.path.join(model_path, "model"))
+        # Final save
+        self.saver.save(self.params["total_timesteps"])

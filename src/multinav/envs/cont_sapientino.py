@@ -41,9 +41,6 @@ from multinav.wrappers.sapientino import ContinuousRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
-# TODO: add the distinction between with and without RB
-# TODO: move fluent extraction ouside of this fn.
-
 
 def make_sapientino_cont_env(params):
     """Return sapientino continuous state environment.
