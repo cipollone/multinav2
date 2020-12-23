@@ -57,7 +57,7 @@ def test(env_name, json_params):
     tester.test()
 
 
-class TestStableBaselines():
+class TestStableBaselines:
     """Define the testing loop for stable_baselines."""
 
     def __init__(self, env, model):
