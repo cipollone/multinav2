@@ -2,13 +2,10 @@
 
 import json
 
-from stable_baselines.common.vec_env import DummyVecEnv
-
+from multinav.envs.cont_sapientino import make_sapientino_cont_env
 from multinav.envs.ros_controls import make_ros_env
 from multinav.helpers.misc import prepare_directories
-from multinav.training import CustomCheckpointCallback
-
-# TODO: make this work also for sapientino
+from multinav.training import TrainStableBaselines
 
 
 def test(env_name, json_params):
@@ -19,7 +16,7 @@ def test(env_name, json_params):
         "resume_file" should point to an existing checkpoint. The other
         parameters must be the one used for training.
     """
-    # Json
+    # Settings
     if not json_params:
         raise TypeError("You must supply the parameters of the preivous training.")
     with open(json_params) as f:
@@ -28,36 +25,54 @@ def test(env_name, json_params):
     # Init dirs
     resuming = bool(params["resume_file"])
     if not resuming:
-        raise RuntimeError("Must be resuming to test")
-    model_path, _ = prepare_directories(
-        env_name="ros-stage",
+        raise RuntimeError("Must resume from a checkpoint in order to test")
+    model_path, log_path = prepare_directories(
+        env_name=env_name,
         no_create=True,
     )
 
-    # Make env
-    ros_env = make_ros_env(params)
+    # Make environment
+    if env_name == "ros":
+        env = make_ros_env(params=params)
+        model = TrainStableBaselines(
+            env=env,
+            params=params,
+            model_path=model_path,
+            log_path=log_path,
+        ).model
+        tester = TestStableBaselines(env=env, model=model)
+    elif env_name == "sapientino-cont":
+        env = make_sapientino_cont_env(params=params)
+        model = TrainStableBaselines(
+            env=env,
+            params=params,
+            model_path=model_path,
+            log_path=log_path,
+        ).model
+        tester = TestStableBaselines(env=env, model=model)
+    else:
+        raise RuntimeError("Environment not supported")
 
-    # Callbacks
-    checkpoint_callback = CustomCheckpointCallback(
-        save_path=model_path,
-        normalizer=None,
-        save_freq=None,
-        name_prefix="dqn",
-    )
+    # Start
+    tester.test()
 
-    # Reload model
-    model, norm_env, _ = checkpoint_callback.load(path=params["resume_file"])
 
-    # Reapply normalizer to env
-    venv = DummyVecEnv([lambda: ros_env])
-    norm_env.set_venv(venv)
+class TestStableBaselines():
+    """Define the testing loop for stable_baselines."""
 
-    # Finally test
-    env = norm_env
-    for _ in range(100):
-        obs = env.reset()
-        while True:
-            action, _ = model.predict(obs)
-            obs, _, done, _ = env.step(action)
-            if done:
-                break
+    def __init__(self, env, model):
+        """Initialize."""
+        self.env = env
+        self.model = model
+
+    def test(self):
+        """Test loop."""
+        for _ in range(100):
+            obs = self.env.reset()
+            while True:
+                self.env.render()
+                action, _ = self.model.predict(obs)
+                obs, _, done, _ = self.env.step(action)
+                if done:
+                    break
+        # TODO: maybe marco has some better class for experiments
