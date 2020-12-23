@@ -1,8 +1,10 @@
-# Project dirs
-## Saved models, weights, temporary parameters
+### Project dirs
+# Saved models, weights, temporary parameters
 /outputs/
 /inputs/
+# Generated from notebooks
 /notebooks/logs
+/notebooks/*.py
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/tex,vim,tags,latex,linux,macos,python,textmate,sublimetext,pycharm+all,intellij+all,visualstudiocode

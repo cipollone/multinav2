@@ -166,6 +166,13 @@ class _RosControlsEnv(gym.Env):
 
         return (observation, 0.0, False, {})
 
+    def render(self, mode="human"):
+        """Render the environment.
+
+        Does nothing. Run with stage gui if you want to visualize.
+        """
+        pass
+
     @staticmethod
     def linear_velociy_in_obs(observation):
         """Return the linear velocity from an observation of this env."""

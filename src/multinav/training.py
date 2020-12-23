@@ -20,21 +20,23 @@ from multinav.helpers.stable_baselines import CustomCheckpointCallback, Renderer
 # Default environments and algorithms parameters
 #   Always prefer to specify them with a json; do not rely on defaults.
 default_parameters = dict(
-    episode_time_limit=100,
-    save_freq=1000,
-    learning_starts=5000,
-    total_timesteps=2000000,
+    # Common
     resume_file=None,
-    log_interval=100,  # In #of episodes
+    episode_time_limit=100,
+    # DQN params
+    gamma=0.99,
+    learning_rate=5e-4,
+    learning_starts=5000,
     exploration_fraction=0.8,
     exploration_initial_eps=1.0,
     exploration_final_eps=0.02,
-    # Ros parameters section
+    save_freq=1000,
+    log_interval=100,  # In #of episodes
+    total_timesteps=2000000,
+    # Ros agent env
     notmoving_limit=12,
-    gamma=0.99,
-    learning_rate=5e-4,
+    # Sapientino env
     acceleration=0.02,
-    # Sapientino parameters section
     angular_acceleration=20.0,
     max_velocity=0.20,
     min_velocity=0.0,
@@ -67,10 +69,30 @@ def train(env_name, json_params=None):
     # Make environment
     if env_name == "ros":
         env = make_ros_env(params=params)
+        do_train = train_stable_baselines
+    elif env_name == "sapientino-cont":
+        env = make_sapientino_cont_env(params=params)
+        do_train = train_stable_baselines
     else:
-        make_sapientino_cont_env(params=params)  # Just for vulture; still not supported
         raise RuntimeError("Environment not supported")
 
+    # Start
+    do_train(
+        env=env,
+        params=params,
+        model_path=model_path,
+        log_path=log_path,
+    )
+
+
+def train_stable_baselines(env, params, model_path, log_path):
+    """Run a training loop for stable baselines.
+
+    :param env: gym environment.
+    :param params: dict of parameters, like `default_parameters`.
+    :param model_path: directory where to save models.
+    :param log_path: directory where to save tensorboard logs.
+    """
     # Callbacks
     checkpoint_callback = CustomCheckpointCallback(
         save_path=model_path,
@@ -81,6 +103,7 @@ def train(env_name, json_params=None):
     all_callbacks = CallbackList([renderer_callback, checkpoint_callback])
 
     # Define agent
+    resuming = bool(params["resume_file"])
     if not resuming:
         model = DQN(
             policy=LnMlpPolicy,
@@ -98,18 +121,14 @@ def train(env_name, json_params=None):
             verbose=1,
         )
     else:
-        # TODO: continue here
         # Reload model
         model, _, counters = checkpoint_callback.load(
             path=params["resume_file"],
         )
-        # TODO
-        # Reapply normalizer to env
-        # norm_env.set_venv(venv)  # noqa: E800  (becaue there's the todo)
-        # model.set_env(norm_env)  # noqa: E800
-        # Restore counters
+        # Restore properties
         model.tensorboard_log = log_path
         model.num_timesteps = counters["step"]
+        model.set_env(env)
 
     # Behaviour on quit
     QuitWithResources.add(

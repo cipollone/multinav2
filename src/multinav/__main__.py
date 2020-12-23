@@ -43,12 +43,12 @@ def main():
     if args.do == "train":
         from multinav import training
 
-        training.train(env_name=args.env, json_args=args.params)
+        training.train(env_name=args.env, json_params=args.params)
 
     elif args.do == "test":
         from multinav import testing
 
-        testing.test(env_name=args.env, json_args=args.params)
+        testing.test(env_name=args.env, json_params=args.params)
 
 
 if __name__ == "__main__":

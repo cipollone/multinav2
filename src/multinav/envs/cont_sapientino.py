@@ -42,11 +42,16 @@ from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
 # TODO: add the distinction between with and without RB
-# TODO: add docstring to make_sapientino_cont_env
+# TODO: move fluent extraction ouside of this fn.
 
 
 def make_sapientino_cont_env(params):
-    """Return sapientino continuous state environment."""
+    """Return sapientino continuous state environment.
+
+    :param params: a dictionary of parameters; see in this function the
+        only ones that are used.
+    :return: an object that respects the gym.Env interface.
+    """
     # Define the robot
     agent_configuration = SapientinoAgentConfiguration(
         continuous=True,
