@@ -1,7 +1,65 @@
 """Python language utilities."""
 
 import signal
+from abc import ABCMeta
 from typing import Dict
+
+
+class ABCMeta2(ABCMeta):
+    """This metaclass can be used just like ABCMeta.
+
+    It adds the possibility to declare abstract instance attributes.
+    These must be assigned to instances inside the __init__ method.
+    How to use:
+
+        class C(metaclass=ABCMeta2):
+            attr = AbstractAttribute()
+            ...
+
+    It is also possible to define methods and properties with that name:
+        class C(metaclass=ABCMeta2):
+            def attr(self):
+                ...
+
+    Note: methods of this class are not inherited by other classes' instances.
+    """
+
+    def __init__(cls, _classname, _supers, _classdict):
+        """Save abstract attributes."""
+        abstract = []
+        for attr in dir(cls):
+            if isinstance(getattr(cls, attr), AbstractAttribute):
+                abstract.append(attr)
+        cls.__abstract_attributes = abstract
+
+    def __call__(cls, *args, **kwargs):
+        """Intercept instance creation."""
+        # Create instance
+        instance = ABCMeta.__call__(cls, *args, **kwargs)
+
+        # Check abstract
+        not_defined = []
+        for attr in cls.__abstract_attributes:
+            if attr not in instance.__dict__:
+                not_defined.append(attr)
+        if not_defined:
+            raise TypeError(
+                cls.__name__ + ".__init__ did not define these abstract "
+                "attributes:\n" + str(not_defined)
+            )
+
+        return instance
+
+
+class AbstractAttribute:
+    """Define an abstract attribute. See description in ABCMeta2."""
+
+
+class ABC2(metaclass=ABCMeta2):
+    """Abstract class through inheritance.
+
+    Use this class just like abc.ABC.
+    """
 
 
 class QuitWithResources:

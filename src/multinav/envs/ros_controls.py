@@ -22,10 +22,10 @@
 
 """A Gym environment that controls a remote ROS instance.
 
-In this module you can just use make_ros_env(). It defines the complete
+In this module you can just use make_env(). It defines the complete
 gym.Env. _RosControlsEnv defines just the basic dynamics and transition
 function, _RosTerminationEnv adds some episode termination criterion, and
-_RosGoalEnv defines rewards. make_ros_env combines them to define the
+_RosGoalEnv defines rewards. make_env combines them to define the
 environment.
 """
 
@@ -266,7 +266,7 @@ class _RosGoalEnv(gym.Wrapper):
             return 0.0
 
 
-def make_ros_env(params):
+def make_env(params):
     """Define the complete ros environment.
 
     See the docs of the other classes in this module for futher information.
