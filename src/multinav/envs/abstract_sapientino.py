@@ -37,7 +37,7 @@ from multinav.helpers.gym import (
     Transitions,
     from_discrete_env_to_graphviz,
 )
-from multinav.restraining_bolts.base import AbstractRB
+from multinav.restraining_bolts.base import SapientinoRB
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 
 
@@ -198,7 +198,7 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
 
     def __init__(
         self,
-        restraining_bolt: AbstractRB,
+        restraining_bolt: SapientinoRB,
         sapientino_args: Optional[List],
         sapientino_kwargs: Optional[Dict] = None,
     ):

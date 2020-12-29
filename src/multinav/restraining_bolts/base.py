@@ -35,7 +35,7 @@ from gym_sapientino.core.types import Colors
 from temprl.wrapper import TemporalGoal
 
 
-class AbstractRB(ABC):
+class SapientinoRB(ABC):
     """Abstract class for Sapientino RB."""
 
     offset = 1

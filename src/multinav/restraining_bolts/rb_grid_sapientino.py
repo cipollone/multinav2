@@ -22,10 +22,10 @@
 """Restraining bolt for Abstract Sapientino."""
 from flloat.semantics import PLInterpretation
 
-from multinav.restraining_bolts.base import AbstractRB
+from multinav.restraining_bolts.base import SapientinoRB
 
 
-class GridSapientinoRB(AbstractRB):
+class GridSapientinoRB(SapientinoRB):
     """Restraining Bolt for the grid Sapientino."""
 
     def extract_sapientino_fluents(self, obs, action) -> PLInterpretation:
