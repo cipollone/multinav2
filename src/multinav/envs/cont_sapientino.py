@@ -22,7 +22,7 @@
 
 """This environment is a sapientino with continuous movements.
 
-Internally, we can use the same simulator than the grid sapientino,
+Internally, we can use the same simulator as the grid sapientino,
 but we extract different features. This file defines a specific environment
 configuration, map, and features extraction. This is the environment used for
 the experiments. Some parameters can be controlled through arguments,

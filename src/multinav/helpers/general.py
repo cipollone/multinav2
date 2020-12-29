@@ -24,7 +24,7 @@ class ABCMeta2(ABCMeta):
     Note: methods of this class are not inherited by other classes' instances.
     """
 
-    def __init__(Class, classname, supers, classdict):
+    def __init__(Class, _classname, _supers, _classdict):
         """Save abstract attributes."""
         abstract = []
         for attr in dir(Class):
