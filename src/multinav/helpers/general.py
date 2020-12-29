@@ -1,65 +1,7 @@
-"""Python utilities."""
+"""Python language utilities."""
 
 import signal
-from abc import ABCMeta
 from typing import Dict
-
-
-class ABCMeta2(ABCMeta):
-    """This metaclass can be used just like ABCMeta.
-
-    It adds the possibility to declare abstract instance attributes.
-    An abstract attribute must be assigned to instances before the __init__
-    method returns. How to declare:
-
-        class C(metaclass=ABCMeta2):
-            attr = AbstractAttribute()
-            ...
-
-    It is also possible to define methods and properties with that name:
-        class C(metaclass=ABCMeta2):
-            def attr(self):
-                ...
-
-    Note: methods of this class are not inherited by other classes' instances.
-    """
-
-    def __init__(Class, classname, supers, classdict):
-        """Save abstract attributes."""
-        abstract = []
-        for attr in dir(Class):
-            if isinstance(getattr(Class, attr), AbstractAttribute):
-                abstract.append(attr)
-        Class.__abstract_attributes = abstract
-
-    def __call__(Class, *args, **kwargs):
-        """Intercept instance creation."""
-        # Create instance
-        instance = ABCMeta.__call__(Class, *args, **kwargs)
-
-        # Check abstract
-        not_defined = []
-        for attr in Class.__abstract_attributes:
-            if attr not in instance.__dict__:
-                not_defined.append(attr)
-        if not_defined:
-            raise TypeError(
-                Class.__name__ + ".__init__ did not define these abstract "
-                "attributes:\n" + str(not_defined)
-            )
-
-        return instance
-
-
-class AbstractAttribute:
-    """Define an abstract attribute. See description in ABCMeta2."""
-
-
-class ABC2(metaclass=ABCMeta2):
-    """Abstract class through inheritance.
-
-    Use this class just like abc.ABC.
-    """
 
 
 class QuitWithResources:
@@ -87,7 +29,7 @@ class QuitWithResources:
         :param deleter: callable to be used when closing.
         """
         if not QuitWithResources.__initialized:
-            signal.signal(signal.SIGINT, lambda sig, frame: QuitWithResources.close())
+            signal.signal(signal.SIGINT, lambda _sig, _frame: QuitWithResources.close())
             QuitWithResources.__initialized = True
 
         if name in QuitWithResources.__deleters:

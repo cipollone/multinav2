@@ -82,7 +82,7 @@ class Sender:
         allow_reuse_address = True
         is_serving = False
 
-        def handle_error(self, request, client_address):
+        def handle_error(self, request, _client_address):
             """Stop the server on broken connection."""
             print("Broken connection", file=sys.stderr)
             self.server_close()

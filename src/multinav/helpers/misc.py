@@ -70,17 +70,6 @@ def stats_from_env(env: gym.Wrapper, prefix: str = "") -> Stats:
     )
 
 
-def plot_stats(stats: Stats):
-    """Plot the stats."""
-    plt.title("Episode lengths")
-    plt.plot(stats.episode_lengths)
-    plt.show()
-
-    plt.title("Episode Rewards")
-    plt.plot(stats.episode_rewards)
-    plt.show()
-
-
 def plot_average_stats(
     stats_list: Sequence[Sequence[Stats]],
     labels: Sequence[str],
@@ -191,7 +180,7 @@ class Experiment:
         return stats
 
 
-def prepare_directories(  # noqa: ignore
+def prepare_directories(  # noqa: C901
     env_name, resuming=False, args=None, no_create=False
 ):
     """Prepare the directories where weights and logs are saved.
