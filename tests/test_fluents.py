@@ -23,7 +23,6 @@
 """Test fluents extraction."""
 
 import pytest
-
 from flloat.semantics import PLInterpretation
 
 from multinav.envs.base import AbstractFluents
@@ -31,12 +30,18 @@ from multinav.envs.cont_sapientino import Fluents as ContSapientinoFluents
 
 
 class Fluents1(AbstractFluents):
+    """Class without fluent list."""
+
     def valuate(self, obs, action):
+        """Any valuation function."""
         return {"is_one"} if obs == 1 else set()
 
 
 class Fluents2(Fluents1):
+    """Complete fluents extractor."""
+
     def __init__(self):
+        """Initialize."""
         self.fluents = {"is_one", "is_two"}
 
 
@@ -60,4 +65,4 @@ def test_fluents_cont_sapientino():
     assert fluents.valuate(dict(beep=1, color=1), 0) == PLInterpretation({"red"})
     assert fluents.valuate(dict(beep=1, color=3), 0) == PLInterpretation({"blue"})
     with pytest.raises(RuntimeError):
-        fluents.valuate(dict(beep=1, color=2), 0)   # green not used
+        fluents.valuate(dict(beep=1, color=2), 0)  # green not used

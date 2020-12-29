@@ -42,7 +42,7 @@ class AbstractFluents(ABC2):
     returned by valuate can only contain symbols from this set.
     """
 
-    fluents = AbstractAttribute()    # type: Any
+    fluents = AbstractAttribute()  # type: Any
 
     @abstractmethod
     def valuate(self, obs, action) -> PLInterpretation:
