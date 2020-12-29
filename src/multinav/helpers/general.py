@@ -24,27 +24,27 @@ class ABCMeta2(ABCMeta):
     Note: methods of this class are not inherited by other classes' instances.
     """
 
-    def __init__(Class, _classname, _supers, _classdict):
+    def __init__(cls, _classname, _supers, _classdict):
         """Save abstract attributes."""
         abstract = []
-        for attr in dir(Class):
-            if isinstance(getattr(Class, attr), AbstractAttribute):
+        for attr in dir(cls):
+            if isinstance(getattr(cls, attr), AbstractAttribute):
                 abstract.append(attr)
-        Class.__abstract_attributes = abstract
+        cls.__abstract_attributes = abstract
 
-    def __call__(Class, *args, **kwargs):
+    def __call__(cls, *args, **kwargs):
         """Intercept instance creation."""
         # Create instance
-        instance = ABCMeta.__call__(Class, *args, **kwargs)
+        instance = ABCMeta.__call__(cls, *args, **kwargs)
 
         # Check abstract
         not_defined = []
-        for attr in Class.__abstract_attributes:
+        for attr in cls.__abstract_attributes:
             if attr not in instance.__dict__:
                 not_defined.append(attr)
         if not_defined:
             raise TypeError(
-                Class.__name__ + ".__init__ did not define these abstract "
+                cls.__name__ + ".__init__ did not define these abstract "
                 "attributes:\n" + str(not_defined)
             )
 
