@@ -42,6 +42,7 @@ from gym_sapientino.core.configurations import (
 )
 from gym_sapientino.core.types import color2int
 
+from multinav.envs.base import AbstractFluents
 from multinav.restraining_bolts.automata import make_sapientino_goal_with_automata
 from multinav.wrappers.sapientino import ContinuousRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
@@ -56,7 +57,7 @@ _sapientino_map_str = """\
 _sapientino_used_colors = ["red", "green", "blue"]
 
 
-class Fluents:
+class Fluents(AbstractFluents):
     """Define the propositions in this specific environment."""
 
     def __init__(self, colors_set: Set[str]):
@@ -67,33 +68,25 @@ class Fluents:
         """
         self._color2int = {c.value: i for c, i in color2int.items()}
         self._int2color = {i: c for c, i in self._color2int.items()}
-        self.colors_set = colors_set
-        if not self.colors_set.issubset(self._color2int):
+        self.fluents = colors_set
+        if not self.fluents.issubset(self._color2int):
             raise ValueError(str(colors_set) + " contains invalid colors")
 
     def valuate(self, obs: Dict[str, float], action) -> PLInterpretation:
-        """Compute a propositional interpretation.
-
-        This function respects the interface defined in
-        temprl.wrapper.TemporalGoal.
-        :param obs: env observation; assuming a dict observation space.
-        :param action: env action.
-        :return: a propositional interpretation
-        """
+        """Respects AbstractFluents.valuate."""
         beeps = obs["beep"] > 0
         if not beeps:
-            fluents = set()  # type: Set[str]
+            true_fluents = set()  # type: Set[str]
         else:
             color_id = obs["color"]
             color_name = self._int2color[color_id]
             if color_name == "blank":
-                fluents = set()
+                true_fluents = set()
             else:
-                if color_name not in self.colors_set:
+                if color_name not in self.fluents:
                     raise RuntimeError("Unexpected color: " + color_name)
-                fluents = {color_name}
-            print(fluents)
-            return PLInterpretation(fluents)
+                true_fluents = {color_name}
+            return PLInterpretation(true_fluents)
 
 
 def make_env(params: Dict[str, Any]):
