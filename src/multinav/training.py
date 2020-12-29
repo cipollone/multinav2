@@ -5,314 +5,161 @@ general logic.
 """
 
 import json
-import os
-import pickle
-from pathlib import Path
 
-from flloat.semantics import PLInterpretation
-from gym.wrappers import TimeLimit
-from gym_sapientino import SapientinoDictSpace
-from gym_sapientino.core.configurations import (
-    SapientinoAgentConfiguration,
-    SapientinoConfiguration,
-)
 from stable_baselines import DQN
-from stable_baselines.common.callbacks import BaseCallback, CallbackList
+from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
 
-from multinav.envs.ros_controls import RosControlsEnv, RosGoalEnv, RosTerminationEnv
+from multinav.envs.cont_sapientino import make_sapientino_cont_env
+from multinav.envs.ros_controls import make_ros_env
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
-from multinav.restraining_bolts.automata import make_sapientino_goal_with_automata
-from multinav.wrappers.sapientino import ContinuousRobotFeatures
-from multinav.wrappers.temprl import MyTemporalGoalWrapper
-from multinav.wrappers.utils import SingleAgentWrapper
+from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
 
-# TODO: move features extraction in a different module
-# TODO: move callbacks in a different module
+# Default environments and algorithms parameters
+#   Always prefer to specify them with a json; do not rely on defaults.
+default_parameters = dict(
+    # Common
+    resume_file=None,
+    episode_time_limit=100,
+    # DQN params
+    gamma=0.99,
+    learning_rate=5e-4,
+    learning_starts=5000,
+    exploration_fraction=0.8,
+    exploration_initial_eps=1.0,
+    exploration_final_eps=0.02,
+    save_freq=1000,
+    log_interval=100,  # In #of episodes
+    total_timesteps=2000000,
+    # Ros agent env
+    notmoving_limit=12,
+    # Sapientino env
+    acceleration=0.02,
+    angular_acceleration=20.0,
+    max_velocity=0.20,
+    min_velocity=0.0,
+    max_angular_vel=40,
+    initial_position=[1, 1],
+)
 
 
-def train(env_name, json_args=None):
+def train(env_name, json_params=None):
     """Train an agent on the ROS environment.
 
-    :param env_name: the environment id {"ros", "sapientino-cont"}
-    :param json_args: the path (str) of json file of arguments.
+    :param env_name: the environment id (see ``multinav --help``)
+    :param json_params: the path (str) of json file of parameters.
     """
-    # Defaults. Please use json_args, this dict just show the supported fields
-    #  but they must be tuned
-    learning_params = dict(
-        episode_time_limit=100,
-        save_freq=1000,
-        learning_starts=5000,
-        total_timesteps=2000000,
-        resume_file=None,
-        log_interval=100,  # In #of episodes
-        exploration_fraction=0.8,
-        exploration_initial_eps=1.0,
-        exploration_final_eps=0.02,
-        notmoving_limit=12,  # Ros only
-        gamma=0.99,
-        learning_rate=5e-4,
-        acceleration=0.02,  # Sapientino only here and below
-        angular_acceleration=20.0,
-        max_velocity=0.20,
-        min_velocity=0.0,
-        max_angular_vel=40,
-        initial_position=[1, 1],
-    )
     # Settings
-    if json_args:
-        with open(json_args) as f:
-            params = json.load(f)
-        learning_params.update(params)
+    params = dict(default_parameters)
+    if json_params:
+        with open(json_params) as f:
+            loaded_params = json.load(f)
+        params.update(loaded_params)
 
-    # Init for outputs
-    resuming = bool(learning_params["resume_file"])
+    # Init output directories and save params
+    resuming = bool(params["resume_file"])
     model_path, log_path = prepare_directories(
         env_name=env_name,
         resuming=resuming,
-        args=learning_params,
+        args=params,
     )
 
-    # Make env
+    # Make environment
     if env_name == "ros":
-        input_env = make_ros_env(learning_params)
+        trainer = TrainStableBaselines(
+            env=make_ros_env(params=params),
+            params=params,
+            model_path=model_path,
+            log_path=log_path,
+        )
     elif env_name == "sapientino-cont":
-        input_env = make_sapientino_cont_env(learning_params)
-    else:
-        raise RuntimeError("not a valid environment name")
-
-    # Normalize the features
-    # TODO: reenable, but before temporal goal!
-    # venv = DummyVecEnv([lambda: input_env])   # noqa: E800  (becaue there's
-    # env = VecNormalize(                       # noqa: E800   the todo)
-    #    venv=venv,                             # noqa: E800
-    #    norm_obs=True,                         # noqa: E800
-    #    norm_reward=False,                     # noqa: E800
-    #    gamma=learning_params["gamma"],        # noqa: E800
-    #    training=True,                         # noqa: E800
-    # )                                         # noqa: E800
-    env = input_env
-
-    # Callbacks
-    checkpoint_callback = CustomCheckpointCallback(
-        save_path=model_path,
-        normalizer=None,  # TODO: readd normalizer?
-        save_freq=learning_params["save_freq"],
-        name_prefix="dqn",
-    )
-    renderer_callback = RendererCallback()
-    all_callbacks = CallbackList([renderer_callback, checkpoint_callback])
-
-    # Define agent
-    if not resuming:
-        model = DQN(
-            policy=LnMlpPolicy,  # TODO: use the rb model
-            env=env,
-            gamma=learning_params["gamma"],
-            learning_rate=learning_params["learning_rate"],
-            double_q=True,
-            learning_starts=learning_params["learning_starts"],
-            prioritized_replay=True,
-            exploration_fraction=learning_params["exploration_fraction"],
-            exploration_final_eps=learning_params["exploration_final_eps"],
-            exploration_initial_eps=learning_params["exploration_initial_eps"],
-            tensorboard_log=log_path,
-            full_tensorboard_log=False,
-            verbose=1,
+        trainer = TrainStableBaselines(
+            env=make_sapientino_cont_env(params=params),
+            params=params,
+            model_path=model_path,
+            log_path=log_path,
         )
     else:
-        # Reload model
-        model, norm_env, counters = checkpoint_callback.load(
-            path=learning_params["resume_file"],
-        )
-        # TODO
-        # Reapply normalizer to env
-        # norm_env.set_venv(venv)  # noqa: E800  (becaue there's the todo)
-        # model.set_env(norm_env)  # noqa: E800
-        # Restore counters
-        model.tensorboard_log = log_path
-        model.num_timesteps = counters["step"]
-
-    # Behaviour on quit
-    QuitWithResources.add(
-        "last_save",
-        lambda: checkpoint_callback.save(step=checkpoint_callback.num_timesteps),
-    )
+        raise RuntimeError("Environment not supported")
 
     # Start
-    model.learn(
-        total_timesteps=learning_params["total_timesteps"],
-        log_interval=learning_params["log_interval"],
-        callback=all_callbacks,
-        reset_num_timesteps=not resuming,
-    )
-
-    # Save weights
-    model.save(os.path.join(model_path, "model"))
+    trainer.train()
 
 
-def make_ros_env(learning_params):
-    """Return the ros environment."""
-    input_env = RosGoalEnv(
-        env=RosTerminationEnv(
-            env=RosControlsEnv(),
-            time_limit=learning_params["episode_time_limit"],
-            notmoving_limit=learning_params["notmoving_limit"],
-        )
-    )
-    return input_env
+class TrainStableBaselines:
+    """Define the agnent and training loop for stable_baselines."""
 
-
-def make_sapientino_cont_env(learning_params):
-    """Return sapientino continuous state environment."""
-    # Define the robot
-    agent_configuration = SapientinoAgentConfiguration(
-        continuous=True,
-        initial_position=learning_params["initial_position"],
-    )
-    # Define the environment
-    configuration = SapientinoConfiguration(
-        [agent_configuration],
-        path_to_map=Path("inputs/sapientino-map.txt"),
-        reward_per_step=-0.01,
-        reward_outside_grid=0.0,
-        reward_duplicate_beep=0.0,
-        acceleration=learning_params["acceleration"],
-        angular_acceleration=learning_params["angular_acceleration"],
-        max_velocity=learning_params["max_velocity"],
-        min_velocity=learning_params["min_velocity"],
-        max_angular_vel=learning_params["angular_acceleration"],
-    )
-    env = SingleAgentWrapper(SapientinoDictSpace(configuration))
-
-    # Define the fluent extractor
-    colors = ["red", "green", "blue"]
-
-    def extract_sapientino_fluents(obs, action):
-        """Extract Sapientino fluents."""
-        is_beep = obs.get("beep") > 0
-        color_id = obs.get("color")
-        if is_beep and 0 <= color_id - 1 < len(colors):
-            color = colors[color_id - 1]
-            fluents = {color} if color in colors else set()
-        else:
-            fluents = set()
-        return PLInterpretation(fluents)
-
-    # Define the temporal goal
-    tg = make_sapientino_goal_with_automata(colors, extract_sapientino_fluents)
-    env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
-    env = TimeLimit(env, max_episode_steps=learning_params["episode_time_limit"])
-    print("Temporal goal:", tg._formula)
-
-    return env
-
-
-class CustomCheckpointCallback(BaseCallback):
-    """Manage model checkpoints.
-
-    This class manages checkpoints, save and restore.
-    It also act as callback class so that it can be used inside
-    stable_baselines learning loop.
-    If you don't plan to use it as callback, assign the model to self.model.
-    """
-
-    # TODO: referring specifically to the normalizer it's ugly
-
-    def __init__(self, save_path, normalizer, save_freq=None, name_prefix="model"):
+    def __init__(self, env, params, model_path, log_path):
         """Initialize.
 
-        :param save_path: model checkpoints path.
-        :param normalizer: a VecNormalize instance.
-        :param save_freq: number of steps between each save (None means never).
-        :param name_prefix: just a name for the saved weights.
+        :param env: gym environment.
+        :param params: dict of parameters, like `default_parameters`.
+        :param model_path: directory where to save models.
+        :param log_path: directory where to save tensorboard logs.
         """
-        BaseCallback.__init__(self)
+        # Callbacks
+        checkpoint_callback = CustomCheckpointCallback(
+            save_path=model_path,
+            save_freq=params["save_freq"],
+            extra=None,
+        )
+        renderer_callback = RendererCallback()
+        all_callbacks = CallbackList([renderer_callback, checkpoint_callback])
+
+        # Define agent
+        resuming = bool(params["resume_file"])
+        if not resuming:
+            model = DQN(
+                policy=LnMlpPolicy,
+                env=env,
+                gamma=params["gamma"],
+                learning_rate=params["learning_rate"],
+                double_q=True,
+                learning_starts=params["learning_starts"],
+                prioritized_replay=True,
+                exploration_fraction=params["exploration_fraction"],
+                exploration_final_eps=params["exploration_final_eps"],
+                exploration_initial_eps=params["exploration_initial_eps"],
+                tensorboard_log=log_path,
+                full_tensorboard_log=False,
+                verbose=1,
+            )
+        else:
+            # Reload model
+            model, _, counters = checkpoint_callback.load(
+                path=params["resume_file"],
+            )
+            # Restore properties
+            model.tensorboard_log = log_path
+            model.num_timesteps = counters["step"]
+            model.set_env(env)
 
         # Store
-        self.normalizer_model = normalizer
-        self._save_freq = save_freq
-        self._counters_file = os.path.join(save_path, os.path.pardir, "counters.json")
-        self._chkpt_format = os.path.join(save_path, name_prefix + "_{step}")
-        self._chkpt_extension = ".zip"
-        self._normalizer_format = os.path.join(save_path, "VecNormalize_{step}.pickle")
+        self.params = params
+        self.resuming = resuming
+        self.saver = checkpoint_callback
+        self.callbacks = all_callbacks
+        self.model = model
 
-    def _update_counters(self, filepath, step, normalizer_file):
-        """Update the file of counters with a new entry.
+    def train(self):
+        """Do train.
 
-        :param filepath: checkpoint that is being saved
-        :param step: current global step
-        :param normalizer_file: associated normalizer
+        Interrupt at any type with Ctrl-C.
         """
-        counters = {}
-
-        # Load
-        if os.path.exists(self._counters_file):
-            with open(self._counters_file) as f:
-                counters = json.load(f)
-
-        filepath = os.path.relpath(filepath)
-        counters[filepath] = dict(step=step, normalizer=normalizer_file)
-
-        # Save
-        with open(self._counters_file, "w") as f:
-            json.dump(counters, f, indent=4)
-
-    def save(self, step):
-        """Manually save a checkpoint.
-
-        :param step: the current step of the training
-            (used just to identify checkpoints).
-        """
-        # Save model
-        model_path = self._chkpt_format.format(step=step)
-        self.model.save(model_path)
-        # Save checkpoint
-        normalizer_path = self._normalizer_format.format(step=step)
-        with open(normalizer_path, "wb") as f:
-            pickle.dump(self.normalizer_model, f)
-
-        self._update_counters(
-            filepath=model_path + self._chkpt_extension,
-            step=step,
-            normalizer_file=normalizer_path,
+        # Behaviour on quit
+        QuitWithResources.add(
+            "last_save",
+            lambda: self.saver.save(step=self.saver.num_timesteps),
         )
 
-    def load(self, path):
-        """Load the weights from a checkpoint.
+        # Start
+        self.model.learn(
+            total_timesteps=self.params["total_timesteps"],
+            log_interval=self.params["log_interval"],
+            callback=self.callbacks,
+            reset_num_timesteps=not self.resuming,
+        )
 
-        :param path: load checkpoint at this path.
-        :return: the model and associated counters.
-        """
-        # Restore
-        path = os.path.relpath(path)
-        model = DQN.load(load_path=path)
-        print("> Loaded:", path)
-
-        # Read counters
-        with open(self._counters_file) as f:
-            data = json.load(f)
-        counters = data[path]
-
-        # Restore normalizer
-        normalizer_path = counters.pop("normalizer")
-        with open(normalizer_path, "rb") as f:
-            normalizer = pickle.load(f)
-
-        return model, normalizer, counters
-
-    def _on_step(self):
-        """Automatic save."""
-        if self._save_freq is None:
-            return
-        if self.num_timesteps % self._save_freq == 0:
-            self.save(step=self.num_timesteps)
-
-
-class RendererCallback(BaseCallback):
-    """Just render at each frame."""
-
-    def _on_step(self):
-        """Do it."""
-        self.training_env.render()
+        # Final save
+        self.saver.save(self.params["total_timesteps"])

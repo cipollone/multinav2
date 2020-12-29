@@ -14,8 +14,7 @@ def split_agent_and_automata(ob_space: Box) -> Tuple[gym.Space, Discrete]:
     """
     Split agent and the automaton space.
 
-    TODO: for the moment, we assume the automata spaces are composed by
-      just one component.
+    NOTE: we assume the automata spaces are composed by just one component.
 
     :param ob_space: the combined observation space.
     :return: the pair of spaces (agent, automata).
