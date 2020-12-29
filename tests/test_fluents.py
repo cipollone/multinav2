@@ -24,7 +24,10 @@
 
 import pytest
 
+from flloat.semantics import PLInterpretation
+
 from multinav.envs.base import AbstractFluents
+from multinav.envs.cont_sapientino import Fluents as ContSapientinoFluents
 
 
 class Fluents1(AbstractFluents):
@@ -37,10 +40,24 @@ class Fluents2(Fluents1):
         self.fluents = {"is_one", "is_two"}
 
 
-def test_base():
+def test_fluents_base():
     """Test the base class."""
     with pytest.raises(TypeError):
         fluents = Fluents1()
     fluents = Fluents2()
 
     assert fluents.valuate(1, 0).issubset(fluents.fluents)
+
+
+def test_fluents_cont_sapientino():
+    """Test fluents extraction on cont-sapientino."""
+    # NOTE: this test depends on gym-sapientino color order
+    with pytest.raises(ValueError):
+        fluents = ContSapientinoFluents({"not a color"})
+    fluents = ContSapientinoFluents({"red", "blue"})  # with just 2 fluents
+
+    assert fluents.valuate(dict(beep=0, color=1), 0) == PLInterpretation(set())
+    assert fluents.valuate(dict(beep=1, color=1), 0) == PLInterpretation({"red"})
+    assert fluents.valuate(dict(beep=1, color=3), 0) == PLInterpretation({"blue"})
+    with pytest.raises(RuntimeError):
+        fluents.valuate(dict(beep=1, color=2), 0)   # green not used

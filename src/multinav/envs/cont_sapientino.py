@@ -86,7 +86,7 @@ class Fluents(AbstractFluents):
                 if color_name not in self.fluents:
                     raise RuntimeError("Unexpected color: " + color_name)
                 true_fluents = {color_name}
-            return PLInterpretation(true_fluents)
+        return PLInterpretation(true_fluents)
 
 
 def make_env(params: Dict[str, Any]):
