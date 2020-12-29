@@ -53,7 +53,7 @@ _sapientino_map_str = """\
 |       |
 | rgb   |
 |       |"""
-_sapientino_colors_in_map = {"red", "green", "blue"}
+_sapientino_used_colors = ["red", "green", "blue"]
 
 
 class Fluents:
@@ -80,14 +80,14 @@ class Fluents:
         :param action: env action.
         :return: a propositional interpretation
         """
-        beeps = obs.get("beep") > 0
+        beeps = obs["beep"] > 0
         if not beeps:
-            fluents = {}
+            fluents = set()  # type: Set[str]
         else:
-            color_id = obs.get("color")
+            color_id = obs["color"]
             color_name = self._int2color[color_id]
             if color_name == "blank":
-                fluents = {}
+                fluents = set()
             else:
                 if color_name not in self.colors_set:
                     raise RuntimeError("Unexpected color: " + color_name)
@@ -129,11 +129,11 @@ def make_env(params: Dict[str, Any]):
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 
     # Define the fluent extractor
-    fluents = Fluents(colors_set=_sapientino_colors_in_map)
+    fluents = Fluents(colors_set=set(_sapientino_used_colors))
 
     # Define the temporal goal
     tg = make_sapientino_goal_with_automata(
-        colors=fluents.colors_set,
+        colors=_sapientino_used_colors,
         fluent_extractor=fluents.valuate,
         reward=1.0,
     )

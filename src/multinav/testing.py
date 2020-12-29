@@ -2,8 +2,8 @@
 
 import json
 
-from multinav.envs.cont_sapientino import make_sapientino_cont_env
-from multinav.envs.ros_controls import make_ros_env
+import multinav.envs.cont_sapientino as cont_sapientino_env
+import multinav.envs.ros_controls as ros_env
 from multinav.helpers.misc import prepare_directories
 from multinav.training import TrainStableBaselines
 
@@ -33,7 +33,7 @@ def test(env_name, json_params):
 
     # Make environment
     if env_name == "ros":
-        env = make_ros_env(params=params)
+        env = ros_env.make_env(params=params)
         model = TrainStableBaselines(
             env=env,
             params=params,
@@ -42,7 +42,7 @@ def test(env_name, json_params):
         ).model
         tester = TestStableBaselines(env=env, model=model)
     elif env_name == "sapientino-cont":
-        env = make_sapientino_cont_env(params=params)
+        env = cont_sapientino_env.make_env(params=params)
         model = TrainStableBaselines(
             env=env,
             params=params,
