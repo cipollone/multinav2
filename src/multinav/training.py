@@ -1,8 +1,4 @@
-"""This module implements the general logic of the training loop.
-
-This file is likely to change. I just needed an outer module where to put the
-general logic.
-"""
+"""This module implements the general logic of the training loop."""
 
 import json
 
@@ -10,8 +6,8 @@ from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
 
-from multinav.envs.cont_sapientino import make_sapientino_cont_env
-from multinav.envs.ros_controls import make_ros_env
+import multinav.envs.cont_sapientino as cont_sapientino_env
+import multinav.envs.ros_controls as ros_env
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
@@ -68,14 +64,14 @@ def train(env_name, json_params=None):
     # Make environment
     if env_name == "ros":
         trainer = TrainStableBaselines(
-            env=make_ros_env(params=params),
+            env=ros_env.make_env(params=params),
             params=params,
             model_path=model_path,
             log_path=log_path,
         )
     elif env_name == "sapientino-cont":
         trainer = TrainStableBaselines(
-            env=make_sapientino_cont_env(params=params),
+            env=cont_sapientino_env.make_env(params=params),
             params=params,
             model_path=model_path,
             log_path=log_path,
