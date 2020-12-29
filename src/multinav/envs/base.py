@@ -38,20 +38,20 @@ class AbstractFluents(ABC2):
     """Definition of fluents for an environment.
 
     This is the base class for a features extractor in an environment.
-    `fluents` is the set of fluents that are valuated.  The interpretation
-    returned by valuate can only contain symbols from this set.
+    `fluents` is the set of fluents that are evaluated.  The interpretation
+    returned by `evaluate` can only contain symbols from this set.
     """
 
     fluents = AbstractAttribute()  # type: Any
 
     @abstractmethod
-    def valuate(self, obs, action) -> PLInterpretation:
+    def evaluate(self, obs, action) -> PLInterpretation:
         """Compute the current propositional interpretation.
 
         This function also respects the interface defined in
         temprl.wrapper.TemporalGoal.
         :param obs: environment observation
         :param action: last executed action
-        :return: a valuation for all fluents
+        :return: a propositional interpretation
         """
         pass

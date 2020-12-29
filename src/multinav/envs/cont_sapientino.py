@@ -64,7 +64,7 @@ class Fluents(AbstractFluents):
         """Initialize.
 
         :param colors_set: a set of colors among the ones used by sapientino;
-            this will be the set of fluents to valuate.
+            this will be the set of fluents to evaluate.
         """
         self._color2int = {c.value: i for c, i in color2int.items()}
         self._int2color = {i: c for c, i in self._color2int.items()}
@@ -72,8 +72,8 @@ class Fluents(AbstractFluents):
         if not self.fluents.issubset(self._color2int):
             raise ValueError(str(colors_set) + " contains invalid colors")
 
-    def valuate(self, obs: Dict[str, float], action) -> PLInterpretation:
-        """Respects AbstractFluents.valuate."""
+    def evaluate(self, obs: Dict[str, float], action) -> PLInterpretation:
+        """Respects AbstractFluents.evaluate."""
         beeps = obs["beep"] > 0
         if not beeps:
             true_fluents = set()  # type: Set[str]
@@ -127,7 +127,7 @@ def make_env(params: Dict[str, Any]):
     # Define the temporal goal
     tg = make_sapientino_goal_with_automata(
         colors=_sapientino_used_colors,
-        fluent_extractor=fluents.valuate,
+        fluent_extractor=fluents.evaluate,
         reward=1.0,
     )
     env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
