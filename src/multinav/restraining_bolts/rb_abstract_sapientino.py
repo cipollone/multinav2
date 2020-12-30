@@ -30,7 +30,7 @@ class AbstractSapientinoRB(SapientinoRB):
 
     def extract_sapientino_fluents(self, obs, action) -> PLInterpretation:
         """Extract Sapientino fluents."""
-        # see AbstractSapientino.
+        # see SapientinoRB
         observation_offset = 1
         visit_action = 1
 

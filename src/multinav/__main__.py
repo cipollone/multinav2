@@ -4,8 +4,6 @@
 
 import argparse
 
-# TODO: allow to choose whether with RB or not
-# TODO: Define fluent extraction functions/classes (even if not complete)
 # TODO: normalize the environment features. Look in 736e60d for example.
 
 

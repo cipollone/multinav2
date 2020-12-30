@@ -36,6 +36,9 @@ from temprl.wrapper import TemporalGoal
 
 from multinav.envs.base import AbstractFluents
 
+# TODO: enable the "bip" fluent in sapientino.
+#   Either update _make_sapientino_automaton or use flloat for DFA generation.
+
 
 class SapientinoGoal(TemporalGoal):
     """Temporal goals for sapientino environments.
