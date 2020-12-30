@@ -48,19 +48,26 @@ from multinav.wrappers.sapientino import ContinuousRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
+# TODO: map and color sequence could be passed as parameters from train
+#   for example from the previous run, along with the value function learnt
+#   for this map and color sequence.
+#   Color sequence is shared by all envs; this is not the right place.
+
 """This is the map of the grid."""
-_sapientino_map_str = """\
+sapientino_map_str = """\
 |       |
 |       |
 | rgb   |
 |       |"""
-_sapientino_color_sequence = ["red", "green", "blue"]
-
-# TODO: maybe this fluent evaluator is common to all sapientino environments
+sapientino_color_sequence = ["red", "green", "blue"]
 
 
 class Fluents(AbstractFluents):
-    """Define the propositions in this specific environment."""
+    """Define the propositions in this specific environment.
+
+    This fluents evaluator works for any environment built on
+    gym_sapientino repository.
+    """
 
     def __init__(self, colors_set: Set[str]):
         """Initialize.
@@ -106,7 +113,7 @@ def make(params: Dict[str, Any]):
 
     # Define the map
     map_file = Path(tempfile.mktemp(suffix=".txt"))
-    map_file.write_text(_sapientino_map_str)
+    map_file.write_text(sapientino_map_str)
 
     # Define the environment
     configuration = SapientinoConfiguration(
@@ -124,11 +131,11 @@ def make(params: Dict[str, Any]):
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 
     # Define the fluent extractor
-    fluents = Fluents(colors_set=set(_sapientino_color_sequence))
+    fluents = Fluents(colors_set=set(sapientino_color_sequence))
 
     # Define the temporal goal
     tg = SapientinoGoal(
-        colors=_sapientino_color_sequence,
+        colors=sapientino_color_sequence,
         fluents=fluents,
         reward=1.0,
     )

@@ -29,6 +29,7 @@ from gym.spaces import MultiDiscrete
 from PIL import Image
 from pythomata.dfa import DFA
 
+from multinav.envs.base import AbstractFluents
 from multinav.helpers.gym import (
     Action,
     MyDiscreteEnv,
@@ -319,3 +320,21 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         for action, _transitions in self.P.get(state, {}).items():
             actions.add(action)
         return actions
+
+
+class Fluents(AbstractFluents):
+    """Define the propositions in this specific environment."""
+
+    def __init__(self, colors_set: Set[str]):
+        """Initialize.
+
+        :param colors_set: a set of colors among the ones used by sapientino;
+            this will be the set of fluents to evaluate.
+        """
+        # TODO:
+        pass
+
+    def evaluate(self, obs: Dict[str, float], action) -> PLInterpretation:
+        """Missing."""
+        # TODO: docstring and fn
+        return None
