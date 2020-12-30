@@ -56,6 +56,8 @@ _sapientino_map_str = """\
 |       |"""
 _sapientino_used_colors = ["red", "green", "blue"]
 
+# TODO: maybe this fluent evaluator is common to all sapientino environments
+
 
 class Fluents(AbstractFluents):
     """Define the propositions in this specific environment."""
