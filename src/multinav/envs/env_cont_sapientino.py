@@ -43,7 +43,7 @@ from gym_sapientino.core.configurations import (
 from gym_sapientino.core.types import color2int
 
 from multinav.envs.base import AbstractFluents
-from multinav.restraining_bolts.automata import make_sapientino_goal_with_automata
+from multinav.envs.temporal_goals import SapientinoGoal
 from multinav.wrappers.sapientino import ContinuousRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
@@ -54,7 +54,7 @@ _sapientino_map_str = """\
 |       |
 | rgb   |
 |       |"""
-_sapientino_used_colors = ["red", "green", "blue"]
+_sapientino_color_sequence = ["red", "green", "blue"]
 
 # TODO: maybe this fluent evaluator is common to all sapientino environments
 
@@ -124,12 +124,12 @@ def make(params: Dict[str, Any]):
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 
     # Define the fluent extractor
-    fluents = Fluents(colors_set=set(_sapientino_used_colors))
+    fluents = Fluents(colors_set=set(_sapientino_color_sequence))
 
     # Define the temporal goal
-    tg = make_sapientino_goal_with_automata(
-        colors=_sapientino_used_colors,
-        fluent_extractor=fluents.evaluate,
+    tg = SapientinoGoal(
+        colors=_sapientino_color_sequence,
+        fluents=fluents,
         reward=1.0,
     )
     env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))

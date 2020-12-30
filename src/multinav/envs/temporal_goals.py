@@ -36,9 +36,6 @@ from temprl.wrapper import TemporalGoal
 
 from multinav.envs.base import AbstractFluents
 
-# TODO: when ready, remove references to make_sapientino_goal_with_automata
-# TODO: test this class
-
 
 class SapientinoGoal(TemporalGoal):
     """Temporal goals for sapientino environments.
