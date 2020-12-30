@@ -27,7 +27,7 @@ import numpy as np
 import pytest
 
 from multinav.algorithms.value_iteration import value_iteration
-from multinav.envs.abstract_sapientino import (
+from multinav.envs.env_abstract_sapientino import (
     AbstractSapientino,
     AbstractSapientinoTemporalGoal,
 )

@@ -25,8 +25,8 @@
 import pytest
 from flloat.semantics import PLInterpretation
 
+from multinav.envs import env_cont_sapientino
 from multinav.envs.base import AbstractFluents
-from multinav.envs.cont_sapientino import Fluents as ContSapientinoFluents
 
 
 class Fluents1(AbstractFluents):
@@ -58,8 +58,8 @@ def test_fluents_cont_sapientino():
     """Test fluents extraction on cont-sapientino."""
     # NOTE: this test depends on gym-sapientino color order
     with pytest.raises(ValueError):
-        fluents = ContSapientinoFluents({"not a color"})
-    fluents = ContSapientinoFluents({"red", "blue"})  # with just 2 fluents
+        fluents = env_cont_sapientino.Fluents({"not a color"})
+    fluents = env_cont_sapientino.Fluents({"red", "blue"})  # with just 2 fluents
 
     assert fluents.evaluate(dict(beep=0, color=1), 0) == PLInterpretation(set())
     assert fluents.evaluate(dict(beep=1, color=1), 0) == PLInterpretation({"red"})
