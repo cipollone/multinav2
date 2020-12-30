@@ -45,7 +45,7 @@ class AbstractFluents(ABC2):
     fluents = AbstractAttribute()  # type: Any
 
     @abstractmethod
-    def evaluate(self, obs, action) -> PLInterpretation:
+    def evaluate(self, obs, action: int) -> PLInterpretation:
         """Compute the current propositional interpretation.
 
         This function also respects the interface defined in

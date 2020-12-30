@@ -66,7 +66,7 @@ class Fluents(AbstractFluents):
         if not self.fluents.issubset(sapientino_defs.color2int):
             raise ValueError(str(colors_set) + " contains invalid colors")
 
-    def evaluate(self, obs: Dict[str, float], action) -> PLInterpretation:
+    def evaluate(self, obs: Dict[str, float], action: int) -> PLInterpretation:
         """Respects AbstractFluents.evaluate."""
         beeps = obs["beep"] > 0
         if not beeps:

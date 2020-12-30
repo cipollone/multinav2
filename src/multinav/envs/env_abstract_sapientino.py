@@ -30,6 +30,7 @@ from gym.spaces import MultiDiscrete
 from PIL import Image
 from pythomata.dfa import DFA
 
+from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
 from multinav.helpers.gym import (
     Action,
@@ -174,10 +175,15 @@ class AbstractSapientino(MyDiscreteEnv):
         return f"goto_{action}"
 
     def _state_to_string(self, state: State):
-        """From state to string.""" ""
-        # TODO add color strings.
+        """From state to string.
+
+        All sapientino environments interpret IDs as the same color.
+        """
         self._is_legal_state(state)
-        return str(state)
+        if state == 0:
+            return "corridor"
+        else:
+            return sapientino_defs.int2color[state]
 
     def render(self, mode="human"):
         """Render the environment (only rgb_array mode)."""
@@ -324,7 +330,7 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
 
 
 class Fluents(AbstractFluents):
-    """Define the propositions in this specific environment."""
+    """Define the propositions for `AbstractSapientino`."""
 
     def __init__(self, colors_set: Set[str]):
         """Initialize.
@@ -332,10 +338,24 @@ class Fluents(AbstractFluents):
         :param colors_set: a set of colors among the ones used by sapientino;
             this will be the set of fluents to evaluate.
         """
-        # TODO:
-        pass
+        self.fluents = colors_set
+        if not self.fluents.issubset(sapientino_defs.color2int):
+            raise ValueError(str(colors_set) + " contains invalid colors")
 
-    def evaluate(self, obs: Dict[str, float], action) -> PLInterpretation:
-        """Missing."""
-        # TODO: docstring, fn
-        return None
+    def evaluate(self, obs: int, action: int) -> PLInterpretation:
+        """Respects AbstractFluents.evaluate.
+
+        :param obs: assuming that the observation comes from an
+            `AbstractSapientino` environment.
+        :param action: the last action.
+        """
+        # TODO: double check and write a test for this
+        observation_offset = 1
+        visit_action = 1
+
+        color_id = obs - observation_offset
+        if visit_action == action:
+            fluents = {sapientino_defs.int2color[color_id]}
+        else:
+            fluents = set()
+        return PLInterpretation(fluents)
