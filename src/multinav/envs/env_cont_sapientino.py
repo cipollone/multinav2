@@ -40,26 +40,13 @@ from gym_sapientino.core.configurations import (
     SapientinoAgentConfiguration,
     SapientinoConfiguration,
 )
-from gym_sapientino.core.types import color2int
 
+from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
 from multinav.envs.temporal_goals import SapientinoGoal
 from multinav.wrappers.sapientino import ContinuousRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
-
-# TODO: map and color sequence could be passed as parameters from train
-#   for example from the previous run, along with the value function learnt
-#   for this map and color sequence.
-#   Color sequence is shared by all envs; this is not the right place.
-
-"""This is the map of the grid."""
-sapientino_map_str = """\
-|       |
-|       |
-| rgb   |
-|       |"""
-sapientino_color_sequence = ["red", "green", "blue"]
 
 
 class Fluents(AbstractFluents):
@@ -75,10 +62,8 @@ class Fluents(AbstractFluents):
         :param colors_set: a set of colors among the ones used by sapientino;
             this will be the set of fluents to evaluate.
         """
-        self._color2int = {c.value: i for c, i in color2int.items()}
-        self._int2color = {i: c for c, i in self._color2int.items()}
         self.fluents = colors_set
-        if not self.fluents.issubset(self._color2int):
+        if not self.fluents.issubset(sapientino_defs.color2int):
             raise ValueError(str(colors_set) + " contains invalid colors")
 
     def evaluate(self, obs: Dict[str, float], action) -> PLInterpretation:
@@ -88,7 +73,7 @@ class Fluents(AbstractFluents):
             true_fluents = set()  # type: Set[str]
         else:
             color_id = obs["color"]
-            color_name = self._int2color[color_id]
+            color_name = sapientino_defs.int2color[color_id]
             if color_name == "blank":
                 true_fluents = set()
             else:
@@ -113,7 +98,7 @@ def make(params: Dict[str, Any]):
 
     # Define the map
     map_file = Path(tempfile.mktemp(suffix=".txt"))
-    map_file.write_text(sapientino_map_str)
+    map_file.write_text(sapientino_defs.sapientino_map_str)
 
     # Define the environment
     configuration = SapientinoConfiguration(
@@ -131,11 +116,11 @@ def make(params: Dict[str, Any]):
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 
     # Define the fluent extractor
-    fluents = Fluents(colors_set=set(sapientino_color_sequence))
+    fluents = Fluents(colors_set=set(sapientino_defs.sapientino_color_sequence))
 
     # Define the temporal goal
     tg = SapientinoGoal(
-        colors=sapientino_color_sequence,
+        colors=sapientino_defs.sapientino_color_sequence,
         fluents=fluents,
         reward=1.0,
     )

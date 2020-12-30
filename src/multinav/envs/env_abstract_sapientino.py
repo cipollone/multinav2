@@ -22,9 +22,10 @@
 
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
 import io
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 import numpy as np
+from flloat.semantics import PLInterpretation
 from gym.spaces import MultiDiscrete
 from PIL import Image
 from pythomata.dfa import DFA
@@ -336,5 +337,5 @@ class Fluents(AbstractFluents):
 
     def evaluate(self, obs: Dict[str, float], action) -> PLInterpretation:
         """Missing."""
-        # TODO: docstring and fn
+        # TODO: docstring, fn
         return None
