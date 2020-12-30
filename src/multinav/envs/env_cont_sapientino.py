@@ -89,8 +89,8 @@ class Fluents(AbstractFluents):
         return PLInterpretation(true_fluents)
 
 
-def make_env(params: Dict[str, Any]):
-    """Return sapientino continuous state environment.
+def make(params: Dict[str, Any]):
+    """Make the sapientino continuous state environment.
 
     :param params: a dictionary of parameters; see in this function the
         only ones that are used.

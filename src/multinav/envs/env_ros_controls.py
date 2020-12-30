@@ -22,11 +22,10 @@
 
 """A Gym environment that controls a remote ROS instance.
 
-In this module you can just use make_env(). It defines the complete
-gym.Env. _RosControlsEnv defines just the basic dynamics and transition
-function, _RosTerminationEnv adds some episode termination criterion, and
-_RosGoalEnv defines rewards. make_env combines them to define the
-environment.
+In this module you can just use `make()`. It defines the complete
+gym.Env. `_RosControlsEnv` defines just the basic dynamics and transition
+function, `_RosTerminationEnv` adds some episode termination criterion, and
+_RosGoalEnv defines rewards. `make` combines them to define the environment.
 """
 
 import gym
@@ -266,8 +265,8 @@ class _RosGoalEnv(gym.Wrapper):
             return 0.0
 
 
-def make_env(params):
-    """Define the complete ros environment.
+def make(params):
+    """Make the "ROS" environment.
 
     See the docs of the other classes in this module for futher information.
     :param params: a dictionary of parameters; see in this function the
