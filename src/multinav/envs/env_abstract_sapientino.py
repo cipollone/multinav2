@@ -22,7 +22,7 @@
 
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
 import io
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
 import numpy as np
 from flloat.semantics import PLInterpretation
@@ -32,6 +32,7 @@ from pythomata.dfa import DFA
 
 from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
+from multinav.envs.temporal_goals import SapientinoGoal
 from multinav.helpers.general import classproperty
 from multinav.helpers.gym import (
     Action,
@@ -199,6 +200,7 @@ class AbstractSapientino(MyDiscreteEnv):
         return array
 
 
+# TODO: look for users of this class; rb and args
 class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
     """
     Abstract Sapientino with Temporal Goals.
@@ -207,24 +209,25 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
     need to build an explicit model.
     """
 
-    def __init__(
-        self,
-        restraining_bolt: SapientinoRB,
-        sapientino_args: Optional[List],
-        sapientino_kwargs: Optional[Dict] = None,
-    ):
+    def __init__(self, **sapientino_kwargs):
         """Initialize the environment."""
-        sapientino_args = sapientino_args or []
-        sapientino_kwargs = sapientino_kwargs or {}
-        self.unwrapped_env = AbstractSapientino(*sapientino_args, **sapientino_kwargs)
-        self.temporal_goal = restraining_bolt.make_sapientino_goal()
-        self.restraining_bolt = restraining_bolt
-        MyTemporalGoalWrapper.__init__(self, self.unwrapped_env, [self.temporal_goal])  # type: ignore
+        # Make AbstractSapientino
+        unwrapped_env = AbstractSapientino(**sapientino_kwargs)
+
+        # Make a temporal goal
+        self.fluents = Fluents(nb_colors=sapientino_kwargs["nb_colors"])
+        self.temporal_goal = SapientinoGoal(
+            colors=list(self.fluents.fluents),
+            fluents=self.fluents,
+        )
+        MyTemporalGoalWrapper.__init__(
+            self, unwrapped_env, [self.temporal_goal]
+        )
 
         # flatten the observation space
         observation_space = MultiDiscrete(
             [
-                self.unwrapped_env.observation_space.n,
+                self.unwrapped.observation_space.n,
                 self.temporal_goal.observation_space.n,
             ]
         )
@@ -232,7 +235,7 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         # compute model
         model = self._compute_model()
         nb_states = observation_space.nvec.prod()
-        nb_actions = self.unwrapped_env.nb_actions
+        nb_actions = self.unwrapped.nb_actions
         ids = np.zeros(nb_states)
         ids[0] = 1.0
         MyDiscreteEnv.__init__(self, nb_states, nb_actions, model, ids)
@@ -246,23 +249,23 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         for automaton_state in automaton.states:
             done = automaton_state in automaton.accepting_states
             reward = 1.0 if done else 0.0
-            for color_id in range(self.unwrapped_env.nb_colors):
-                initial_state = (self.unwrapped_env.initial_state, automaton_state)
-                color = self.unwrapped_env.state_from_color(color_id)
+            for color_id in range(self.unwrapped.nb_colors):
+                initial_state = (self.unwrapped.initial_state, automaton_state)
+                color = self.unwrapped.state_from_color(color_id)
                 color_state = (color, automaton_state)
 
                 # from the corridor, you can go to any color
-                goto_color_action = self.unwrapped_env.action_goto_color_from_color(
+                goto_color_action = self.unwrapped.action_goto_color_from_color(
                     color_id
                 )
                 new_transition = (
-                    1.0 - self.unwrapped_env.fail_prob,
+                    1.0 - self.unwrapped.fail_prob,
                     color_state,
                     reward,
                     done,
                 )
                 fail_transition = (
-                    self.unwrapped_env.fail_prob,
+                    self.unwrapped.fail_prob,
                     initial_state,
                     reward,
                     done,
@@ -273,38 +276,38 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
 
                 # if you visit a color, check the transition on the automaton.
                 fluents = self.temporal_goal.extract_fluents(
-                    color, self.unwrapped_env.visit_color
+                    color, self.unwrapped.visit_color
                 )
                 next_automaton_state = automaton.transition_function.get(
                     automaton_state, {}
                 ).get(fluents, failure_state)
                 next_state = (color, next_automaton_state)
                 new_transition = (
-                    1.0 - self.unwrapped_env.fail_prob,
+                    1.0 - self.unwrapped.fail_prob,
                     next_state,
                     reward,
                     done,
                 )
                 fail_transition = (
-                    self.unwrapped_env.fail_prob,
+                    self.unwrapped.fail_prob,
                     color_state,
                     reward,
                     done,
                 )
                 model.setdefault(color_state, {}).setdefault(
-                    self.unwrapped_env.visit_color, []
+                    self.unwrapped.visit_color, []
                 ).extend([new_transition, fail_transition])
 
                 # from any color, you can go back to the corridor.
                 new_transition = (1.0, initial_state, reward, done)
                 fail_transition = (
-                    self.unwrapped_env.fail_prob,
+                    self.unwrapped.fail_prob,
                     color_state,
                     reward,
                     done,
                 )
                 model.setdefault(color_state, {}).setdefault(
-                    self.unwrapped_env.goto_corridor, []
+                    self.unwrapped.goto_corridor, []
                 ).extend([new_transition, fail_transition])
 
         return model
