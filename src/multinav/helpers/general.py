@@ -62,6 +62,14 @@ class ABC2(metaclass=ABCMeta2):
     """
 
 
+class classproperty(property):
+    """Properties without class instances."""
+
+    def __get__(self, _cls, owner):
+        """Pass cls and return value compute by getter."""
+        return classmethod(self.fget).__get__(None, owner)()
+
+
 class QuitWithResources:
     """Close the resources when ctrl-c is pressed."""
 
