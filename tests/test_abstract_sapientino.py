@@ -33,7 +33,6 @@ from multinav.envs.env_abstract_sapientino import (
     Fluents,
 )
 from multinav.helpers.gym import Transition, Transitions
-from multinav.restraining_bolts.rb_abstract_sapientino import AbstractSapientinoRB
 
 
 def test_abstract_sapientino():
@@ -123,8 +122,7 @@ def test_value_iteration_with_fail_prob():
 def test_value_iteration_with_rb():
     """Test value iteration with the restraining bolt."""
     nb_colors = 3
-    rb = AbstractSapientinoRB(nb_colors)
-    env = AbstractSapientinoTemporalGoal(rb, [nb_colors], dict(failure_probability=0.0))
+    env = AbstractSapientinoTemporalGoal(nb_colors=nb_colors, failure_probability=0.1)
     v, policy = value_iteration(env, discount=0.9, max_iterations=200)
     actual_values = np.array(
         list(map(itemgetter(1), sorted(v.items(), key=lambda x: x[0])))

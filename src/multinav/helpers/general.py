@@ -62,12 +62,17 @@ class ABC2(metaclass=ABCMeta2):
     """
 
 
-class classproperty(property):
-    """Properties without class instances."""
+def classproperty(getter):
+    """Decorate methods as class properties."""
 
-    def __get__(self, _cls, owner):
-        """Pass cls and return value compute by getter."""
-        return classmethod(self.fget).__get__(None, owner)()
+    class StaticGetter:
+        """Descriptor."""
+
+        def __get__(self, instance, owner):
+            """Return value compute by getter."""
+            return getter(owner)
+
+    return StaticGetter()
 
 
 class QuitWithResources:

@@ -21,8 +21,8 @@
 #
 
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
+
 import io
-from typing import Dict, List, Optional
 
 import numpy as np
 from flloat.semantics import PLInterpretation
@@ -42,7 +42,6 @@ from multinav.helpers.gym import (
     Transitions,
     from_discrete_env_to_graphviz,
 )
-from multinav.restraining_bolts.base import SapientinoRB
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 
 
@@ -73,7 +72,7 @@ class AbstractSapientino(MyDiscreteEnv):
         return self._failure_probability
 
     @property
-    def initial_state(cls) -> int:
+    def initial_state(self) -> int:
         """Get the initial state."""
         return 0
 
@@ -125,12 +124,12 @@ class AbstractSapientino(MyDiscreteEnv):
         return color_id + 2
 
     @classproperty
-    def goto_corridor(cls) -> Action:
+    def goto_corridor(cls) -> Action:  # pylint: disable=no-self-argument
         """Get the action "goto corridor"."""
         return 0
 
     @classproperty
-    def visit_color(cls) -> Action:
+    def visit_color(cls) -> Action:  # pylint: disable=no-self-argument
         """Get the action "visit_color"."""
         return 1
 
@@ -200,7 +199,6 @@ class AbstractSapientino(MyDiscreteEnv):
         return array
 
 
-# TODO: look for users of this class; rb and args
 class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
     """
     Abstract Sapientino with Temporal Goals.
@@ -220,9 +218,7 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
             colors=list(self.fluents.fluents),
             fluents=self.fluents,
         )
-        MyTemporalGoalWrapper.__init__(
-            self, unwrapped_env, [self.temporal_goal]
-        )
+        MyTemporalGoalWrapper.__init__(self, unwrapped_env, [self.temporal_goal])
 
         # flatten the observation space
         observation_space = MultiDiscrete(
@@ -327,13 +323,6 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         new_state = tuple([obs] + automata_states)
         return new_state, reward, done, info
 
-    def available_actions(self, state):
-        """Get the available action from a state."""
-        actions = set()
-        for action, _transitions in self.P[state].items():
-            actions.add(action)
-        return actions
-
 
 class Fluents(AbstractFluents):
     """Define the propositions for `AbstractSapientino`."""
@@ -345,8 +334,7 @@ class Fluents(AbstractFluents):
         """
         base_id = 1  # the first is for corridor
         self.fluents = {
-            sapientino_defs.int2color[i]
-            for i in range(base_id, base_id + nb_colors)
+            sapientino_defs.int2color[i] for i in range(base_id, base_id + nb_colors)
         }
 
     def evaluate(self, obs: int, action: int) -> PLInterpretation:
