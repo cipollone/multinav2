@@ -30,6 +30,7 @@ from multinav.algorithms.value_iteration import value_iteration
 from multinav.envs.env_abstract_sapientino import (
     AbstractSapientino,
     AbstractSapientinoTemporalGoal,
+    Fluents,
 )
 from multinav.helpers.gym import Transition, Transitions
 from multinav.restraining_bolts.rb_abstract_sapientino import AbstractSapientinoRB
@@ -157,3 +158,18 @@ def test_value_iteration_with_rb():
         ]
     )
     assert np.allclose(actual_values, expected_values)
+
+
+def test_fluent_extraction():
+    """Test fluents for this environment."""
+    nb_colors = 3
+    fluents = Fluents(nb_colors)
+
+    # Colors
+    assert fluents.fluents == {"red", "green", "blue"}
+
+    # action 0 is vist
+    assert fluents.evaluate(0, 1).true_propositions == set()
+    assert fluents.evaluate(1, 1).true_propositions == {"red"}
+    assert fluents.evaluate(2, 1).true_propositions == {"green"}
+    assert fluents.evaluate(3, 1).true_propositions == {"blue"}

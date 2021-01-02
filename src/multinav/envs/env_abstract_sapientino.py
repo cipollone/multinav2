@@ -32,6 +32,7 @@ from pythomata.dfa import DFA
 
 from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
+from multinav.helpers.general import classproperty
 from multinav.helpers.gym import (
     Action,
     MyDiscreteEnv,
@@ -71,7 +72,7 @@ class AbstractSapientino(MyDiscreteEnv):
         return self._failure_probability
 
     @property
-    def initial_state(self) -> int:
+    def initial_state(cls) -> int:
         """Get the initial state."""
         return 0
 
@@ -81,8 +82,10 @@ class AbstractSapientino(MyDiscreteEnv):
         Get the number of states.
 
         That is:
-        - one state for each color
         - one state for the corridor
+        - one state for each color
+        NOTE: Some parts of this module assume that the corridor, or "blank"
+        state is number 0. This is also the same convention of gym-sapientino.
 
         :return: the number of states.
         """
@@ -120,13 +123,13 @@ class AbstractSapientino(MyDiscreteEnv):
         assert 0 <= color_id < self.nb_colors, f"{color_id} is not a legal color."
         return color_id + 2
 
-    @property
-    def goto_corridor(self) -> Action:
+    @classproperty
+    def goto_corridor(cls) -> Action:
         """Get the action "goto corridor"."""
         return 0
 
-    @property
-    def visit_color(self) -> Action:
+    @classproperty
+    def visit_color(cls) -> Action:
         """Get the action "visit_color"."""
         return 1
 
@@ -324,7 +327,7 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
     def available_actions(self, state):
         """Get the available action from a state."""
         actions = set()
-        for action, _transitions in self.P.get(state, {}).items():
+        for action, _transitions in self.P[state].items():
             actions.add(action)
         return actions
 
@@ -332,15 +335,16 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
 class Fluents(AbstractFluents):
     """Define the propositions for `AbstractSapientino`."""
 
-    def __init__(self, colors_set: Set[str]):
+    def __init__(self, nb_colors: int):
         """Initialize.
 
-        :param colors_set: a set of colors among the ones used by sapientino;
-            this will be the set of fluents to evaluate.
+        :param nb_colors: The number of colors/rooms in the environment.
         """
-        self.fluents = colors_set
-        if not self.fluents.issubset(sapientino_defs.color2int):
-            raise ValueError(str(colors_set) + " contains invalid colors")
+        base_id = 1  # the first is for corridor
+        self.fluents = {
+            sapientino_defs.int2color[i]
+            for i in range(base_id, base_id + nb_colors)
+        }
 
     def evaluate(self, obs: int, action: int) -> PLInterpretation:
         """Respects AbstractFluents.evaluate.
@@ -349,13 +353,10 @@ class Fluents(AbstractFluents):
             `AbstractSapientino` environment.
         :param action: the last action.
         """
-        # TODO: double check and write a test for this
-        observation_offset = 1
-        visit_action = 1
-
-        color_id = obs - observation_offset
-        if visit_action == action:
-            fluents = {sapientino_defs.int2color[color_id]}
+        if action == AbstractSapientino.visit_color:
+            fluents = {sapientino_defs.int2color[obs]}
+            if obs == 0:  # blank/corridor
+                fluents = set()
         else:
             fluents = set()
         return PLInterpretation(fluents)

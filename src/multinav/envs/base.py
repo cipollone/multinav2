@@ -27,7 +27,7 @@ defined here.
 """
 
 from abc import abstractmethod
-from typing import Any
+from typing import Any, Set
 
 from flloat.semantics import PLInterpretation
 
@@ -42,7 +42,7 @@ class AbstractFluents(ABC2):
     returned by `evaluate` can only contain symbols from this set.
     """
 
-    fluents = AbstractAttribute()  # type: Any
+    fluents = AbstractAttribute()  # type: Set[str]
 
     @abstractmethod
     def evaluate(self, obs, action: int) -> PLInterpretation:
