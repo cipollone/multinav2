@@ -213,9 +213,11 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         unwrapped_env = AbstractSapientino(**sapientino_kwargs)
 
         # Make a temporal goal
-        self.fluents = Fluents(nb_colors=sapientino_kwargs["nb_colors"])
+        nb_colors = sapientino_kwargs["nb_colors"]
+        color_sequence = [sapientino_defs.int2color[i] for i in range(1, nb_colors + 1)]
+        self.fluents = Fluents(nb_colors=nb_colors)
         self.temporal_goal = SapientinoGoal(
-            colors=list(self.fluents.fluents),
+            colors=color_sequence,
             fluents=self.fluents,
         )
         MyTemporalGoalWrapper.__init__(self, unwrapped_env, [self.temporal_goal])
