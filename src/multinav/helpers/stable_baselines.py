@@ -1,5 +1,7 @@
 """Helper functions and classes related to the stable_baselines library."""
 
+from typing import Optional
+
 from stable_baselines import DQN
 from stable_baselines.common import BaseRLModel
 from stable_baselines.common.callbacks import BaseCallback
@@ -24,7 +26,13 @@ class CustomCheckpointCallback(BaseCallback):
     yourself before saving.
     """
 
-    def __init__(self, save_path, save_freq=None, name_prefix="model", extra=None):
+    def __init__(
+        self,
+        save_path: str,
+        save_freq: Optional[int] = None,
+        name_prefix: str = "model",
+        extra=None,
+    ):
         """Initialize.
 
         :param save_path: model checkpoints path.
@@ -39,7 +47,7 @@ class CustomCheckpointCallback(BaseCallback):
         # Store
         self._save_freq = save_freq
         self._saver = Saver(
-            model=None,  # initialized in init_callback
+            model=None,  # type: ignore
             loader=DQN.load,
             save_path=save_path,
             name_prefix=name_prefix,

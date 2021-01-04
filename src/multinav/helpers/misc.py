@@ -27,6 +27,7 @@ import os
 import pickle
 import random
 import shutil
+from abc import ABC
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Sequence
 
@@ -181,14 +182,21 @@ class Experiment:
         return stats
 
 
-# TODO: typing?
 class Saver:
     """Save and restore models from checkpoints."""
 
+    class Savable(ABC):
+        """Interface of a savable model."""
+
+        @classmethod
+        def __subclasshook__(cls, C):
+            """Anything that has a save() is savable."""
+            return hasattr(C, "save") and callable(C.save)
+
     def __init__(
         self,
-        model,
-        loader,
+        model: Savable,
+        loader: Callable[[str], Savable],
         save_path: str,
         name_prefix: str = "model",
         model_ext: str = "",
