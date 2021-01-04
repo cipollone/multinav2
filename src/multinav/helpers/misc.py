@@ -19,11 +19,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
-"""Misc helpers."""
+"""Misc helpers (mostly related to training)."""
 
 import json
 import multiprocessing
 import os
+import pickle
 import random
 import shutil
 from dataclasses import dataclass, field
@@ -178,6 +179,113 @@ class Experiment:
             _, stat = p.get()
             stats.append(stat)
         return stats
+
+
+# TODO: typing?
+class Saver:
+    """Save and restore models from checkpoints."""
+
+    def __init__(
+        self,
+        model,
+        loader,
+        save_path: str,
+        name_prefix: str = "model",
+        model_ext: str = "",
+        extra=None,
+    ):
+        """Initialize.
+
+        :param model: any object with a `save(file_path)` method.
+        :param loader: a callable with `file_path` argument that returns
+            a model.
+        :param save_path: model checkpoints path.
+            You could use `prepare_directories` to get this.
+        :param name_prefix: just a name for the saved weights.
+        :param model_ext: use this when `model.save` appends something to the
+            given checkpoint path.
+        :param extra: an optional, additional pickable object that is saved
+            with the main model.
+        """
+        # Store
+        self.model = model
+        self.loader = loader
+        self.model_file_ext = model_ext
+        self.extra_model = extra
+        self._counters_file = os.path.join(save_path, os.path.pardir, "counters.json")
+        self._chkpt_format = os.path.join(save_path, name_prefix + "_{step}")
+        self._extra_format = os.path.join(save_path, "Extra_{step}.pickle")
+
+    def _update_json(self, filepath: str, infos: Dict[str, Any]):
+        """Update the file of checkpoint infos with a new entry.
+
+        :param filepath: checkpoint that is being saved
+        :param infos: any dict of informations.
+        """
+        # Load
+        counters = {}
+        if os.path.exists(self._counters_file):
+            with open(self._counters_file) as f:
+                counters = json.load(f)
+
+        filepath = os.path.relpath(filepath)
+        counters[filepath] = infos
+
+        # Save
+        with open(self._counters_file, "w") as f:
+            json.dump(counters, f, indent=4)
+
+    def save(self, step):
+        """Manually save a checkpoint.
+
+        :param step: the current step of the training
+            (used to identify checkpoints).
+        """
+        # Save model
+        model_path = self._chkpt_format.format(step=step)
+        self.model.save(model_path)
+        # Save extra
+        if self.extra_model is not None:
+            extra_path = self._extra_format.format(step=step)
+            with open(extra_path, "wb") as f:
+                pickle.dump(self.extra_model, f)
+        else:
+            extra_path = None
+
+        self._update_json(
+            filepath=model_path + self.model_file_ext,
+            infos=dict(
+                step=step,
+                extra_file=extra_path,
+            ),
+        )
+
+    def load(self, path):
+        """Load the weights from a checkpoint.
+
+        :param path: load checkpoint at this path.
+        :return: the model, the extra object (can be None) and associated
+            counters.
+        """
+        # Restore
+        path = os.path.relpath(path)
+        model = self.loader(load_path=path)
+        print("> Loaded:", path)
+
+        # Read counters
+        with open(self._counters_file) as f:
+            data = json.load(f)
+        counters = data[path]
+
+        # Load extra
+        extra_path = counters.pop("extra_file")
+        if extra_path:
+            with open(extra_path, "rb") as f:
+                extra_model = pickle.load(f)
+        else:
+            extra_model = None
+
+        return model, extra_model, counters
 
 
 def prepare_directories(  # noqa: C901

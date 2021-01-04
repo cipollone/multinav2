@@ -1,11 +1,10 @@
 """Helper functions and classes related to the stable_baselines library."""
 
-import json
-import os
-import pickle
-
 from stable_baselines import DQN
+from stable_baselines.common import BaseRLModel
 from stable_baselines.common.callbacks import BaseCallback
+
+from multinav.helpers.misc import Saver
 
 
 class RendererCallback(BaseCallback):
@@ -34,86 +33,32 @@ class CustomCheckpointCallback(BaseCallback):
         :param extra: an optional, additional pickable object that is saved with
             the main model.
         """
+        # Super
         BaseCallback.__init__(self)
 
         # Store
         self._save_freq = save_freq
-        self._counters_file = os.path.join(save_path, os.path.pardir, "counters.json")
-        self._chkpt_format = os.path.join(save_path, name_prefix + "_{step}")
-        self._chkpt_extension = ".zip"
-        self.extra_model = extra
-        self._extra_format = os.path.join(save_path, "Extra_{step}.pickle")
-
-    def _update_counters(self, filepath, step, extra_file=None):
-        """Update the file of counters with a new entry.
-
-        :param filepath: checkpoint that is being saved
-        :param step: current global step
-        :param extra_file: associated extra saved model
-        """
-        counters = {}
-
-        # Load
-        if os.path.exists(self._counters_file):
-            with open(self._counters_file) as f:
-                counters = json.load(f)
-
-        filepath = os.path.relpath(filepath)
-        counters[filepath] = dict(step=step, extra=extra_file)
-
-        # Save
-        with open(self._counters_file, "w") as f:
-            json.dump(counters, f, indent=4)
-
-    def save(self, step):
-        """Manually save a checkpoint.
-
-        :param step: the current step of the training
-            (used just to identify checkpoints).
-        """
-        # Save model
-        model_path = self._chkpt_format.format(step=step)
-        self.model.save(model_path)
-        # Save extra
-        if self.extra_model is not None:
-            extra_path = self._extra_format.format(step=step)
-            with open(extra_path, "wb") as f:
-                pickle.dump(self.extra_model, f)
-        else:
-            extra_path = None
-
-        self._update_counters(
-            filepath=model_path + self._chkpt_extension,
-            step=step,
-            extra_file=extra_path,
+        self._saver = Saver(
+            model=None,  # initialized in init_callback
+            loader=DQN.load,
+            save_path=save_path,
+            name_prefix=name_prefix,
+            model_ext=".zip",
+            extra=extra,
         )
 
+    def init_callback(self, model: BaseRLModel) -> None:
+        """Initialize vars; stable_baselines interface."""
+        self._saver.model = model
+        BaseCallback.init_callback(self, model=model)
+
+    def save(self, step):
+        """Save a checkpoint; @see Saver."""
+        self._saver.save(step=step)
+
     def load(self, path):
-        """Load the weights from a checkpoint.
-
-        :param path: load checkpoint at this path.
-        :return: the model, the extra object (can be None) and associated
-            counters.
-        """
-        # Restore
-        path = os.path.relpath(path)
-        model = DQN.load(load_path=path)
-        print("> Loaded:", path)
-
-        # Read counters
-        with open(self._counters_file) as f:
-            data = json.load(f)
-        counters = data[path]
-
-        # Load extra
-        extra_path = counters.pop("extra")
-        if extra_path:
-            with open(extra_path, "rb") as f:
-                extra_model = pickle.load(f)
-        else:
-            extra_model = None
-
-        return model, extra_model, counters
+        """Load from a checkpoint; @see Saver."""
+        return self._saver.load(path=path)
 
     def _on_step(self):
         """Automatic save."""
