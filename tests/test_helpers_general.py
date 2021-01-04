@@ -19,24 +19,20 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
-"""Restraining bolt for Abstract Sapientino."""
-from flloat.semantics import PLInterpretation
 
-from multinav.restraining_bolts.base import SapientinoRB
+"""Most classes in multinav.helpers.general have been tested already."""
+
+from multinav.helpers.general import classproperty
 
 
-class AbstractSapientinoRB(SapientinoRB):
-    """Restraining Bolt for abstract Sapientino."""
+def test_classproperty():
+    """Test classproperty decorator."""
 
-    def extract_sapientino_fluents(self, obs, action) -> PLInterpretation:
-        """Extract Sapientino fluents."""
-        # see SapientinoRB
-        observation_offset = 1
-        visit_action = 1
+    class A:
+        @classproperty
+        def b(cls):
+            return 3
 
-        color_id = obs - observation_offset
-        if visit_action == action:
-            fluents = {self.colors[color_id]}
-        else:
-            fluents = set()
-        return PLInterpretation(fluents)
+    a = A()
+    assert a.b == 3
+    assert A.b == 3

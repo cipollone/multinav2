@@ -30,9 +30,9 @@ from multinav.algorithms.value_iteration import value_iteration
 from multinav.envs.env_abstract_sapientino import (
     AbstractSapientino,
     AbstractSapientinoTemporalGoal,
+    Fluents,
 )
 from multinav.helpers.gym import Transition, Transitions
-from multinav.restraining_bolts.rb_abstract_sapientino import AbstractSapientinoRB
 
 
 def test_abstract_sapientino():
@@ -122,38 +122,48 @@ def test_value_iteration_with_fail_prob():
 def test_value_iteration_with_rb():
     """Test value iteration with the restraining bolt."""
     nb_colors = 3
-    rb = AbstractSapientinoRB(nb_colors)
-    env = AbstractSapientinoTemporalGoal(rb, [nb_colors], dict(failure_probability=0.0))
-    v, policy = value_iteration(env, discount=0.9, max_iterations=200)
+    env = AbstractSapientinoTemporalGoal(nb_colors=nb_colors, failure_probability=0.1)
+    v, policy = value_iteration(env, discount=0.9, max_iterations=2000)
     actual_values = np.array(
         list(map(itemgetter(1), sorted(v.items(), key=lambda x: x[0])))
     )
     expected_values = np.array(
         [
-            4.3046720115533725,
-            5.904899911553373,
-            2.647284498601486e-14,
-            8.099999911553372,
-            9.999999911553372,
-            0.0,
-            4.782968911553372,
-            5.314409911553372,
-            2.647284498601486e-14,
-            7.289999911553372,
-            9.999999911553372,
-            0.0,
-            3.874204801553371,
-            6.560999911553372,
-            2.647284498601486e-14,
-            7.289999911553372,
-            9.999999911553372,
-            0.0,
-            3.874204801553371,
-            5.314409911553372,
-            2.647284498601486e-14,
-            8.999999911553372,
-            9.999999911553372,
-            0.0,
+            9.33195100e00,
+            1.19092409e01,
+            7.11071670e-14,
+            1.51983244e01,
+            1.81735619e01,
+            1.04840437e01,
+            1.17783701e01,
+            7.49535352e-14,
+            1.50313099e01,
+            1.91826436e01,
+            9.22940208e00,
+            1.33795176e01,
+            7.49535352e-14,
+            1.50313099e01,
+            1.91826436e01,
+            9.22940208e00,
+            1.17783701e01,
+            7.49535352e-14,
+            1.70746608e01,
+            1.91826436e01,
         ]
     )
-    assert np.allclose(actual_values, expected_values)
+    assert np.allclose(actual_values, expected_values, atol=1e-7)
+
+
+def test_fluent_extraction():
+    """Test fluents for this environment."""
+    nb_colors = 3
+    fluents = Fluents(nb_colors)
+
+    # Colors
+    assert fluents.fluents == {"red", "green", "blue"}
+
+    # action 0 is vist
+    assert fluents.evaluate(0, 1).true_propositions == set()
+    assert fluents.evaluate(1, 1).true_propositions == {"red"}
+    assert fluents.evaluate(2, 1).true_propositions == {"green"}
+    assert fluents.evaluate(3, 1).true_propositions == {"blue"}

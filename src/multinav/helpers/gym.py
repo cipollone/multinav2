@@ -110,7 +110,7 @@ class MyDiscreteEnv(DiscreteEnv):
 
     def _is_legal_state(self, state: State):
         """Check that it is a legal state."""
-        assert 0 <= state < self.nS, f"{state} is not a legal state."
+        assert state in self.P, f"{state} is not a legal state."
 
     def _is_legal_action(self, action: Action):
         """Check that it is a legal action."""
@@ -119,10 +119,7 @@ class MyDiscreteEnv(DiscreteEnv):
     def available_actions(self, state):
         """Get the available action from a state."""
         self._is_legal_state(state)
-        actions = set()
-        for action, _transitions in self.P.get(state, {}).items():
-            actions.add(action)
-        return actions
+        return set(self.P[state].keys())
 
 
 def _random_action(env: gym.Env, state):

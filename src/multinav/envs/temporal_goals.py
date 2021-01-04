@@ -29,6 +29,7 @@ here, so that these are shared.
 from typing import Optional, Sequence
 
 from flloat.semantics import PLInterpretation
+from gym.spaces import Discrete
 from pythomata.base import TransitionFunction
 from pythomata.dfa import DFA
 from pythomata.utils import powerset
@@ -114,3 +115,12 @@ class SapientinoGoal(TemporalGoal):
 
         dfa = DFA(states, alphabet, initial_state, {accepting}, transitions)
         return dfa.trim().complete()
+
+    @property
+    def observation_space(self) -> Discrete:
+        """Return the observation space.
+
+        NOTE: Temprl returns automata states+1, we don't want that
+        if we already have a complete automaton.
+        """
+        return Discrete(len(self._automaton.states))
