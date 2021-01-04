@@ -232,4 +232,6 @@ class TrainQ:
         }
 
         # Save it
-        self.saver.save(0)  # TODO: use a callback to periodically save and use the correct final step
+        self.saver.save(
+            0
+        )  # TODO: use a callback to periodically save and use the correct final step

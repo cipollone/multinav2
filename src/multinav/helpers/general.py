@@ -2,7 +2,7 @@
 
 import signal
 from abc import ABCMeta
-from typing import Dict
+from typing import Dict, List
 
 
 class ABCMeta2(ABCMeta):
@@ -60,6 +60,33 @@ class ABC2(metaclass=ABCMeta2):
 
     Use this class just like abc.ABC.
     """
+
+
+class ABCWithMethods(ABC2):
+    """Classes with these methods are considered (virtual) subclasses.
+
+    Usage:
+
+        class Interface(ABCWithMethods):
+            _abs_methods = ["must_have_this"]
+
+        class A:
+            def must_have_this():
+                pass
+
+    According to the definition above, `A` is a virtual subclass of
+    `Interface`. This is useful to use mypy with duck-typing.
+    """
+
+    # Static member
+    _abs_methods: List[str]
+
+    @classmethod
+    def __subclasshook__(cls, C):
+        """Check that C has all methods."""
+        return all(
+            (hasattr(C, m) and callable(getattr(C, m)) for m in cls._abs_methods)
+        )
 
 
 def classproperty(getter):
