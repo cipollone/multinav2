@@ -47,7 +47,7 @@ class CustomCheckpointCallback(BaseCallback):
         # Store
         self._save_freq = save_freq
         self._saver = Saver(
-            model=None,  # type: ignore
+            saver=lambda: None,  # This will be set in init_callback
             loader=DQN.load,
             save_path=save_path,
             name_prefix=name_prefix,
@@ -57,7 +57,7 @@ class CustomCheckpointCallback(BaseCallback):
 
     def init_callback(self, model: BaseRLModel) -> None:
         """Initialize vars; stable_baselines interface."""
-        self._saver.model = model
+        self._saver.saver = model.save
         BaseCallback.init_callback(self, model=model)
 
     def save(self, step):
