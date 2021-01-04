@@ -62,6 +62,19 @@ class ABC2(metaclass=ABCMeta2):
     """
 
 
+def classproperty(getter):
+    """Decorate methods as class properties."""
+
+    class StaticGetter:
+        """Descriptor."""
+
+        def __get__(self, instance, owner):
+            """Return value compute by getter."""
+            return getter(owner)
+
+    return StaticGetter()
+
+
 class QuitWithResources:
     """Close the resources when ctrl-c is pressed."""
 

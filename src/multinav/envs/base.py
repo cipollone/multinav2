@@ -27,7 +27,7 @@ defined here.
 """
 
 from abc import abstractmethod
-from typing import Any
+from typing import Set, cast
 
 from flloat.semantics import PLInterpretation
 
@@ -42,10 +42,10 @@ class AbstractFluents(ABC2):
     returned by `evaluate` can only contain symbols from this set.
     """
 
-    fluents = AbstractAttribute()  # type: Any
+    fluents = cast(Set[str], AbstractAttribute())  # the cast is just for mypy
 
     @abstractmethod
-    def evaluate(self, obs, action) -> PLInterpretation:
+    def evaluate(self, obs, action: int) -> PLInterpretation:
         """Compute the current propositional interpretation.
 
         This function also respects the interface defined in

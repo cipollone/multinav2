@@ -40,25 +40,21 @@ from gym_sapientino.core.configurations import (
     SapientinoAgentConfiguration,
     SapientinoConfiguration,
 )
-from gym_sapientino.core.types import color2int
 
+from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
-from multinav.restraining_bolts.automata import make_sapientino_goal_with_automata
+from multinav.envs.temporal_goals import SapientinoGoal
 from multinav.wrappers.sapientino import ContinuousRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
-"""This is the map of the grid."""
-_sapientino_map_str = """\
-|       |
-|       |
-| rgb   |
-|       |"""
-_sapientino_used_colors = ["red", "green", "blue"]
-
 
 class Fluents(AbstractFluents):
-    """Define the propositions in this specific environment."""
+    """Define the propositions in this specific environment.
+
+    This fluents evaluator works for any environment built on
+    gym_sapientino repository.
+    """
 
     def __init__(self, colors_set: Set[str]):
         """Initialize.
@@ -66,20 +62,18 @@ class Fluents(AbstractFluents):
         :param colors_set: a set of colors among the ones used by sapientino;
             this will be the set of fluents to evaluate.
         """
-        self._color2int = {c.value: i for c, i in color2int.items()}
-        self._int2color = {i: c for c, i in self._color2int.items()}
         self.fluents = colors_set
-        if not self.fluents.issubset(self._color2int):
+        if not self.fluents.issubset(sapientino_defs.color2int):
             raise ValueError(str(colors_set) + " contains invalid colors")
 
-    def evaluate(self, obs: Dict[str, float], action) -> PLInterpretation:
+    def evaluate(self, obs: Dict[str, float], action: int) -> PLInterpretation:
         """Respects AbstractFluents.evaluate."""
         beeps = obs["beep"] > 0
         if not beeps:
             true_fluents = set()  # type: Set[str]
         else:
             color_id = obs["color"]
-            color_name = self._int2color[color_id]
+            color_name = sapientino_defs.int2color[color_id]
             if color_name == "blank":
                 true_fluents = set()
             else:
@@ -89,8 +83,8 @@ class Fluents(AbstractFluents):
         return PLInterpretation(true_fluents)
 
 
-def make_env(params: Dict[str, Any]):
-    """Return sapientino continuous state environment.
+def make(params: Dict[str, Any]):
+    """Make the sapientino continuous state environment.
 
     :param params: a dictionary of parameters; see in this function the
         only ones that are used.
@@ -104,7 +98,7 @@ def make_env(params: Dict[str, Any]):
 
     # Define the map
     map_file = Path(tempfile.mktemp(suffix=".txt"))
-    map_file.write_text(_sapientino_map_str)
+    map_file.write_text(sapientino_defs.sapientino_map_str)
 
     # Define the environment
     configuration = SapientinoConfiguration(
@@ -122,13 +116,13 @@ def make_env(params: Dict[str, Any]):
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 
     # Define the fluent extractor
-    fluents = Fluents(colors_set=set(_sapientino_used_colors))
+    fluents = Fluents(colors_set=set(sapientino_defs.sapientino_color_sequence))
 
     # Define the temporal goal
-    tg = make_sapientino_goal_with_automata(
-        colors=_sapientino_used_colors,
-        fluent_extractor=fluents.evaluate,
-        reward=1.0,
+    tg = SapientinoGoal(
+        colors=sapientino_defs.sapientino_color_sequence,
+        fluents=fluents,
+        reward=params["tg_reward"],
     )
     env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])

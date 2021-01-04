@@ -6,8 +6,7 @@ from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
 
-import multinav.envs.cont_sapientino as cont_sapientino_env
-import multinav.envs.ros_controls as ros_env
+from multinav.envs import env_cont_sapientino, env_ros_controls
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
@@ -37,6 +36,7 @@ default_parameters = dict(
     min_velocity=0.0,
     max_angular_vel=40,
     initial_position=[1, 1],
+    tg_reward=1.0,
 )
 
 
@@ -64,14 +64,14 @@ def train(env_name, json_params=None):
     # Make environment
     if env_name == "ros":
         trainer = TrainStableBaselines(
-            env=ros_env.make_env(params=params),
+            env=env_ros_controls.make(params=params),
             params=params,
             model_path=model_path,
             log_path=log_path,
         )
     elif env_name == "sapientino-cont":
         trainer = TrainStableBaselines(
-            env=cont_sapientino_env.make_env(params=params),
+            env=env_cont_sapientino.make(params=params),
             params=params,
             model_path=model_path,
             log_path=log_path,
