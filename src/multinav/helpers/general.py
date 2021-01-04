@@ -112,36 +112,36 @@ class QuitWithResources:
         """Don't instantiate."""
         raise TypeError("Don't instantiate this class")
 
-    @staticmethod
-    def close():
+    @classmethod
+    def close(cls):
         """Close all and quit."""
-        for _, deleter in QuitWithResources.__deleters.items():
+        for _, deleter in cls.__deleters.items():
             deleter()
         quit()
 
-    @staticmethod
-    def add(name, deleter):
+    @classmethod
+    def add(cls, name, deleter):
         """Declare a new resource to be closed.
 
         :param name: any identifier for this resource.
         :param deleter: callable to be used when closing.
         """
-        if not QuitWithResources.__initialized:
-            signal.signal(signal.SIGINT, lambda _sig, _frame: QuitWithResources.close())
-            QuitWithResources.__initialized = True
+        if not cls.__initialized:
+            signal.signal(signal.SIGINT, lambda _sig, _frame: cls.close())
+            cls.__initialized = True
 
-        if name in QuitWithResources.__deleters:
+        if name in cls.__deleters:
             raise ValueError("This name is already used")
 
-        QuitWithResources.__deleters[name] = deleter
+        cls.__deleters[name] = deleter
 
-    @staticmethod
-    def remove(name):
+    @classmethod
+    def remove(cls, name):
         """Remove a resource.
 
         :param name: identifier of a resource.
         """
-        if name not in QuitWithResources.__deleters:
+        if name not in cls.__deleters:
             raise ValueError(str(name) + " is not a resource")
 
-        QuitWithResources.__deleters.pop(name)
+        cls.__deleters.pop(name)
