@@ -49,6 +49,7 @@ from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
 
+# TODO: move to sapientino_defs and rename sapientino_defs
 class Fluents(AbstractFluents):
     """Define the propositions in this specific environment.
 
@@ -122,7 +123,7 @@ def make(params: Dict[str, Any]):
     tg = SapientinoGoal(
         colors=sapientino_defs.sapientino_color_sequence,
         fluents=fluents,
-        reward=1.0,
+        reward=params["tg_reward"],
     )
     env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
