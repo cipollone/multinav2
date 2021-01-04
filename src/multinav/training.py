@@ -1,15 +1,22 @@
 """This module implements the general logic of the training loop."""
 
 import json
+import pickle
+from typing import Any, Dict
 
+import numpy as np
+from gym import Env
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
 
-from multinav.envs import env_cont_sapientino, env_ros_controls
+from multinav.algorithms.q_learning import q_learning
+from multinav.envs import env_cont_sapientino, env_grid_sapientino, env_ros_controls
 from multinav.helpers.general import QuitWithResources
-from multinav.helpers.misc import prepare_directories
+from multinav.helpers.misc import Saver, prepare_directories
 from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
+
+# TODO: save value functions and automata? extra=(value function and automaton)
 
 # Default environments and algorithms parameters
 #   Always prefer to specify them with a json; do not rely on defaults.
@@ -17,9 +24,9 @@ default_parameters = dict(
     # Common
     resume_file=None,
     episode_time_limit=100,
-    # DQN params
-    gamma=0.99,
     learning_rate=5e-4,
+    gamma=0.99,
+    # DQN params
     learning_starts=5000,
     exploration_fraction=0.8,
     exploration_initial_eps=1.0,
@@ -27,6 +34,9 @@ default_parameters = dict(
     save_freq=1000,
     log_interval=100,  # In #of episodes
     total_timesteps=2000000,
+    # Q params
+    nb_episodes=1000,
+    q_eps=0.5,
     # Ros agent env
     notmoving_limit=12,
     # Sapientino env
@@ -76,6 +86,14 @@ def train(env_name, json_params=None):
             model_path=model_path,
             log_path=log_path,
         )
+    elif env_name == "sapientino-grid":
+        trainer = TrainQ(
+            env=env_grid_sapientino.make(params=params),
+            params=params,
+            model_path=model_path,
+        )
+    elif env_name == "sapientino-abs":
+        raise RuntimeError("Environment not supported")
     else:
         raise RuntimeError("Environment not supported")
 
@@ -159,3 +177,59 @@ class TrainStableBaselines:
 
         # Final save
         self.saver.save(self.params["total_timesteps"])
+
+
+class TrainQ:
+    """Agent and training loop for Q learning."""
+
+    def __init__(self, env: Env, params: Dict[str, Any], model_path):
+        """Initialize.
+
+        :param env: discrete-state gym environment.
+        :param params: dict of parameters. See `default_parameters`.
+        :param model_path: directory where to save models.
+        """
+        # Store
+        self.env = env
+        self.params = params
+        self._value_function = {}
+
+        # Saver
+        self.saver = Saver(
+            saver=self._save_fn,
+            loader=self._load_fn,
+            save_path=model_path,
+            name_prefix="valuefn",
+            model_ext=".pickle",
+            extra=None,
+        )
+
+    def _save_fn(self, path: str):
+        """Save model to file."""
+        with open(path + ".pickle", "wb") as f:
+            pickle.dump(self._value_function, f)
+
+    def _load_fn(self, path: str):
+        with open(path, "rb") as f:
+            self._value_function = pickle.load(f)
+
+    def train(self):
+        """Start training."""
+        # Learn
+        q_function = q_learning(
+            env=self.env,
+            nb_episodes=self.params["nb_episodes"],
+            alpha=self.params["learning_rate"],
+            eps=self.params["q_eps"],
+            gamma=self.params["gamma"],
+            learning_rate_decay=False,
+            epsilon_decay=True,
+        )
+
+        # Compute value function (assuming q is optimal)
+        self._value_function = {
+            state: np.max(q).item() for state, q in q_function.items()
+        }
+
+        # Save it
+        self.saver.save(0)  # TODO: use a callback to periodically save and use the correct final step
