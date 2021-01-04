@@ -122,7 +122,7 @@ def make(params: Dict[str, Any]):
     tg = SapientinoGoal(
         colors=sapientino_defs.sapientino_color_sequence,
         fluents=fluents,
-        reward=1.0,
+        reward=params["tg_reward"],
     )
     env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])

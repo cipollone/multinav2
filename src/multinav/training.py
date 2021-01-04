@@ -36,6 +36,7 @@ default_parameters = dict(
     min_velocity=0.0,
     max_angular_vel=40,
     initial_position=[1, 1],
+    tg_reward=1.0,
 )
 
 

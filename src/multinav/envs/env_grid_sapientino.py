@@ -20,11 +20,25 @@
 # along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Reward shaping wrapper."""
+import tempfile
 from pathlib import Path
+from typing import Any, Dict
 
+from gym.wrappers import TimeLimit
+from gym_sapientino import SapientinoDictSpace
+from gym_sapientino.core.configurations import (
+    SapientinoAgentConfiguration,
+    SapientinoConfiguration,
+)
 from gym_sapientino.core.types import Colors, color2id
 
+from multinav.envs import sapientino_defs
+from multinav.envs.env_cont_sapientino import Fluents
+from multinav.envs.temporal_goals import SapientinoGoal
 from multinav.helpers.gym import RewardShaper
+from multinav.wrappers.sapientino import GridRobotFeatures
+from multinav.wrappers.temprl import MyTemporalGoalWrapper
+from multinav.wrappers.utils import SingleAgentWrapper
 
 
 class GridSapientinoRewardShaper(RewardShaper):
@@ -73,3 +87,46 @@ def generate_grid(
 
     content = "\n".join(cells)
     output_file.write_text(content)
+
+
+def make(params: Dict[str, Any]):
+    """Make the sapientino continuous state environment.
+
+    :param params: a dictionary of parameters; see in this function the
+        only ones that are used.
+    :return: an object that respects the gym.Env interface.
+    """
+    # Define the robot
+    agent_configuration = SapientinoAgentConfiguration(
+        continuous=False,
+        differential=False,
+        initial_position=params["initial_position"],
+    )
+
+    # Define the map
+    map_file = Path(tempfile.mktemp(suffix=".txt"))
+    map_file.write_text(sapientino_defs.sapientino_map_str)
+
+    # Define the environment
+    configuration = SapientinoConfiguration(
+        [agent_configuration],
+        path_to_map=map_file,
+        reward_per_step=-0.01,
+        reward_outside_grid=0.0,
+        reward_duplicate_beep=0.0,
+    )
+    env = SingleAgentWrapper(SapientinoDictSpace(configuration))
+
+    # Define the fluent extractor
+    fluents = Fluents(colors_set=set(sapientino_defs.sapientino_color_sequence))
+
+    # Define the temporal goal
+    tg = SapientinoGoal(
+        colors=sapientino_defs.sapientino_color_sequence,
+        fluents=fluents,
+        reward=params["tg_reward"],
+    )
+    env = GridRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
+    env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
+
+    return env

@@ -26,10 +26,12 @@ import numpy as np
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core.configurations import SapientinoConfiguration
+from gym_sapientino.core.types import Colors
 
 from multinav.algorithms.q_learning import q_learning
+from multinav.envs.env_cont_sapientino import Fluents
+from multinav.envs.temporal_goals import SapientinoGoal
 from multinav.helpers.gym import rollout
-from multinav.restraining_bolts.rb_grid_sapientino import GridSapientinoRB
 from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import MyStatsRecorder, SingleAgentWrapper
@@ -37,14 +39,17 @@ from multinav.wrappers.utils import MyStatsRecorder, SingleAgentWrapper
 
 def test_grid_sapientino_rb_q_learning(disable_debug_logging):
     """Test grid Sapientino + RB, using Q-Learning."""
-    nb_colors = 3
     configuration = SapientinoConfiguration(
         reward_per_step=-0.01,
         reward_outside_grid=0.0,
         reward_duplicate_beep=0.0,
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
-    tg = GridSapientinoRB(nb_colors).make_sapientino_goal(reward=10.0)
+    tg = SapientinoGoal(
+        colors=["red", "green", "blue"],
+        fluents=Fluents(colors_set={str(c) for c in Colors}),
+        reward=10.0,
+    )
     env = GridRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
     env = TimeLimit(env, max_episode_steps=25)
 
