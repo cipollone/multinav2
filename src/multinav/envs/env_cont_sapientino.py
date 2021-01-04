@@ -49,7 +49,6 @@ from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
 
-# TODO: move to sapientino_defs and rename sapientino_defs
 class Fluents(AbstractFluents):
     """Define the propositions in this specific environment.
 
