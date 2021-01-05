@@ -11,14 +11,18 @@ from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
 
 from multinav.algorithms.q_learning import q_learning
-from multinav.envs import env_cont_sapientino, env_grid_sapientino, env_ros_controls
+from multinav.algorithms.value_iteration import value_iteration
+from multinav.envs import (
+    env_abstract_sapientino,
+    env_cont_sapientino,
+    env_grid_sapientino,
+    env_ros_controls,
+)
 from multinav.helpers.callbacks import SaverCallback
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
 from multinav.wrappers.utils import CallbackWrapper
-
-# TODO: save value functions and automata? extra=(value function and automaton)
 
 # Default environments and algorithms parameters
 #   Always prefer to specify them with a json; do not rely on defaults.
@@ -39,6 +43,8 @@ default_parameters = dict(
     # Q params
     nb_episodes=1000,
     q_eps=0.5,
+    # ValueIteration params
+    max_iterations=2000,
     # Ros agent env
     notmoving_limit=12,
     # Sapientino env
@@ -49,6 +55,9 @@ default_parameters = dict(
     max_angular_vel=40,
     initial_position=[1, 1],
     tg_reward=1.0,
+    # Abs sapientino env
+    nb_colors=3,
+    sapientino_fail_p=0.2,
 )
 
 
@@ -73,7 +82,7 @@ def train(env_name, json_params=None):
         args=params,
     )
 
-    # Make environment
+    # Make
     if env_name == "ros":
         trainer = TrainStableBaselines(
             env=env_ros_controls.make(params=params),
@@ -95,7 +104,11 @@ def train(env_name, json_params=None):
             model_path=model_path,
         )
     elif env_name == "sapientino-abs":
-        raise RuntimeError("Environment not supported")
+        trainer = TrainValueIteration(
+            env=env_abstract_sapientino.make(params=params),
+            params=params,
+            model_path=model_path,
+        )
     else:
         raise RuntimeError("Environment not supported")
 
@@ -191,9 +204,15 @@ class TrainQ:
         :param params: dict of parameters. See `default_parameters`.
         :param model_path: directory where to save models.
         """
+        # Check
+        if params["resume_file"] is not None:
+            raise TypeError(
+                "Resuming a trainin is not supported for this algorithm."
+            )
+
         # Saver
         self.saver = SaverCallback(
-            save_freq=params["save_freq"],
+            save_freq=None,  # Not needed
             saver=self._save_fn,
             loader=self._load_fn,
             save_path=model_path,
@@ -208,9 +227,17 @@ class TrainQ:
         self.env = env
         self.params = params
         self._value_function = {}  # type: Dict[Any, float]
+        self._q_function = {}  # type: Dict[Any, np.ndarray]
+
+    def _update_value_function(self):
+        """Update value funtion from Q."""
+        self._value_function = {
+            state: np.max(q).item() for state, q in self._q_function.items()
+        }
 
     def _save_fn(self, path: str):
         """Save model to file."""
+        self._update_value_function()
         with open(path + ".pickle", "wb") as f:
             pickle.dump(self._value_function, f)
 
@@ -221,7 +248,7 @@ class TrainQ:
     def train(self):
         """Start training."""
         # Learn
-        q_function = q_learning(
+        self._q_function = q_learning(
             env=self.env,
             nb_episodes=self.params["nb_episodes"],
             alpha=self.params["learning_rate"],
@@ -231,10 +258,28 @@ class TrainQ:
             epsilon_decay=True,
         )
 
-        # Compute value function (assuming q is optimal)
-        self._value_function = {
-            state: np.max(q).item() for state, q in q_function.items()
-        }
+        # Save
+        self.saver.save()
+
+
+class TrainValueIteration(TrainQ):
+    """Agent and training loop for Value Iteration."""
+
+    def _save_fn(self, path: str):
+        """Save model to file."""
+        value_fn = dict(self._value_function)
+        with open(path + ".pickle", "wb") as f:
+            pickle.dump(value_fn, f)
+
+    def train(self):
+        """Start training."""
+        # Learn
+        self._value_function, _ = value_iteration(
+            env=self.env,
+            max_iterations=self.params["max_iterations"],
+            eps=1e-5,
+            discount=self.params["gamma"],
+        )
 
         # Save it
-        self.saver.save(self.saver.num_timesteps)
+        self.saver.save()

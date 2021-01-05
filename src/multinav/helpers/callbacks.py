@@ -104,4 +104,8 @@ class SaverCallback(Saver, Callback):
         if self._save_freq is None:
             return
         if self.num_timesteps % self._save_freq == 0:
-            self.save(step=self.num_timesteps)
+            self.save()
+
+    def save(self):
+        """Save a checkpoint now."""
+        Saver.save(self, step=self.num_timesteps)
