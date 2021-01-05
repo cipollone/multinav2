@@ -23,12 +23,18 @@
 import shutil
 import time
 from pathlib import Path
-from typing import List
+from typing import Any, Callable, Dict, List
 
 import gym
 from gym import Wrapper
 from gym.spaces import Tuple as GymTuple
 from PIL import Image
+
+from multinav.helpers.general import ABCWithMethods
+
+# Types
+Observation = Any
+Action = int
 
 
 class MyMonitor(Wrapper):
@@ -168,3 +174,42 @@ class SingleAgentWrapper(Wrapper):
         state = super().reset(**kwargs)
         new_state = state[0]
         return new_state
+
+
+class CallbackWrapper(Wrapper):
+    """Inject callbacks in the training algorithm."""
+
+    class CallbackInterface(ABCWithMethods):
+        """Supported callback methods."""
+
+        # Required methods
+        _abs_methods = ["_on_step", "_on_reset"]
+
+        # Types
+        _on_reset: Callable[[Observation], None]
+        _on_step: Callable[[Action, Observation, float, bool, Dict], None]
+
+    def __init__(
+        self,
+        env: gym.Env,
+        callback: CallbackInterface,
+    ):
+        """Initialize.
+
+        :param env: Gym environment to wrap
+        :param callback: a callback object
+        """
+        Wrapper.__init__(self, env)
+        self._callback = callback
+
+    def reset(self):
+        """Reset the environment."""
+        obs = Wrapper.reset(self)
+        self._callback._on_reset(obs)
+        return obs
+
+    def step(self, action):
+        """Environment step."""
+        observation, reward, done, info = Wrapper.step(self, action)
+        self._callback._on_step(action, observation, reward, done, info)
+        return observation, reward, done, info
