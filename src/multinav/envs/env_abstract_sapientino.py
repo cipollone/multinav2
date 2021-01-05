@@ -24,7 +24,7 @@
 
 import io
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from flloat.semantics import PLInterpretation
@@ -40,6 +40,7 @@ from multinav.helpers.gym import (
     MyDiscreteEnv,
     Probability,
     State,
+    Transition,
     Transitions,
     from_discrete_env_to_graphviz,
     iter_space,
@@ -210,10 +211,11 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
     """
 
     def __init__(
-        self, *,
+        self,
+        *,
         tg_reward: float = 1.0,
         save_to: Optional[str] = None,
-        **sapientino_kwargs
+        **sapientino_kwargs,
     ):
         """Initialize the environment.
 
@@ -246,7 +248,8 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         # compute model
         model: Transitions = {}
         initial_state = (
-            self.temporal_goal.automaton.initial_state, self.unwrapped.initial_state
+            self.temporal_goal.automaton.initial_state,
+            self.unwrapped.initial_state,
         )
         self._generate_transitions(model, initial_state)
         # Complete with unreachable states
@@ -280,7 +283,7 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         # For all actions
         model[state] = {}
         for action in sapientino_tf:
-            new_transitions = []
+            new_transitions: List[Transition] = []
             model[state][action] = new_transitions
 
             # For all nondeterministic transitions
@@ -289,7 +292,11 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
 
                 # Move automaton
                 color = self.unwrapped._state_to_string(sap_state)
-                fluents = {color} if color != "corridor" else set()
+                fluents = (
+                    {color}
+                    if action == self.unwrapped.visit_color and color != "corridor"
+                    else set()
+                )
                 automaton_state = automaton_tf[PLInterpretation(fluents)]
 
                 # Compose state
