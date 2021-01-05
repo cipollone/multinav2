@@ -27,9 +27,8 @@ import os
 import pickle
 import random
 import shutil
-from abc import ABC
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import gym
 import matplotlib.pyplot as plt
@@ -246,6 +245,7 @@ class Saver:
         model_path = self._chkpt_format.format(step=step)
         self.saver(model_path)
         # Save extra
+        extra_path: Optional[str]
         if self.extra_model is not None:
             extra_path = self._extra_format.format(step=step)
             with open(extra_path, "wb") as f:
@@ -270,19 +270,19 @@ class Saver:
         """
         # Restore
         path = os.path.relpath(path)
-        model = self.loader(load_path=path)
+        model = self.loader(path)
         print("> Loaded:", path)
 
         # Read counters
-        with open(self._counters_file) as f:
-            data = json.load(f)
+        with open(self._counters_file) as f1:
+            data = json.load(f1)
         counters = data[path]
 
         # Load extra
         extra_path = counters.pop("extra_file")
         if extra_path:
-            with open(extra_path, "rb") as f:
-                extra_model = pickle.load(f)
+            with open(extra_path, "rb") as f2:
+                extra_model = pickle.load(f2)
         else:
             extra_model = None
 

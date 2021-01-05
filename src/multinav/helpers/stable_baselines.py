@@ -47,7 +47,7 @@ class CustomCheckpointCallback(BaseCallback):
         # Store
         self._save_freq = save_freq
         self._saver = Saver(
-            saver=lambda: None,  # This will be set in init_callback
+            saver=lambda path: None,  # This will be set in init_callback
             loader=DQN.load,
             save_path=save_path,
             name_prefix=name_prefix,
