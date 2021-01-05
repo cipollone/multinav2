@@ -8,6 +8,7 @@ from typing import Any, Dict
 import numpy as np
 from gym import Env
 from matplotlib import pyplot as plt
+from PIL import Image
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
@@ -305,7 +306,7 @@ class TrainValueIteration(TrainQ):
     def train(self):
         """Start training."""
         # Learn
-        self._value_function, policy = value_iteration(
+        self._value_function, self._policy = value_iteration(
             env=self.env,
             max_iterations=self.params["max_iterations"],
             eps=1e-5,
@@ -317,5 +318,13 @@ class TrainValueIteration(TrainQ):
         self.saver.save()
 
         # Log
+        self.log()
+
+    def log(self):
+        """Log."""
         print("Value function", self._value_function)
-        print("Policy", policy)
+        print("Policy", self._policy)
+        # Print transition function
+        frame = self.env.render(mode="rgb_array")
+        img = Image.fromarray(frame)
+        img.save(os.path.join(self._log_path, "frame.png"))

@@ -30,7 +30,6 @@ import numpy as np
 from flloat.semantics import PLInterpretation
 from gym.spaces import MultiDiscrete
 from PIL import Image
-from pythomata.dfa import DFA
 
 from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
@@ -43,6 +42,7 @@ from multinav.helpers.gym import (
     State,
     Transitions,
     from_discrete_env_to_graphviz,
+    iter_space,
 )
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 
@@ -235,7 +235,7 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         )
         MyTemporalGoalWrapper.__init__(self, unwrapped_env, [self.temporal_goal])
 
-        # flatten the observation space
+        # Set observation space
         observation_space = MultiDiscrete(
             [
                 self.unwrapped.observation_space.n,
@@ -244,99 +244,66 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         )
 
         # compute model
-        model = self._compute_model()
+        model: Transitions = {}
+        initial_state = (
+            self.temporal_goal.automaton.initial_state, self.unwrapped.initial_state
+        )
+        self._generate_transitions(model, initial_state)
+        # Complete with unreachable states
+        for state in iter_space(observation_space):
+            model.setdefault(state, {})
+
+        # Set discrete env
         nb_states = observation_space.nvec.prod()
         nb_actions = self.unwrapped.nb_actions
         ids = np.zeros(nb_states)
         ids[0] = 1.0
         MyDiscreteEnv.__init__(self, nb_states, nb_actions, model, ids)
+
+        # Assign observation space
         self.observation_space = observation_space
 
-    def _compute_model(self):
-        """Compute the model."""
-        model: Transitions = {}
-        automaton: DFA = self.temporal_goal.automaton
-        failure_state = len(automaton.states) - 1
-        for automaton_state in automaton.states:
-            done = automaton_state in automaton.accepting_states
-            reward = self.temporal_goal.reward if done else 0.0
-            for color_id in range(self.unwrapped.nb_colors):
-                initial_state = (self.unwrapped.initial_state, automaton_state)
-                color = self.unwrapped.state_from_color(color_id)
-                color_state = (color, automaton_state)
+    def _generate_transitions(
+        self,
+        model: Transitions,
+        state: State,
+    ):
+        """Recusively visit states and generate transitions."""
+        if state in model:
+            return
 
-                # from the corridor, you can go to any color
-                goto_color_action = self.unwrapped.action_goto_color_from_color(
-                    color_id
-                )
-                new_transition = (
-                    1.0 - self.unwrapped.fail_prob,
-                    color_state,
-                    reward,
-                    done,
-                )
-                fail_transition = (
-                    self.unwrapped.fail_prob,
-                    initial_state,
-                    reward,
-                    done,
-                )
-                model.setdefault(initial_state, {}).setdefault(
-                    goto_color_action, []
-                ).extend([new_transition, fail_transition])
+        # Transition function from state
+        automaton = self.temporal_goal.automaton
+        sapientino_tf = self.unwrapped.P[state[0]]
+        automaton_tf = automaton.transition_function[state[1]]
 
-                # if you visit a color, check the transition on the automaton.
-                fluents = self.temporal_goal.extract_fluents(
-                    color, self.unwrapped.visit_color
-                )
-                next_automaton_state = automaton.transition_function.get(
-                    automaton_state, {}
-                ).get(fluents, failure_state)
-                next_state = (color, next_automaton_state)
-                new_transition = (
-                    1.0 - self.unwrapped.fail_prob,
-                    next_state,
-                    reward,
-                    done,
-                )
-                fail_transition = (
-                    self.unwrapped.fail_prob,
-                    color_state,
-                    reward,
-                    done,
-                )
-                model.setdefault(color_state, {}).setdefault(
-                    self.unwrapped.visit_color, []
-                ).extend([new_transition, fail_transition])
+        # For all actions
+        model[state] = {}
+        for action in sapientino_tf:
+            new_transitions = []
+            model[state][action] = new_transitions
 
-                # from any color, you can go back to the corridor.
-                new_transition = (1.0, initial_state, reward, done)
-                fail_transition = (
-                    self.unwrapped.fail_prob,
-                    color_state,
-                    reward,
-                    done,
+            # For all nondeterministic transitions
+            for transition in sapientino_tf[action]:
+                p, sap_state, sap_reward, sap_done = transition
+
+                # Move automaton
+                color = self.unwrapped._state_to_string(sap_state)
+                fluents = {color} if color != "corridor" else set()
+                automaton_state = automaton_tf[PLInterpretation(fluents)]
+
+                # Compose state
+                goal_reached = automaton_state in automaton.accepting_states
+                new_reward = sap_reward + (
+                    self.temporal_goal.reward if goal_reached else 0.0
                 )
-                model.setdefault(color_state, {}).setdefault(
-                    self.unwrapped.goto_corridor, []
-                ).extend([new_transition, fail_transition])
+                new_done = sap_done or goal_reached
+                new_state = (sap_state, automaton_state)
 
-        return model
+                new_transitions.append((p, new_state, new_reward, new_done))
 
-    def reset(self):
-        """Reset the environment."""
-        obs, automata_states = super().reset()
-        return tuple([obs] + automata_states)
-
-    def step(self, a):
-        """Do a step in the environment."""
-        state, reward, done, info = super().step(a)
-        obs, automata_states = state
-        if self.temporal_goal.is_true():
-            reward += self.temporal_goal.reward
-            done = True
-        new_state = tuple([obs] + automata_states)
-        return new_state, reward, done, info
+                # Recurse
+                self._generate_transitions(model, new_state)
 
 
 class Fluents(AbstractFluents):
