@@ -108,7 +108,10 @@ def train(env_name, json_params=None):
         )
     elif env_name == "sapientino-abs":
         trainer = TrainValueIteration(
-            env=env_abstract_sapientino.make(params=params),
+            env=env_abstract_sapientino.make(
+                params=params,
+                log_dir=log_path,
+            ),
             params=params,
             model_path=model_path,
             log_path=log_path,

@@ -23,7 +23,8 @@
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
 
 import io
-from typing import Any, Dict
+import os
+from typing import Any, Dict, Optional
 
 import numpy as np
 from flloat.semantics import PLInterpretation
@@ -208,10 +209,16 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
     need to build an explicit model.
     """
 
-    def __init__(self, *, tg_reward=1.0, **sapientino_kwargs):
+    def __init__(
+        self, *,
+        tg_reward: float = 1.0,
+        save_to: Optional[str] = None,
+        **sapientino_kwargs
+    ):
         """Initialize the environment.
 
         :param tg_reward: reward supplied when the temporal goal is reached.
+        :param save_to: path where the automaton temporal goal should be saved.
         """
         # Make AbstractSapientino
         unwrapped_env = AbstractSapientino(**sapientino_kwargs)
@@ -224,6 +231,7 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
             colors=color_sequence,
             fluents=self.fluents,
             reward=tg_reward,
+            save_to=save_to,
         )
         MyTemporalGoalWrapper.__init__(self, unwrapped_env, [self.temporal_goal])
 
@@ -360,16 +368,18 @@ class Fluents(AbstractFluents):
         return PLInterpretation(fluents)
 
 
-def make(params: Dict[str, Any]):
+def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     """Make the sapientino abstract state environment (agent teleports).
 
     :param params: a dictionary of parameters; see in this function the
         only ones that are used.
+    :param log_dir: directory where logs can be saved.
     :return: an object that respects the gym.Env interface.
     """
     env = AbstractSapientinoTemporalGoal(
         nb_colors=params["nb_colors"],
         failure_probability=params["sapientino_fail_p"],
         tg_reward=params["tg_reward"],
+        save_to=os.path.join(log_dir, "reward-dfa.dot") if log_dir else None,
     )
     return env
