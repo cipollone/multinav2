@@ -206,9 +206,7 @@ class TrainQ:
         """
         # Check
         if params["resume_file"] is not None:
-            raise TypeError(
-                "Resuming a trainin is not supported for this algorithm."
-            )
+            raise TypeError("Resuming a trainin is not supported for this algorithm.")
 
         # Saver
         self.saver = SaverCallback(
