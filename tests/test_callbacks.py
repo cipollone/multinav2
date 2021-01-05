@@ -20,11 +20,13 @@
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""Test for multinav.wrappers.utils."""
+"""Test for callbacks."""
 
 import gym
+import pytest
 
-from multinav.wrappers import utils
+from multinav.helpers.callbacks import CallbackInterface
+from multinav.wrappers.utils import CallbackWrapper
 
 
 class CallbackA:
@@ -39,10 +41,21 @@ class CallbackA:
         self._last_reset = observation
 
 
-def test_callback_wrapper():
-    """Test CallbackWrapper."""
+def test_callback():
+    """Test callbacks."""
+    # Test interface
+    assert issubclass(CallbackA, CallbackInterface)
+
+    with pytest.raises(TypeError):
+
+        class CallbackB(CallbackInterface):
+            pass
+
+        CallbackB()
+
+    # Test wrapper
     env = gym.make("Taxi-v3")
-    env = utils.CallbackWrapper(env, CallbackA())
+    env = CallbackWrapper(env, CallbackA())
 
     obs = env.reset()
     assert obs == env._callback._last_reset

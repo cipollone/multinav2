@@ -23,18 +23,14 @@
 import shutil
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import List
 
 import gym
 from gym import Wrapper
 from gym.spaces import Tuple as GymTuple
 from PIL import Image
 
-from multinav.helpers.general import ABCWithMethods
-
-# Types
-Observation = Any
-Action = int
+from multinav.helpers.callbacks import CallbackInterface
 
 
 class MyMonitor(Wrapper):
@@ -178,16 +174,6 @@ class SingleAgentWrapper(Wrapper):
 
 class CallbackWrapper(Wrapper):
     """Inject callbacks in the training algorithm."""
-
-    class CallbackInterface(ABCWithMethods):
-        """Supported callback methods."""
-
-        # Required methods
-        _abs_methods = ["_on_step", "_on_reset"]
-
-        # Types
-        _on_reset: Callable[[Observation], None]
-        _on_step: Callable[[Action, Observation, float, bool, Dict], None]
 
     def __init__(
         self,
