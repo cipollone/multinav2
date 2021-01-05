@@ -1,11 +1,13 @@
 """This module implements the general logic of the training loop."""
 
 import json
+import os
 import pickle
 from typing import Any, Dict
 
 import numpy as np
 from gym import Env
+from matplotlib import pyplot as plt
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
@@ -22,7 +24,7 @@ from multinav.helpers.callbacks import SaverCallback
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
-from multinav.wrappers.utils import CallbackWrapper
+from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
 
 # Default environments and algorithms parameters
 #   Always prefer to specify them with a json; do not rely on defaults.
@@ -102,12 +104,14 @@ def train(env_name, json_params=None):
             env=env_grid_sapientino.make(params=params),
             params=params,
             model_path=model_path,
+            log_path=log_path,
         )
     elif env_name == "sapientino-abs":
         trainer = TrainValueIteration(
             env=env_abstract_sapientino.make(params=params),
             params=params,
             model_path=model_path,
+            log_path=log_path,
         )
     else:
         raise RuntimeError("Environment not supported")
@@ -197,12 +201,19 @@ class TrainStableBaselines:
 class TrainQ:
     """Agent and training loop for Q learning."""
 
-    def __init__(self, env: Env, params: Dict[str, Any], model_path):
+    def __init__(
+        self,
+        env: Env,
+        params: Dict[str, Any],
+        model_path: str,
+        log_path: str,
+    ):
         """Initialize.
 
         :param env: discrete-state gym environment.
         :param params: dict of parameters. See `default_parameters`.
         :param model_path: directory where to save models.
+        :param log_path: directory where to save training logs.
         """
         # Check
         if params["resume_file"] is not None:
@@ -218,12 +229,15 @@ class TrainQ:
             model_ext=".pickle",
             extra=None,
         )
-        # Apply to env
         env = CallbackWrapper(env=env, callback=self.saver)
+
+        # Stats recorder
+        env = MyStatsRecorder(env)
 
         # Store
         self.env = env
         self.params = params
+        self._log_path = log_path
         self._value_function = {}  # type: Dict[Any, float]
         self._q_function = {}  # type: Dict[Any, np.ndarray]
 
@@ -259,6 +273,22 @@ class TrainQ:
         # Save
         self.saver.save()
 
+        # Log
+        self.log()
+
+    def log(self):
+        """Save logs to files."""
+        properties = ["episode_lengths", "episode_rewards"]
+
+        fig, axes = plt.subplots(nrows=len(properties), ncols=1)
+        for name, ax in zip(properties, axes):
+            ax.plot(getattr(self.env, name))
+            ax.set_ylabel(name)
+            if name == properties[-1]:
+                ax.set_xlabel("timesteps")
+
+        fig.savefig(os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight")
+
 
 class TrainValueIteration(TrainQ):
     """Agent and training loop for Value Iteration."""
@@ -272,12 +302,17 @@ class TrainValueIteration(TrainQ):
     def train(self):
         """Start training."""
         # Learn
-        self._value_function, _ = value_iteration(
+        self._value_function, policy = value_iteration(
             env=self.env,
             max_iterations=self.params["max_iterations"],
             eps=1e-5,
             discount=self.params["gamma"],
         )
+        self._value_function = dict(self._value_function)
 
-        # Save it
+        # Save
         self.saver.save()
+
+        # Log
+        print("Value function", self._value_function)
+        print("Policy", policy)
