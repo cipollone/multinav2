@@ -23,6 +23,7 @@
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
 
 import io
+from typing import Any, Dict
 
 import numpy as np
 from flloat.semantics import PLInterpretation
@@ -207,8 +208,11 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
     need to build an explicit model.
     """
 
-    def __init__(self, **sapientino_kwargs):
-        """Initialize the environment."""
+    def __init__(self, *, tg_reward=1.0, **sapientino_kwargs):
+        """Initialize the environment.
+
+        :param tg_reward: reward supplied when the temporal goal is reached.
+        """
         # Make AbstractSapientino
         unwrapped_env = AbstractSapientino(**sapientino_kwargs)
 
@@ -219,6 +223,7 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         self.temporal_goal = SapientinoGoal(
             colors=color_sequence,
             fluents=self.fluents,
+            reward=tg_reward,
         )
         MyTemporalGoalWrapper.__init__(self, unwrapped_env, [self.temporal_goal])
 
@@ -246,7 +251,7 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
         failure_state = len(automaton.states) - 1
         for automaton_state in automaton.states:
             done = automaton_state in automaton.accepting_states
-            reward = 1.0 if done else 0.0
+            reward = self.temporal_goal.reward if done else 0.0
             for color_id in range(self.unwrapped.nb_colors):
                 initial_state = (self.unwrapped.initial_state, automaton_state)
                 color = self.unwrapped.state_from_color(color_id)
@@ -353,3 +358,18 @@ class Fluents(AbstractFluents):
         else:
             fluents = set()
         return PLInterpretation(fluents)
+
+
+def make(params: Dict[str, Any]):
+    """Make the sapientino abstract state environment (agent teleports).
+
+    :param params: a dictionary of parameters; see in this function the
+        only ones that are used.
+    :return: an object that respects the gym.Env interface.
+    """
+    env = AbstractSapientinoTemporalGoal(
+        nb_colors=params["nb_colors"],
+        failure_probability=params["sapientino_fail_p"],
+        tg_reward=params["tg_reward"],
+    )
+    return env

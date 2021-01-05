@@ -27,9 +27,8 @@ import os
 import pickle
 import random
 import shutil
-from abc import ABC
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import gym
 import matplotlib.pyplot as plt
@@ -183,20 +182,12 @@ class Experiment:
 
 
 class Saver:
-    """Save and restore models from checkpoints."""
-
-    class Savable(ABC):
-        """Interface of a savable model."""
-
-        @classmethod
-        def __subclasshook__(cls, C):
-            """Anything that has a save() is savable."""
-            return hasattr(C, "save") and callable(C.save)
+    """Manages saving and loading checkpoints from files."""
 
     def __init__(
         self,
-        model: Savable,
-        loader: Callable[[str], Savable],
+        saver: Callable[[str], None],
+        loader: Callable[[str], Any],
         save_path: str,
         name_prefix: str = "model",
         model_ext: str = "",
@@ -204,19 +195,20 @@ class Saver:
     ):
         """Initialize.
 
-        :param model: any object with a `save(file_path)` method.
+        :param saver: a callable with `file_path` argument that saves
+            a model to this path.
         :param loader: a callable with `file_path` argument that returns
             a model.
         :param save_path: model checkpoints path.
             You could use `prepare_directories` to get this.
         :param name_prefix: just a name for the saved weights.
-        :param model_ext: use this when `model.save` appends something to the
+        :param model_ext: use this when saver appends something to the
             given checkpoint path.
         :param extra: an optional, additional pickable object that is saved
             with the main model.
         """
         # Store
-        self.model = model
+        self.saver = saver
         self.loader = loader
         self.model_file_ext = model_ext
         self.extra_model = extra
@@ -243,7 +235,7 @@ class Saver:
         with open(self._counters_file, "w") as f:
             json.dump(counters, f, indent=4)
 
-    def save(self, step):
+    def save(self, step: int):
         """Manually save a checkpoint.
 
         :param step: the current step of the training
@@ -251,8 +243,9 @@ class Saver:
         """
         # Save model
         model_path = self._chkpt_format.format(step=step)
-        self.model.save(model_path)
+        self.saver(model_path)
         # Save extra
+        extra_path: Optional[str]
         if self.extra_model is not None:
             extra_path = self._extra_format.format(step=step)
             with open(extra_path, "wb") as f:
@@ -268,28 +261,28 @@ class Saver:
             ),
         )
 
-    def load(self, path):
+    def load(self, path: str) -> Tuple[Any, Any, Dict[str, Any]]:
         """Load the weights from a checkpoint.
 
         :param path: load checkpoint at this path.
-        :return: the model, the extra object (can be None) and associated
+        :return: the model, the extra object (can be None), and associated
             counters.
         """
         # Restore
         path = os.path.relpath(path)
-        model = self.loader(load_path=path)
+        model = self.loader(path)
         print("> Loaded:", path)
 
         # Read counters
-        with open(self._counters_file) as f:
-            data = json.load(f)
+        with open(self._counters_file) as f1:
+            data = json.load(f1)
         counters = data[path]
 
         # Load extra
         extra_path = counters.pop("extra_file")
         if extra_path:
-            with open(extra_path, "rb") as f:
-                extra_model = pickle.load(f)
+            with open(extra_path, "rb") as f2:
+                extra_model = pickle.load(f2)
         else:
             extra_model = None
 

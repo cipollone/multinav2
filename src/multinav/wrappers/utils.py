@@ -30,6 +30,8 @@ from gym import Wrapper
 from gym.spaces import Tuple as GymTuple
 from PIL import Image
 
+from multinav.helpers.callbacks import Callback
+
 
 class MyMonitor(Wrapper):
     """A simple monitor."""
@@ -168,3 +170,32 @@ class SingleAgentWrapper(Wrapper):
         state = super().reset(**kwargs)
         new_state = state[0]
         return new_state
+
+
+class CallbackWrapper(Wrapper):
+    """Inject callbacks in the training algorithm."""
+
+    def __init__(
+        self,
+        env: gym.Env,
+        callback: Callback,
+    ):
+        """Initialize.
+
+        :param env: Gym environment to wrap
+        :param callback: a callback object
+        """
+        Wrapper.__init__(self, env)
+        self._callback = callback
+
+    def reset(self):
+        """Reset the environment."""
+        obs = Wrapper.reset(self)
+        self._callback._on_reset(obs)
+        return obs
+
+    def step(self, action):
+        """Environment step."""
+        observation, reward, done, info = Wrapper.step(self, action)
+        self._callback._on_step(action, observation, reward, done, info)
+        return observation, reward, done, info

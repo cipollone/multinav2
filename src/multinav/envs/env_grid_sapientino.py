@@ -90,7 +90,7 @@ def generate_grid(
 
 
 def make(params: Dict[str, Any]):
-    """Make the sapientino continuous state environment.
+    """Make the sapientino grid state environment.
 
     :param params: a dictionary of parameters; see in this function the
         only ones that are used.
