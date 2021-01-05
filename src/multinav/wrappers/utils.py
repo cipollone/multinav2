@@ -30,7 +30,7 @@ from gym import Wrapper
 from gym.spaces import Tuple as GymTuple
 from PIL import Image
 
-from multinav.helpers.callbacks import CallbackInterface
+from multinav.helpers.callbacks import Callback
 
 
 class MyMonitor(Wrapper):
@@ -178,7 +178,7 @@ class CallbackWrapper(Wrapper):
     def __init__(
         self,
         env: gym.Env,
-        callback: CallbackInterface,
+        callback: Callback,
     ):
         """Initialize.
 

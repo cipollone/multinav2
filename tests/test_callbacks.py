@@ -25,7 +25,7 @@
 import gym
 import pytest
 
-from multinav.helpers.callbacks import CallbackInterface
+from multinav.helpers.callbacks import Callback
 from multinav.wrappers.utils import CallbackWrapper
 
 
@@ -44,11 +44,11 @@ class CallbackA:
 def test_callback():
     """Test callbacks."""
     # Test interface
-    assert issubclass(CallbackA, CallbackInterface)
+    assert issubclass(CallbackA, Callback)
 
     with pytest.raises(TypeError):
 
-        class CallbackB(CallbackInterface):
+        class CallbackB(Callback):
             pass
 
         CallbackB()

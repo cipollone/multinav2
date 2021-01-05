@@ -27,17 +27,18 @@ Callbacks can be applied with multinav.wrappers.CallbackWrapper.
 """
 
 from abc import abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from multinav.helpers.general import ABCWithMethods
+from multinav.helpers.misc import Saver
 
 # Types
 Observation = Any
 Action = int
 
 
-class CallbackInterface(ABCWithMethods):
-    """Interface of callbacks.
+class Callback(ABCWithMethods):
+    """Abstract interface of callbacks.
 
     To implement a callback, you can either subclass this or just
     declare an indipendent class with the methods declared below.
@@ -72,3 +73,35 @@ class CallbackInterface(ABCWithMethods):
         :param info: returned dict of infos
         """
         raise NotImplementedError("Abstract")
+
+
+class SaverCallback(Saver, Callback):
+    """This is a callback that periodically saves."""
+
+    def __init__(self, *, save_freq: Optional[int], **saver_kwargs):
+        """Initialize.
+
+        :param save_freq: number of steps between each save (None means never).
+        """
+        Saver.__init__(self, **saver_kwargs)
+        self._save_freq = save_freq
+        self.num_timesteps = 0
+
+    def _on_reset(self, obs: Observation) -> None:
+        """Nothing to do."""
+        pass
+
+    def _on_step(
+        self,
+        action: Action,
+        obs: Observation,
+        reward: float,
+        done: bool,
+        info: Dict[str, Any],
+    ) -> None:
+        """See Callback._on_step."""
+        self.num_timesteps += 1
+        if self._save_freq is None:
+            return
+        if self.num_timesteps % self._save_freq == 0:
+            self.save(step=self.num_timesteps)

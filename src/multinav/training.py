@@ -12,9 +12,11 @@ from stable_baselines.deepq.policies import LnMlpPolicy
 
 from multinav.algorithms.q_learning import q_learning
 from multinav.envs import env_cont_sapientino, env_grid_sapientino, env_ros_controls
+from multinav.helpers.callbacks import SaverCallback
 from multinav.helpers.general import QuitWithResources
-from multinav.helpers.misc import Saver, prepare_directories
+from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
+from multinav.wrappers.utils import CallbackWrapper
 
 # TODO: save value functions and automata? extra=(value function and automaton)
 
@@ -189,13 +191,9 @@ class TrainQ:
         :param params: dict of parameters. See `default_parameters`.
         :param model_path: directory where to save models.
         """
-        # Store
-        self.env = env
-        self.params = params
-        self._value_function = {}  # type: Dict[Any, float]
-
         # Saver
-        self.saver = Saver(
+        self.saver = SaverCallback(
+            save_freq=params["save_freq"],
             saver=self._save_fn,
             loader=self._load_fn,
             save_path=model_path,
@@ -203,6 +201,13 @@ class TrainQ:
             model_ext=".pickle",
             extra=None,
         )
+        # Apply to env
+        env = CallbackWrapper(env=env, callback=self.saver)
+
+        # Store
+        self.env = env
+        self.params = params
+        self._value_function = {}  # type: Dict[Any, float]
 
     def _save_fn(self, path: str):
         """Save model to file."""
@@ -232,6 +237,4 @@ class TrainQ:
         }
 
         # Save it
-        self.saver.save(
-            0
-        )  # TODO: use a callback to periodically save and use the correct final step
+        self.saver.save(self.saver.num_timesteps)
