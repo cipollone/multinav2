@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import List
 
 import gym
+import matplotlib.pyplot as plt
 from gym import Wrapper
 from gym.spaces import Tuple as GymTuple
 from PIL import Image
@@ -199,3 +200,17 @@ class CallbackWrapper(Wrapper):
         observation, reward, done, info = Wrapper.step(self, action)
         self._callback._on_step(action, observation, reward, done, info)
         return observation, reward, done, info
+
+
+class AbstractSapientinoRenderer(Wrapper):
+    """Wraps and display abstract sapientino."""
+
+    def render(self, _mode="human"):
+        """Show on screen the sapientino images.
+
+        mode is ignored.
+        """
+        # Image array
+        img_array = self.unwrapped.render(mode="rgb_array")
+        plt.figure(0)
+        plt.imshow(img_array)

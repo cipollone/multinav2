@@ -23,10 +23,8 @@
 
 import json
 import os
-import pickle
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-import numpy as np
 from gym import Env
 from matplotlib import pyplot as plt
 from PIL import Image
@@ -86,11 +84,17 @@ default_parameters = dict(
 )
 
 
-def train(env_name, json_params=None):
+def train(
+    env_name: str,
+    json_params: Optional[str] = None,
+    cmd_params: Optional[Dict[str, Any]] = None,
+):
     """Train an agent on the ROS environment.
 
     :param env_name: the environment id (see ``multinav --help``)
     :param json_params: the path (str) of json file of parameters.
+    :param cmd_params: optional command line parameters. These are meant to
+        override json_params.
     """
     # Settings
     params = dict(default_parameters)
@@ -98,6 +102,8 @@ def train(env_name, json_params=None):
         with open(json_params) as f:
             loaded_params = json.load(f)
         params.update(loaded_params)
+    if cmd_params:
+        params.update(cmd_params)
 
     # Init output directories and save params
     resuming = bool(params["resume_file"])
@@ -242,8 +248,8 @@ class TrainQ:
         :param log_path: directory where to save training logs.
         """
         # Check
-        if params["resume_file"] is not None:
-            raise TypeError("Resuming a trainin is not supported for this algorithm.")
+        if "resume_file" in params and params["resume_file"]:
+            raise TypeError("Resuming a trainingg is not supported for this algorithm.")
 
         # Agent
         agent = QFunctionModel(q_function=dict())
@@ -320,8 +326,8 @@ class TrainValueIteration(TrainQ):
         :param log_path: directory where to save training logs.
         """
         # Check
-        if params["resume_file"] is not None:
-            raise TypeError("Resuming a trainin is not supported for this algorithm.")
+        if "resume_file" in params and params["resume_file"]:
+            raise TypeError("Resuming a trainingg is not supported for this algorithm.")
 
         # Agent
         agent = ValueFunctionModel(
