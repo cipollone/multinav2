@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2020 Roberto Cipollone, Marco Favorito
+#
+# ------------------------------
+#
+# This file is part of multinav.
+#
+# multinav is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# multinav is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with multinav.  If not, see <https://www.gnu.org/licenses/>.
+#
 """This module implements the general logic of the training loop."""
 
 import json
@@ -8,12 +29,13 @@ from typing import Any, Dict
 import numpy as np
 from gym import Env
 from matplotlib import pyplot as plt
+from PIL import Image
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
 
 from multinav.algorithms.q_learning import q_learning
-from multinav.algorithms.value_iteration import value_iteration
+from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
 from multinav.envs import (
     env_abstract_sapientino,
     env_cont_sapientino,
@@ -108,7 +130,10 @@ def train(env_name, json_params=None):
         )
     elif env_name == "sapientino-abs":
         trainer = TrainValueIteration(
-            env=env_abstract_sapientino.make(params=params),
+            env=env_abstract_sapientino.make(
+                params=params,
+                log_dir=log_path,
+            ),
             params=params,
             model_path=model_path,
             log_path=log_path,
@@ -302,7 +327,7 @@ class TrainValueIteration(TrainQ):
     def train(self):
         """Start training."""
         # Learn
-        self._value_function, policy = value_iteration(
+        self._value_function, self._policy = value_iteration(
             env=self.env,
             max_iterations=self.params["max_iterations"],
             eps=1e-5,
@@ -314,5 +339,14 @@ class TrainValueIteration(TrainQ):
         self.saver.save()
 
         # Log
-        print("Value function", self._value_function)
-        print("Policy", policy)
+        self.log()
+
+    def log(self):
+        """Log."""
+        pretty_print_v(self._value_function)
+
+        print("Policy", self._policy)
+
+        frame = self.env.render(mode="rgb_array")
+        img = Image.fromarray(frame)
+        img.save(os.path.join(self._log_path, "frame.png"))

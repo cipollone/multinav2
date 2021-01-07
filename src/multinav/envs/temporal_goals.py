@@ -57,6 +57,7 @@ class SapientinoGoal(TemporalGoal):
         colors: Sequence[str],
         fluents: AbstractFluents,
         reward: Optional[float] = 1.0,
+        save_to: Optional[str] = None,
     ):
         """Initialize.
 
@@ -65,6 +66,7 @@ class SapientinoGoal(TemporalGoal):
         :param fluents: a fluents evaluator. All colors must be fluents, so
             that we know when the agent is in each position.
         :param reward: reward suplied when reward is reached.
+        :param save_to: path where the automaton should be exported.
         """
         # Check
         if not all((color in fluents.fluents for color in colors)):
@@ -72,6 +74,10 @@ class SapientinoGoal(TemporalGoal):
 
         # Make automaton for this sequence
         automaton = self._make_sapientino_automaton(colors)
+
+        # Maybe save
+        if save_to:
+            automaton.to_dot(save_to)
 
         # Super
         TemporalGoal.__init__(
@@ -110,7 +116,7 @@ class SapientinoGoal(TemporalGoal):
             states.add(current_state)
 
         for symbol in alphabet:
-            transitions.setdefault(current_state, {})[symbol] = current_state
+            transitions.setdefault(current_state, {})[symbol] = sink
             transitions.setdefault(sink, {})[symbol] = sink
 
         dfa = DFA(states, alphabet, initial_state, {accepting}, transitions)

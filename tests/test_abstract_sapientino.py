@@ -123,32 +123,30 @@ def test_value_iteration_with_rb():
     """Test value iteration with the restraining bolt."""
     nb_colors = 3
     env = AbstractSapientinoTemporalGoal(nb_colors=nb_colors, failure_probability=0.1)
-    v, policy = value_iteration(env, discount=0.9, max_iterations=2000)
-    actual_values = np.array(
-        list(map(itemgetter(1), sorted(v.items(), key=lambda x: x[0])))
-    )
+    v, _policy = value_iteration(env, discount=0.9, max_iterations=2000)
+    actual_values = np.array(list(v[state] for state in sorted(list(v.keys()))))
     expected_values = np.array(
         [
-            9.33195100e00,
-            1.19092409e01,
-            7.11071670e-14,
-            1.51983244e01,
-            1.81735619e01,
-            1.04840437e01,
-            1.17783701e01,
-            7.49535352e-14,
-            1.50313099e01,
-            1.91826436e01,
-            9.22940208e00,
-            1.33795176e01,
-            7.49535352e-14,
-            1.50313099e01,
-            1.91826436e01,
-            9.22940208e00,
-            1.17783701e01,
-            7.49535352e-14,
-            1.70746608e01,
-            1.91826436e01,
+            5.58750905e-01,
+            7.05230308e-01,
+            1.58312478e-07,
+            8.90110041e-01,
+            0.00000000e00,
+            6.27732489e-01,
+            6.97480534e-01,
+            1.66876005e-07,
+            8.80328622e-01,
+            0.00000000e00,
+            5.52610794e-01,
+            7.92295768e-01,
+            1.66876005e-07,
+            8.80328622e-01,
+            0.00000000e00,
+            5.52610794e-01,
+            6.97480534e-01,
+            1.66876005e-07,
+            1.00000016e00,
+            1.66876005e-07,
         ]
     )
     assert np.allclose(actual_values, expected_values, atol=1e-7)
