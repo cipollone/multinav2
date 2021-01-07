@@ -36,6 +36,7 @@ from stable_baselines.deepq.policies import LnMlpPolicy
 
 from multinav.algorithms.q_learning import q_learning
 from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
+from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.envs import (
     env_abstract_sapientino,
     env_cont_sapientino,
@@ -244,14 +245,17 @@ class TrainQ:
         if params["resume_file"] is not None:
             raise TypeError("Resuming a trainin is not supported for this algorithm.")
 
+        # Agent
+        agent = QFunctionModel(q_function=dict())
+
         # Saver
         self.saver = SaverCallback(
             save_freq=None,  # Not needed
-            saver=self._save_fn,
-            loader=self._load_fn,
+            saver=agent.save,
+            loader=agent.load,
             save_path=model_path,
-            name_prefix="valuefn",
-            model_ext=".pickle",
+            name_prefix="model",
+            model_ext=agent.file_ext,
             extra=None,
         )
         env = CallbackWrapper(env=env, callback=self.saver)
@@ -262,30 +266,13 @@ class TrainQ:
         # Store
         self.env = env
         self.params = params
+        self.agent = agent
         self._log_path = log_path
-        self._value_function = {}  # type: Dict[Any, float]
-        self._q_function = {}  # type: Dict[Any, np.ndarray]
-
-    def _update_value_function(self):
-        """Update value funtion from Q."""
-        self._value_function = {
-            state: np.max(q).item() for state, q in self._q_function.items()
-        }
-
-    def _save_fn(self, path: str):
-        """Save model to file."""
-        self._update_value_function()
-        with open(path + ".pickle", "wb") as f:
-            pickle.dump(self._value_function, f)
-
-    def _load_fn(self, path: str):
-        with open(path, "rb") as f:
-            self._value_function = pickle.load(f)
 
     def train(self):
         """Start training."""
         # Learn
-        self._q_function = q_learning(
+        self.agent.q_function = q_learning(
             env=self.env,
             nb_episodes=self.params["nb_episodes"],
             alpha=self.params["learning_rate"],
@@ -318,22 +305,63 @@ class TrainQ:
 class TrainValueIteration(TrainQ):
     """Agent and training loop for Value Iteration."""
 
-    def _save_fn(self, path: str):
-        """Save model to file."""
-        value_fn = dict(self._value_function)
-        with open(path + ".pickle", "wb") as f:
-            pickle.dump(value_fn, f)
+    def __init__(
+        self,
+        env: Env,
+        params: Dict[str, Any],
+        model_path: str,
+        log_path: str,
+    ):
+        """Initialize.
+
+        :param env: discrete-state gym environment.
+        :param params: dict of parameters. See `default_parameters`.
+        :param model_path: directory where to save models.
+        :param log_path: directory where to save training logs.
+        """
+        # Check
+        if params["resume_file"] is not None:
+            raise TypeError("Resuming a trainin is not supported for this algorithm.")
+
+        # Agent
+        agent = ValueFunctionModel(
+            value_function=dict(),
+            policy=dict(),
+        )
+
+        # Saver
+        self.saver = SaverCallback(
+            save_freq=None,  # Not needed
+            saver=agent.save,
+            loader=agent.load,
+            save_path=model_path,
+            name_prefix="model",
+            model_ext=agent.file_ext,
+            extra=None,
+        )
+        env = CallbackWrapper(env=env, callback=self.saver)
+
+        # Stats recorder
+        env = MyStatsRecorder(env)
+
+        # Store
+        self.env = env
+        self.params = params
+        self.agent = agent
+        self._log_path = log_path
 
     def train(self):
         """Start training."""
         # Learn
-        self._value_function, self._policy = value_iteration(
+        value_function, policy = value_iteration(
             env=self.env,
             max_iterations=self.params["max_iterations"],
             eps=1e-5,
             discount=self.params["gamma"],
         )
-        self._value_function = dict(self._value_function)
+        # Store
+        self.agent.value_function = dict(value_function)
+        self.agent.policy = dict(policy)
 
         # Save
         self.saver.save()
@@ -343,9 +371,9 @@ class TrainValueIteration(TrainQ):
 
     def log(self):
         """Log."""
-        pretty_print_v(self._value_function)
+        pretty_print_v(self.agent.value_function)
 
-        print("Policy", self._policy)
+        print("Policy", self.agent.policy)
 
         frame = self.env.render(mode="rgb_array")
         img = Image.fromarray(frame)
