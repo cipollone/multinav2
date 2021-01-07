@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2020 Roberto Cipollone, Marco Favorito
+#
+# ------------------------------
+#
+# This file is part of multinav.
+#
+# multinav is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# multinav is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with multinav.  If not, see <https://www.gnu.org/licenses/>.
+#
 """This module implements the general logic of the training loop."""
 
 import json
@@ -14,7 +35,7 @@ from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
 
 from multinav.algorithms.q_learning import q_learning
-from multinav.algorithms.value_iteration import value_iteration
+from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
 from multinav.envs import (
     env_abstract_sapientino,
     env_cont_sapientino,
@@ -322,9 +343,10 @@ class TrainValueIteration(TrainQ):
 
     def log(self):
         """Log."""
-        print("Value function", self._value_function)
+        pretty_print_v(self._value_function)
+
         print("Policy", self._policy)
-        # Print transition function
+
         frame = self.env.render(mode="rgb_array")
         img = Image.fromarray(frame)
         img.save(os.path.join(self._log_path, "frame.png"))

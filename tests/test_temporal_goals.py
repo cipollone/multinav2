@@ -51,8 +51,9 @@ def test_sapientino_goal():
     yellow = PLInterpretation({"yellow"})
 
     assert len(tg.automaton.states) == 4
+    assert tg.automaton.accepts([red, blue])
     assert tg.automaton.accepts([empty, red, empty, blue])
-    assert tg.automaton.accepts([empty, red, empty, blue, empty])
+    assert not tg.automaton.accepts([empty, red, empty, blue, empty])
     assert not tg.automaton.accepts([red, yellow])
     assert not tg.automaton.accepts([red])
     assert not tg.automaton.accepts([])

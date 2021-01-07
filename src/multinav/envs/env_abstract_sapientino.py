@@ -235,7 +235,8 @@ class AbstractSapientinoTemporalGoal(MyTemporalGoalWrapper, MyDiscreteEnv):
             reward=tg_reward,
             save_to=save_to,
         )
-        MyTemporalGoalWrapper.__init__(self, unwrapped_env, [self.temporal_goal])
+        # Mypy thinks this is object.__init__ I had to silence it
+        MyTemporalGoalWrapper.__init__(self, unwrapped_env, [self.temporal_goal])  # type: ignore
 
         # Set observation space
         observation_space = MultiDiscrete(

@@ -116,7 +116,7 @@ class SapientinoGoal(TemporalGoal):
             states.add(current_state)
 
         for symbol in alphabet:
-            transitions.setdefault(current_state, {})[symbol] = current_state
+            transitions.setdefault(current_state, {})[symbol] = sink
             transitions.setdefault(sink, {})[symbol] = sink
 
         dfa = DFA(states, alphabet, initial_state, {accepting}, transitions)

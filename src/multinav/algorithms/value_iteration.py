@@ -97,3 +97,13 @@ class _ValueIteration:
 def value_iteration(*args, **kwargs):
     """Run value iteration."""
     return _ValueIteration(*args, **kwargs)()
+
+
+def pretty_print_v(valuefn: dict):
+    """Nicely print value function (just for debugging)."""
+    print("Value function")
+    states = list(valuefn.keys())
+    states.sort()
+
+    for state in states:
+        print("  ", state, ": ", np.around(valuefn[state], decimals=2), sep="")
