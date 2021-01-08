@@ -23,8 +23,7 @@
 
 import numpy as np
 from gym import Env, ObservationWrapper
-from gym.spaces import MultiDiscrete, Discrete
-from gym.spaces import Tuple as GymTuple
+from gym.spaces import Discrete, MultiDiscrete
 from temprl.wrapper import TemporalGoalWrapper
 
 from multinav.helpers.notebooks import automaton_to_rgb

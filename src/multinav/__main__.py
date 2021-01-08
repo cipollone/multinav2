@@ -28,9 +28,7 @@ def main():
         "Launch a training without this  to generate a skeleton",
     )
     parser.add_argument(
-        "-r",
-        "--resume",
-        help="Resume from checkpoint file. Overrides json params."
+        "-r", "--resume", help="Resume from checkpoint file. Overrides json params."
     )
     parser.add_argument(
         "do",

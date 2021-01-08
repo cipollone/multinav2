@@ -253,13 +253,7 @@ class AbstractSapientinoTemporalGoal(MyDiscreteEnv):
         nb_actions = self.sapientino_env.nb_actions
         isd = np.zeros(nb_states)
         isd[0] = 1.0
-        MyDiscreteEnv.__init__(
-            self,
-            nS=nb_states,
-            nA=nb_actions,
-            P=model,
-            isd=isd
-        )
+        MyDiscreteEnv.__init__(self, nS=nb_states, nA=nb_actions, P=model, isd=isd)
 
         # Update observation space
         self.observation_space = self.temporal_env.observation_space

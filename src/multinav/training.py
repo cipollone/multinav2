@@ -32,9 +32,9 @@ from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
 
+from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.algorithms.q_learning import q_learning
 from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
-from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.envs import (
     env_abstract_sapientino,
     env_cont_sapientino,
