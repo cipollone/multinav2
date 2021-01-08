@@ -31,6 +31,7 @@ from PIL import Image
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
+from typing_extensions import Protocol
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.algorithms.q_learning import q_learning
@@ -114,6 +115,7 @@ def train(
     )
 
     # Make
+    trainer: Trainer
     if env_name == "ros":
         trainer = TrainStableBaselines(
             env=env_ros_controls.make(params=params),
@@ -150,6 +152,14 @@ def train(
 
     # Start
     trainer.train()
+
+
+class Trainer(Protocol):
+    """Trainer interface (typing)."""
+
+    def train(self) -> None:
+        """Trainig loop."""
+        raise TypeError("Abstract.")
 
 
 class TrainStableBaselines:
@@ -308,7 +318,7 @@ class TrainQ:
         fig.savefig(os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight")
 
 
-class TrainValueIteration(TrainQ):
+class TrainValueIteration:
     """Agent and training loop for Value Iteration."""
 
     def __init__(

@@ -22,7 +22,7 @@
 
 """Most classes in multinav.helpers.general have been tested already."""
 
-from multinav.helpers.general import ABCWithMethods, classproperty
+from multinav.helpers.general import classproperty
 
 
 def test_classproperty():
@@ -30,34 +30,9 @@ def test_classproperty():
 
     class A:
         @classproperty
-        def b(cls):
+        def b(cls):  # pylint: disable=no-self-argument
             return 3
 
     a = A()
     assert a.b == 3
     assert A.b == 3
-
-
-class Interface(ABCWithMethods):
-    """Example of an interface."""
-
-    _abs_methods = ["this", "and_that"]
-
-
-def test_ABCWithMethods():
-    """Test ABCWithMethods."""
-
-    class A:
-        pass
-
-    class B:
-        def this(self):
-            return True
-
-    class C(B):
-        def and_that(self):
-            return False
-
-    assert not issubclass(A, Interface)
-    assert not issubclass(B, Interface)
-    assert issubclass(C, Interface)

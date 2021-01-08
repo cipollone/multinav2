@@ -26,41 +26,37 @@ algorithms.
 """
 
 import pickle
-from abc import abstractclassmethod, abstractmethod
 from typing import Dict
 
 import numpy as np
+from typing_extensions import Protocol
 
-from multinav.helpers.general import ABCWithMethods
 from multinav.helpers.gym import Action, State
 
 
-class AgentModel(ABCWithMethods):
+class AgentModel(Protocol):
     """A generic agent that can act."""
 
-    _abs_methods = ["predict", "save", "load"]
-
-    @abstractmethod
     def predict(self, observation: State) -> Action:
         """Compute the action to execute."""
+        raise NotImplementedError("Abstract")
 
-    @abstractmethod
     def save(self, path: str) -> str:
         """Save model to path.
 
         :param path: directory + model name
         :return: the output file
         """
-        pass
+        raise NotImplementedError("Abstract")
 
-    @abstractclassmethod
+    @classmethod
     def load(cls, path: str) -> "AgentModel":
         """Load model from path.
 
         :param path: exact file path to load.
         :return: the built agent
         """
-        pass
+        raise NotImplementedError("Abstract")
 
 
 class QFunctionModel(AgentModel):

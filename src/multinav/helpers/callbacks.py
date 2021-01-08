@@ -26,10 +26,10 @@ concept, these are not specific to the learning library.
 Callbacks can be applied with multinav.wrappers.CallbackWrapper.
 """
 
-from abc import abstractmethod
 from typing import Any, Dict, Optional
 
-from multinav.helpers.general import ABCWithMethods
+from typing_extensions import Protocol
+
 from multinav.helpers.misc import Saver
 
 # Types
@@ -37,17 +37,13 @@ Observation = Any
 Action = int
 
 
-class Callback(ABCWithMethods):
+class Callback(Protocol):
     """Abstract interface of callbacks.
 
     To implement a callback, you can either subclass this or just
     declare an indipendent class with the methods declared below.
     """
 
-    # Required methods
-    _abs_methods = ["_on_step", "_on_reset"]
-
-    @abstractmethod
     def _on_reset(self, obs: Observation) -> None:
         """Do this on reset.
 
@@ -55,7 +51,6 @@ class Callback(ABCWithMethods):
         """
         raise NotImplementedError("Abstract")
 
-    @abstractmethod
     def _on_step(
         self,
         action: Action,
