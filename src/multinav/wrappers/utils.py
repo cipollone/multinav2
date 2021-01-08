@@ -205,6 +205,11 @@ class CallbackWrapper(Wrapper):
 class AbstractSapientinoRenderer(Wrapper):
     """Wraps and display abstract sapientino."""
 
+    def __init__(self, *args, **kwargs):
+        """Initialize."""
+        Wrapper.__init__(self, *args, **kwargs)
+        self.__img = None
+
     def render(self, mode="human"):
         """Show on screen the sapientino images.
 
@@ -212,6 +217,10 @@ class AbstractSapientinoRenderer(Wrapper):
         """
         # Image array
         img_array = self.env.render(mode="rgb_array")
-        plt.figure(0)
-        plt.imshow(img_array)
-        plt.show()
+        # Draw
+        if self.__img is None:
+            self.__img = plt.imshow(img_array)
+        else:
+            self.__img.set_data(img_array)
+        plt.pause(0.1)
+        plt.draw()
