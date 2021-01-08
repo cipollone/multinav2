@@ -205,12 +205,13 @@ class CallbackWrapper(Wrapper):
 class AbstractSapientinoRenderer(Wrapper):
     """Wraps and display abstract sapientino."""
 
-    def render(self, _mode="human"):
+    def render(self, mode="human"):
         """Show on screen the sapientino images.
 
         mode is ignored.
         """
         # Image array
-        img_array = self.unwrapped.render(mode="rgb_array")
+        img_array = self.env.render(mode="rgb_array")
         plt.figure(0)
         plt.imshow(img_array)
+        plt.show()

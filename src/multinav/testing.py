@@ -25,6 +25,7 @@ import json
 from typing import Any, Dict, Optional
 
 import gym
+from stable_baselines.common import BaseRLModel
 
 from multinav.algorithms.agents import AgentModel
 from multinav.envs import (
@@ -136,14 +137,26 @@ class Tester:
         """Initialize."""
         self.env = env
         self.model = model
+        self._is_stable_baselines_model = isinstance(model, BaseRLModel)
 
     def test(self):
         """Test loop."""
+        # Episodes
         for _ in range(100):
+
+            # Init episode
             obs = self.env.reset()
             done = False
+
             while not done:
-                print(obs)
+                # Render
                 self.env.render()
-                action, _ = self.model.predict(obs)
+
+                # Compute action
+                action = self.model.predict(obs)
+                if self._is_stable_baselines_model:
+                    assert action[1] is None
+                    action = action[0]
+
+                # Move env
                 obs, _, done, _ = self.env.step(action)
