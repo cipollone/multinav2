@@ -222,5 +222,5 @@ class AbstractSapientinoRenderer(Wrapper):
             self.__img = plt.imshow(img_array)
         else:
             self.__img.set_data(img_array)
-        plt.pause(0.1)
+        plt.pause(0.01)
         plt.draw()

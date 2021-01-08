@@ -22,6 +22,7 @@
 """Test on environment."""
 
 import json
+import time
 from typing import Any, Dict, Optional
 
 import gym
@@ -160,3 +161,6 @@ class Tester:
 
                 # Move env
                 obs, _, done, _ = self.env.step(action)
+
+                # Let us see the screen
+                time.sleep(0.1)
