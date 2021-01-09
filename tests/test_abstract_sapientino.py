@@ -21,8 +21,6 @@
 #
 
 """Tests for Abstract Sapientino."""
-from operator import itemgetter
-
 import numpy as np
 import pytest
 
@@ -48,13 +46,13 @@ def test_abstract_sapientino():
         env.step(1)
 
     # go to color 0
-    next_state, reward, done, info = env.step(2)
+    next_state, reward, done, _info = env.step(2)
     assert next_state == 1
     assert reward == 0.0
     assert not done
 
     # visit current color.
-    next_state, reward, done, info = env.step(1)
+    next_state, reward, done, _info = env.step(1)
     assert next_state == 1
     assert reward == 0.0
     assert not done
@@ -66,7 +64,7 @@ def test_abstract_sapientino():
             env.step(action)
 
     # go back to corridor.
-    next_state, reward, done, info = env.step(0)
+    next_state, reward, done, _info = env.step(0)
     assert next_state == 0
     assert reward == 0.0
     assert not done
@@ -93,10 +91,8 @@ class _RewardWrapper(AbstractSapientino):
 def test_value_iteration():
     """Test value iteration on abstract Sapientino."""
     env = _RewardWrapper(5, failure_probability=0.0)
-    v, policy = value_iteration(env, discount=0.9, max_iterations=200)
-    actual_values = np.array(
-        list(map(itemgetter(1), sorted(v.items(), key=lambda x: x[0])))
-    )
+    v, _policy = value_iteration(env, discount=0.9, max_iterations=200)
+    actual_values = np.array(list(v[state] for state in sorted(list(v.keys()))))
     expected_values = np.array([9, 8.1, 8.1, 8.1, 8.1, 10])
     assert np.allclose(actual_values, expected_values)
 
@@ -104,17 +100,15 @@ def test_value_iteration():
 def test_value_iteration_with_fail_prob():
     """Test value iteration on abstract Sapientino, but with small failure probability."""
     env = _RewardWrapper(5, failure_probability=0.05)
-    v, policy = value_iteration(env, discount=0.9, max_iterations=100)
-    actual_values = np.array(
-        list(map(itemgetter(1), sorted(v.items(), key=lambda x: x[0])))
-    )
+    v, _policy = value_iteration(env, discount=0.9, max_iterations=100)
+    actual_values = np.array(list(v[state] for state in sorted(list(v.keys()))))
     expected_values = [
-        5.86562511,
-        5.52781383,
-        5.52781383,
-        5.52781383,
-        5.52781383,
-        6.5516724,
+        5.86567864,
+        5.25147128,
+        5.25147128,
+        5.25147128,
+        5.25147128,
+        6.55172311,
     ]
     assert np.allclose(actual_values, expected_values)
 
@@ -127,28 +121,29 @@ def test_value_iteration_with_rb():
     actual_values = np.array(list(v[state] for state in sorted(list(v.keys()))))
     expected_values = np.array(
         [
-            5.58750905e-01,
-            7.05230308e-01,
-            1.58312478e-07,
-            8.90110041e-01,
+            4.52588208e-01,
+            6.34707234e-01,
+            8.64309952e-08,
+            8.90109977e-01,
             0.00000000e00,
-            6.27732489e-01,
-            6.97480534e-01,
-            1.66876005e-07,
-            8.80328622e-01,
+            5.08463285e-01,
+            5.64959196e-01,
+            8.64309952e-08,
+            7.92295703e-01,
             0.00000000e00,
-            5.52610794e-01,
-            7.92295768e-01,
-            1.66876005e-07,
-            8.80328622e-01,
+            4.02853250e-01,
+            7.13066141e-01,
+            8.64309952e-08,
+            7.92295703e-01,
             0.00000000e00,
-            5.52610794e-01,
-            6.97480534e-01,
-            1.66876005e-07,
-            1.00000016e00,
-            1.66876005e-07,
+            4.02853250e-01,
+            5.64959196e-01,
+            8.64309952e-08,
+            1.00000009e00,
+            8.64309952e-08,
         ]
     )
+
     assert np.allclose(actual_values, expected_values, atol=1e-7)
 
 

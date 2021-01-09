@@ -155,14 +155,16 @@ class AbstractSapientino(MyDiscreteEnv):
             ).extend([new_transition, fail_transition])
 
             # if you visit a color, you remain in the same state.
-            # we would need additional states to model visit failure
-            new_transition = (1.0, color_state, 0.0, False)
+            # NOTE: these two transitions are equivalent to a single transition
+            #   it may be useful later, though.
+            new_transition = (1.0 - self.fail_prob, color_state, 0.0, False)
+            fail_transition = (self.fail_prob, color_state, 0.0, False)
             model.setdefault(color_state, {}).setdefault(self.visit_color, []).extend(
-                [new_transition]
+                [new_transition, fail_transition]
             )
 
             # from any color, you can go back to the corridor.
-            new_transition = (1.0, self.initial_state, 0.0, False)
+            new_transition = (1.0 - self.fail_prob, self.initial_state, 0.0, False)
             fail_transition = (self.fail_prob, color_state, 0.0, False)
             model.setdefault(color_state, {}).setdefault(self.goto_corridor, []).extend(
                 [new_transition, fail_transition]

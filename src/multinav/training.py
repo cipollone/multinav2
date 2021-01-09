@@ -23,6 +23,7 @@
 
 import json
 import os
+from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 from gym import Env
@@ -31,7 +32,6 @@ from PIL import Image
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
 from stable_baselines.deepq.policies import LnMlpPolicy
-from typing_extensions import Protocol
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.algorithms.q_learning import q_learning
@@ -154,15 +154,16 @@ def train(
     trainer.train()
 
 
-class Trainer(Protocol):
-    """Trainer interface (typing)."""
+class Trainer(ABC):
+    """Trainer interface (used for typing)."""
 
+    @abstractmethod
     def train(self) -> None:
         """Trainig loop."""
-        raise TypeError("Abstract.")
+        pass
 
 
-class TrainStableBaselines:
+class TrainStableBaselines(Trainer):
     """Define the agnent and training loop for stable_baselines."""
 
     def __init__(self, env, params, model_path, log_path):
@@ -240,7 +241,7 @@ class TrainStableBaselines:
         self.saver.save(self.params["total_timesteps"])
 
 
-class TrainQ:
+class TrainQ(Trainer):
     """Agent and training loop for Q learning."""
 
     def __init__(
@@ -318,7 +319,7 @@ class TrainQ:
         fig.savefig(os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight")
 
 
-class TrainValueIteration:
+class TrainValueIteration(Trainer):
     """Agent and training loop for Value Iteration."""
 
     def __init__(
