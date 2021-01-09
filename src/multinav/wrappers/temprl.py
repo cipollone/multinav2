@@ -20,7 +20,10 @@
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Helpers related to TempRL wrappers."""
+
 import numpy as np
+from gym import Env, ObservationWrapper
+from gym.spaces import Discrete, MultiDiscrete
 from temprl.wrapper import TemporalGoalWrapper
 
 from multinav.helpers.notebooks import automaton_to_rgb
@@ -79,6 +82,35 @@ class MyTemporalGoalWrapper(TemporalGoalWrapper):
                 reward += tg.reward
         done = all(tg.is_true() for tg in self.temp_goals)
         return state, reward, done, info
+
+
+class FlattenAutomataStates(ObservationWrapper):
+    """Flatten the observation space to one array.
+
+    A state (x, [q1, q2]) becomes (x, q1, q2).
+    """
+
+    def __init__(self, env: Env):
+        """Initialize.
+
+        :param env: gym environment to wrap.
+        """
+        ObservationWrapper.__init__(self, env)
+
+        space = env.observation_space
+        assert len(space) == 2, "Expected: environment state, automata states"
+        assert type(space[0]) == Discrete, "Env state must be discrete"
+        assert type(space[1]) == MultiDiscrete, "Automata states are discrete"
+
+        self.observation_space = MultiDiscrete(
+            (np.insert(space[1].nvec, 0, space[0].n))
+        )
+
+    def observation(self, observation):
+        """Flatten."""
+        env_state = observation[0]
+        automata_states = tuple(observation[1])
+        return (env_state,) + automata_states
 
 
 def _add_channel(frame: np.ndarray):

@@ -28,6 +28,9 @@ def main():
         "Launch a training without this  to generate a skeleton",
     )
     parser.add_argument(
+        "-r", "--resume", help="Resume from checkpoint file. Overrides json params."
+    )
+    parser.add_argument(
         "do",
         choices=["train", "test"],
         help="What to do",
@@ -36,16 +39,29 @@ def main():
     # Parse
     args = parser.parse_args()
 
+    # Other params
+    cmd_params = dict()
+    if args.resume:
+        cmd_params["resume_file"] = args.resume
+
     # Go
     if args.do == "train":
         from multinav import training
 
-        training.train(env_name=args.env, json_params=args.params)
+        training.train(
+            env_name=args.env,
+            json_params=args.params,
+            cmd_params=cmd_params,
+        )
 
     elif args.do == "test":
         from multinav import testing
 
-        testing.test(env_name=args.env, json_params=args.params)
+        testing.test(
+            env_name=args.env,
+            json_params=args.params,
+            cmd_params=cmd_params,
+        )
 
 
 if __name__ == "__main__":
