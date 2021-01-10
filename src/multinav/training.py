@@ -56,13 +56,13 @@ default_parameters = dict(
     episode_time_limit=100,
     learning_rate=5e-4,
     gamma=0.99,
-    save_freq=1000,
     # DQN params
     learning_starts=5000,
     exploration_fraction=0.8,
     exploration_initial_eps=1.0,
     exploration_final_eps=0.02,
     log_interval=100,  # In #of episodes
+    save_freq=1000,
     total_timesteps=2000000,
     # Q params
     nb_episodes=1000,
