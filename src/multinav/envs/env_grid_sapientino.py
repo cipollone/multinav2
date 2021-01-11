@@ -32,10 +32,12 @@ from gym_sapientino.core.configurations import (
 )
 from gym_sapientino.core.types import Colors, color2id
 
+from multinav.algorithms.agents import ValueFunctionModel
 from multinav.envs import sapientino_defs
 from multinav.envs.env_cont_sapientino import Fluents
 from multinav.envs.temporal_goals import SapientinoGoal
-from multinav.helpers.gym import RewardShaper
+from multinav.helpers.gym import RewardShaper, StateH, StateL
+from multinav.wrappers.reward_shaping import RewardShapingWrapper
 from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
@@ -56,6 +58,7 @@ class GridSapientinoRewardShaper(RewardShaper):
         """Initialize the Sapientino reward shaper."""
         self.value_function_table = value_function_table
         super().__init__(self._value_function_callable, self._mapping_function)
+        # TODO: updated RewardShaper
 
 
 def generate_grid(
@@ -87,6 +90,37 @@ def generate_grid(
 
     content = "\n".join(cells)
     output_file.write_text(content)
+
+
+def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
+    """Load a reward shaper.
+
+    Loads a saved agent for `AbstractSapientinoTemporalGoal` this model is
+    then used to compute the reward shaping.
+
+    :param path: path to saved checkpoint for `AbstractSapientinoTemporalGoal`
+    :param gamma: RL discount factor.
+    :return: reward shaper to apply.
+    """
+    # AbstractSapientinoTemporalGoal is a ValueFunctionModel
+    agent = ValueFunctionModel.load(path=path)
+
+    # Define mapping
+    def _map(state: StateL) -> StateH:
+        # NOTE: this assumes that the automaton and ids remain the same!
+        #  Maybe it should be loaded too
+        agent_state, automata_states = state[0], state[1:]
+        color = agent_state["color"]
+        return (color,) + tuple(*automata_states)
+
+    # Mapping
+    shaper = RewardShaper(
+        value_function=lambda s: agent.value_function[s],
+        mapping_function=_map,
+        gamma=gamma,
+    )
+
+    return shaper
 
 
 def make(params: Dict[str, Any]):
@@ -126,7 +160,20 @@ def make(params: Dict[str, Any]):
         fluents=fluents,
         reward=params["tg_reward"],
     )
-    env = GridRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
+    env = MyTemporalGoalWrapper(env, [tg])
+
+    # Time limit (this should be before reward shaping)
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
+
+    # Maybe apply reward shaping
+    if params["shaping"]:
+        reward_shaper = _load_reward_shaper(
+            path=params["shaping"],
+            gamma=params["gamma"],
+        )
+        env = RewardShapingWrapper(env, reward_shaper=reward_shaper)
+
+    # Final features
+    env = GridRobotFeatures(env)
 
     return env

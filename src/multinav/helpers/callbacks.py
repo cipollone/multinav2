@@ -26,15 +26,15 @@ concept, these are not specific to the learning library.
 Callbacks can be applied with multinav.wrappers.CallbackWrapper.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional, List
 
 from typing_extensions import Protocol
 
+from multinav.helpers.gym import Action, Done, Reward, State
 from multinav.helpers.misc import Saver
 
-# Types
-Observation = Any
-Action = int
+StepFunction = Callable[[Action, State, Reward, Done, Dict[str, Any]], None]
+EpisodeFunction = Callable[[State, int], None]
 
 
 class Callback(Protocol):
@@ -44,7 +44,7 @@ class Callback(Protocol):
     declare an indipendent class with the methods declared below.
     """
 
-    def _on_reset(self, obs: Observation) -> None:
+    def _on_reset(self, obs: State) -> None:
         """Do this on reset.
 
         :param obs: observation received from env.reset
@@ -54,7 +54,7 @@ class Callback(Protocol):
     def _on_step(
         self,
         action: Action,
-        obs: Observation,
+        obs: State,
         reward: float,
         done: bool,
         info: Dict[str, Any],
@@ -82,14 +82,14 @@ class SaverCallback(Saver, Callback):
         self._save_freq = save_freq
         self.num_timesteps = 0
 
-    def _on_reset(self, obs: Observation) -> None:
+    def _on_reset(self, obs: State) -> None:
         """Nothing to do."""
         pass
 
     def _on_step(
         self,
         action: Action,
-        obs: Observation,
+        obs: State,
         reward: float,
         done: bool,
         info: Dict[str, Any],
@@ -104,3 +104,88 @@ class SaverCallback(Saver, Callback):
     def save(self):
         """Save a checkpoint now."""
         Saver.save(self, step=self.num_timesteps)
+
+
+class FnCallback(Callback):
+    """Periodically calls a function."""
+
+    def __init__(
+        self,
+        *,
+        step_fn: Optional[StepFunction] = None,
+        step_freq: Optional[int] = None,
+        ep_fn: Optional[EpisodeFunction] = None,
+        ep_freq: Optional[int] = None,
+    ):
+        """Initialize.
+
+        :param step_fn: Function to call for step callback
+        :param step_freq: Call frequency in number of steps.
+        :param ep_fn: Function to call for episode callback.
+        :param ep_freq: Call frequency in number of episodes.
+        """
+        assert not step_freq or step_fn, "No step function"
+        assert not ep_freq or ep_fn, "No episode function"
+
+        self._step_fn = step_fn
+        self._step_freq = step_freq
+        self._ep_fn = ep_fn
+        self._ep_freq = ep_freq
+
+        self.num_timesteps = 0
+        self.num_episodes = 0
+
+    def _ep_call(self, *args, **kwargs):
+        """Just remove self."""
+        self._ep_fn(*args, **kwargs)
+
+    def _step_call(self, *args, **kwargs):
+        """Just remove self."""
+        self._step_fn(*args, **kwargs)
+
+    def _on_reset(self, obs: State) -> None:
+        """Maybe call function on reset."""
+        self.num_episodes += 1
+        if self._ep_freq:
+            if self.num_episodes % self._ep_freq == 0:
+                self._ep_call(obs, self.num_episodes)
+
+    def _on_step(
+        self,
+        action: Action,
+        obs: State,
+        reward: float,
+        done: bool,
+        info: Dict[str, Any],
+    ) -> None:
+        """Maybe call function on step."""
+        self.num_timesteps += 1
+        if self._step_freq:
+            if self.num_timesteps % self._step_freq == 0:
+                info["num_episodes"] = self.num_episodes
+                self._step_call(action, obs, reward, done, info)
+
+
+class CallbackList(Callback):
+    """Calls a sequence of callbacks."""
+
+    def __init__(self, callbacks: List[Callback]):
+        """Initialize."""
+        self._callbacks = callbacks
+
+    def _on_reset(self, obs: State) -> None:
+        """Signal reset to all."""
+        for callback in self._callbacks:
+            callback._on_reset(obs)
+
+    def _on_step(
+        self,
+        action: Action,
+        obs: State,
+        reward: float,
+        done: bool,
+        info: Dict[str, Any],
+    ) -> None:
+        """Do step on all."""
+        for callback in self._callbacks:
+            callback._on_step(action, obs, reward, done, info)
