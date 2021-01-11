@@ -26,7 +26,7 @@ concept, these are not specific to the learning library.
 Callbacks can be applied with multinav.wrappers.CallbackWrapper.
 """
 
-from typing import Any, Callable, Dict, Optional, List
+from typing import Any, Callable, Dict, List, Optional
 
 from typing_extensions import Protocol
 

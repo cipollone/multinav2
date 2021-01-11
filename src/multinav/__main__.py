@@ -46,7 +46,7 @@ def main():
         "-i",
         "--interactive",
         action="store_true",
-        help="Test with an interactive episode (used for debugging)."
+        help="Test with an interactive episode (used for debugging).",
     )
 
     # Parse

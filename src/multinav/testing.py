@@ -181,7 +181,9 @@ class Tester:
                 # Let us see the screen
                 time.sleep(0.1)
 
-    def _interact(self, data: GymStep, action: Action, ask: Optional[bool] = True) -> Action:
+    def _interact(
+        self, data: GymStep, action: Action, ask: Optional[bool] = True
+    ) -> Action:
         """Interact with user.
 
         The function shows some data, then asks for an action on the command
@@ -199,8 +201,10 @@ class Tester:
         if not ask:
             return action
 
-        act = input("Action in [-1, {}] (default {})? ".format(
-            self.env.action_space.n - 1, action)
+        act = input(
+            "Action in [-1, {}] (default {})? ".format(
+                self.env.action_space.n - 1, action
+            )
         )
         if act is not None and act != "":
             action = int(act)

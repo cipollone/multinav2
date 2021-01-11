@@ -283,7 +283,9 @@ class TrainQ(Trainer):
         )
 
         # Logger
-        self.logger = FnCallback(ep_freq=params["log_interval"], ep_fn=lambda o, e: self.log())
+        self.logger = FnCallback(
+            ep_freq=params["log_interval"], ep_fn=lambda _o, _i: self.log()
+        )
 
         # Wrap callbacks
         self.callbacks = CustomCallbackList([self.saver, self.logger])
@@ -291,7 +293,9 @@ class TrainQ(Trainer):
 
         # Log properties
         self._log_properties = ["episode_lengths", "episode_rewards"]
-        self._draw_fig, self._draw_axes = plt.subplots(nrows=len(self._log_properties), ncols=1)
+        self._draw_fig, self._draw_axes = plt.subplots(
+            nrows=len(self._log_properties), ncols=1, figsize=(15, 11)
+        )
         self._draw_lines = [None for i in range(len(self._log_properties))]
 
         # Stats recorder
@@ -331,7 +335,7 @@ class TrainQ(Trainer):
             data = getattr(self.env, name)
 
             if line is None:
-                self._draw_lines[i], = ax.plot(data)
+                (self._draw_lines[i],) = ax.plot(data)
                 ax.set_ylabel(name)
                 if name == self._log_properties[-1]:
                     ax.set_xlabel("timesteps")
@@ -339,9 +343,11 @@ class TrainQ(Trainer):
             else:
                 line.set_data(np.arange(len(data)), data)
                 ax.relim()
-                ax.autoscale()
+                ax.autoscale(tight=True)
 
-        self._draw_fig.savefig(os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight")
+        self._draw_fig.savefig(
+            os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight"
+        )
 
 
 class TrainValueIteration(Trainer):
