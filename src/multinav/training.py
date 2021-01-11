@@ -135,7 +135,10 @@ def train(
         )
     elif env_name == "sapientino-grid":
         trainer = TrainQ(
-            env=env_grid_sapientino.make(params=params),
+            env=env_grid_sapientino.make(
+                params=params,
+                log_dir=log_path,
+            ),
             params=params,
             model_path=model_path,
             log_path=log_path,

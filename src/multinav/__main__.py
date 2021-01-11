@@ -13,7 +13,14 @@ def main():
         description="RL on navigation environments with different abstractions"
     )
 
-    # Args
+    # What to do
+    parser.add_argument(
+        "do",
+        choices=["train", "test"],
+        help="What to do",
+    )
+
+    # Options
     parser.add_argument(
         "-e",
         "--env",
@@ -33,13 +40,13 @@ def main():
     parser.add_argument(
         "-s",
         "--shaping",
-        type=str,
         help="Apply reward shaping from checkpoint of the more abstract environment.",
     )
     parser.add_argument(
-        "do",
-        choices=["train", "test"],
-        help="What to do",
+        "-i",
+        "--interactive",
+        action="store_true",
+        help="Test with an interactive episode (used for debugging)."
     )
 
     # Parse
@@ -51,6 +58,7 @@ def main():
         cmd_params["resume_file"] = args.resume
     if args.shaping:
         cmd_params["shaping"] = args.shaping
+    cmd_params["interactive"] = args.interactive
 
     # Go
     if args.do == "train":

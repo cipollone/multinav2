@@ -20,9 +20,10 @@
 # along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Reward shaping wrapper."""
+import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
@@ -123,11 +124,12 @@ def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
     return shaper
 
 
-def make(params: Dict[str, Any]):
+def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     """Make the sapientino grid state environment.
 
     :param params: a dictionary of parameters; see in this function the
         only ones that are used.
+    :param log_dir: directory where logs can be saved.
     :return: an object that respects the gym.Env interface.
     """
     # Define the robot
@@ -159,6 +161,7 @@ def make(params: Dict[str, Any]):
         colors=sapientino_defs.sapientino_color_sequence,
         fluents=fluents,
         reward=params["tg_reward"],
+        save_to=os.path.join(log_dir, "reward-dfa.dot") if log_dir else None,
     )
     env = MyTemporalGoalWrapper(env, [tg])
 

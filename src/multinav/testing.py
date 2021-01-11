@@ -23,7 +23,7 @@
 
 import json
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import gym
 from stable_baselines.common import BaseRLModel
@@ -35,9 +35,12 @@ from multinav.envs import (
     env_grid_sapientino,
     env_ros_controls,
 )
+from multinav.helpers.gym import Action, Done, Reward, State
 from multinav.helpers.misc import prepare_directories
 from multinav.training import TrainQ, TrainStableBaselines, TrainValueIteration
 from multinav.wrappers.utils import AbstractSapientinoRenderer
+
+GymStep = Tuple[State, Reward, Done, Dict[str, Any]]
 
 
 def test(
@@ -125,7 +128,7 @@ def test(
         raise RuntimeError("Environment not supported")
 
     # Same testing loop for all
-    tester = Tester(env=env, model=model)
+    tester = Tester(env=env, model=model, interactive=params["interactive"])
 
     # Start
     tester.test()
@@ -134,10 +137,11 @@ def test(
 class Tester:
     """Define the testing loop."""
 
-    def __init__(self, env: gym.Env, model: AgentModel):
+    def __init__(self, env: gym.Env, model: AgentModel, interactive: bool):
         """Initialize."""
         self.env = env
         self.model = model
+        self._interactive = interactive
         self._is_stable_baselines_model = isinstance(model, BaseRLModel)
 
     def test(self):
@@ -147,7 +151,9 @@ class Tester:
 
             # Init episode
             obs = self.env.reset()
+            reward = None
             done = False
+            info = None
 
             while not done:
                 # Render
@@ -159,8 +165,46 @@ class Tester:
                     assert action[1] is None
                     action = action[0]
 
+                # Maybe interact
+                if self._interactive:
+                    action = self._interact((obs, reward, done, info), action)
+                    if action < 0:
+                        break
+
                 # Move env
-                obs, _, done, _ = self.env.step(action)
+                obs, reward, done, info = self.env.step(action)
+
+                # Print
+                if self._interactive and done:
+                    self._interact((obs, reward, done, info), action, False)
 
                 # Let us see the screen
                 time.sleep(0.1)
+
+    def _interact(self, data: GymStep, action: Action, ask: Optional[bool] = True) -> Action:
+        """Interact with user.
+
+        The function shows some data, then asks for an action on the command
+        line.
+        :param stata: the last tuple returned by gym environment.
+        :param action: the last action selected by the agent.
+        :param ask: whether we should ask the use or just print to cmd line.
+        :return: the action to perform; defaults to input action.
+        """
+        print("Env step")
+        print("  Observation:", data[0])
+        print("       Reward:", data[1])
+        print("         Done:", data[2])
+        print("        Infos:", data[3])
+        if not ask:
+            return action
+
+        act = input("Action in [-1, {}] (default {})? ".format(
+            self.env.action_space.n - 1, action)
+        )
+        if act is not None and act != "":
+            action = int(act)
+        if action < 0:
+            print("Reset")
+
+        return action
