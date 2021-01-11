@@ -53,6 +53,7 @@ from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
 default_parameters = dict(
     # Common
     resume_file=None,
+    shaping=None,
     episode_time_limit=100,
     learning_rate=5e-4,
     gamma=0.99,

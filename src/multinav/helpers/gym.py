@@ -227,11 +227,19 @@ class RewardShaper:
         self._last_state: StateL = None
 
     def reset(self, state: StateL):
-        """Reset the environment."""
+        """Reset the environment.
+
+        :param state: state returned by env.reset().
+        """
         self._last_state = state
 
     def step(self, state_p: StateL, done: bool) -> float:
-        """Do a step, and get shaping reward."""
+        """Do a step, and get shaping reward.
+
+        :param state_p: new state of last transition on the environment.
+        :param done: is the new state terminal?
+        :return: shaping reward, it should be added to the original reward.
+        """
         previous_state = self.mapping_function(self._last_state)
         current_state = self.mapping_function(state_p)
         self._last_state = state_p
