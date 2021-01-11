@@ -294,7 +294,7 @@ class TrainQ(Trainer):
         # Log properties
         self._log_properties = ["episode_lengths", "episode_rewards"]
         self._draw_fig, self._draw_axes = plt.subplots(
-            nrows=len(self._log_properties), ncols=1, figsize=(15, 11)
+            nrows=len(self._log_properties), ncols=1, figsize=(20, 12)
         )
         self._draw_lines = [None for i in range(len(self._log_properties))]
 
@@ -318,6 +318,7 @@ class TrainQ(Trainer):
             gamma=self.params["gamma"],
             learning_rate_decay=False,
             epsilon_decay=True,
+            verbose=True,
         )
 
         # Save
@@ -338,7 +339,7 @@ class TrainQ(Trainer):
                 (self._draw_lines[i],) = ax.plot(data)
                 ax.set_ylabel(name)
                 if name == self._log_properties[-1]:
-                    ax.set_xlabel("timesteps")
+                    ax.set_xlabel("episodes")
 
             else:
                 line.set_data(np.arange(len(data)), data)

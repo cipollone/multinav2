@@ -29,10 +29,12 @@ the experiments. Some parameters can be controlled through arguments,
 others can be edited here.
 """
 
+import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, Set
+from typing import Any, Dict, Optional, Set
 
+import numpy as np
 from flloat.semantics import PLInterpretation
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
@@ -41,10 +43,13 @@ from gym_sapientino.core.configurations import (
     SapientinoConfiguration,
 )
 
+from multinav.algorithms.agents import QFunctionModel
 from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
 from multinav.envs.temporal_goals import SapientinoGoal
-from multinav.wrappers.sapientino import ContinuousRobotFeatures
+from multinav.helpers.gym import RewardShaper, StateH, StateL
+from multinav.wrappers.reward_shaping import RewardShapingWrapper
+from multinav.wrappers.sapientino import ContinuousRobotFeatures, GridRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
@@ -83,11 +88,50 @@ class Fluents(AbstractFluents):
         return PLInterpretation(true_fluents)
 
 
-def make(params: Dict[str, Any]):
+def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
+    """Load a reward shaper.
+
+    This loads a saved agent for `sapientino-grid` then
+    it uses it to compute the reward shaping to apply to this environment.
+
+    :param path: path to saved checkpoint for `sapientino-grid` model.
+    :param gamma: RL discount factor.
+    :return: reward shaper to apply.
+    """
+    # sapientino-grid's agent is a QFunctionModel
+    agent = QFunctionModel.load(path=path)
+
+    # Define mapping
+    def _map(state: StateL) -> StateH:
+        # NOTE: this assumes that the automaton and ids remain the same!
+        #  Maybe it should be loaded too
+        x = state[0]["discrete_x"]
+        y = state[0]["discrete_y"]
+        return (x, y, *state[1])
+
+    # TODO: Verify that you have a sensible value function then rm
+    def _valuefn(state: StateH):
+        q = agent.q_function[state]
+        print("Valuefn of state", state, ":", np.around(np.amax(q), 3))
+        return np.amax(q)
+
+    # Shaper
+    shaper = RewardShaper(
+        #value_function=lambda state: np.amax(agent.q_function[state]),
+        value_function=_valuefn,
+        mapping_function=_map,
+        gamma=gamma,
+    )
+
+    return shaper
+
+
+def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     """Make the sapientino continuous state environment.
 
     :param params: a dictionary of parameters; see in this function the
         only ones that are used.
+    :param log_dir: directory where logs can be saved.
     :return: an object that respects the gym.Env interface.
     """
     # Define the robot
@@ -123,8 +167,22 @@ def make(params: Dict[str, Any]):
         colors=sapientino_defs.sapientino_color_sequence,
         fluents=fluents,
         reward=params["tg_reward"],
+        save_to=os.path.join(log_dir, "reward-dfa.dot") if log_dir else None,
     )
-    env = ContinuousRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
+    env = MyTemporalGoalWrapper(env, [tg])
+
+    # Time limit (this should be before reward shaping)
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
+
+    # Maybe apply reward shaping
+    if params["shaping"]:
+        reward_shaper = _load_reward_shaper(
+            path=params["shaping"],
+            gamma=params["gamma"],
+        )
+        env = RewardShapingWrapper(env, reward_shaper=reward_shaper)
+
+    # Final features
+    env = ContinuousRobotFeatures(env)
 
     return env
