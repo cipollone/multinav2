@@ -55,11 +55,10 @@ class GridSapientinoRewardShaper(RewardShaper):
         color = agent_state["color"]
         return (color,) + tuple(*automata_states)
 
-    def __init__(self, value_function_table):
+    def __init__(self, value_function_table, gamma):
         """Initialize the Sapientino reward shaper."""
         self.value_function_table = value_function_table
-        super().__init__(self._value_function_callable, self._mapping_function)
-        # TODO: updated RewardShaper
+        super().__init__(self._value_function_callable, self._mapping_function, gamma)
 
 
 def generate_grid(
