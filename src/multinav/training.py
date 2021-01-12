@@ -196,6 +196,8 @@ class TrainStableBaselines(Trainer):
 
         all_callbacks = CallbackList(callbacks_list)
 
+        # TODO: normalize env features (not automata)
+
         # Define agent
         resuming = bool(params["resume_file"])
         if not resuming:

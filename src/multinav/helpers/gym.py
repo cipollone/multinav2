@@ -182,11 +182,20 @@ def _(space: MultiDiscrete):
         yield i
 
 
-def combine_boxes(*args: Box) -> Box:
-    """Combine a list of gym.Box spaces into one."""
-    assert all(list(space.shape) == [1] for space in args)
-    lows = np.asarray([space.low[0] for space in args])
-    highs = np.asarray([space.high[0] for space in args])
+def combine_boxes(*spaces: Box) -> Box:
+    """Combine a list of gym.Box spaces into one.
+
+    It merges a list of unidimensional boxes to one unidimensional box by
+    combining along the only dimension. Limits are kept separate.
+    Output type is np.float32.
+    """
+    # Unidimensional spaces
+    assert all(len(space.shape) == 1 for space in spaces)
+
+    # Concat
+    lows = np.concatenate([space.low for space in spaces])
+    highs = np.concatenate([space.high for space in spaces])
+
     return Box(lows, highs)
 
 

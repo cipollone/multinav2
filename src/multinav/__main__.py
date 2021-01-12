@@ -4,8 +4,6 @@
 
 import argparse
 
-# TODO: normalize the environment features. Look in 736e60d for example.
-
 
 def main():
     """Is the main function."""
