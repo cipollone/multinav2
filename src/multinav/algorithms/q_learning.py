@@ -23,7 +23,7 @@
 import sys
 from collections import defaultdict
 from functools import partial
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import gym
 import numpy as np
@@ -61,7 +61,6 @@ def q_learning(
     eps0 = eps
 
     # Init
-    t = 0
     nb_actions = env.action_space.n
     Q: Dict[Any, np.ndarray] = defaultdict(partial(_random_action, nb_actions))
 
@@ -81,7 +80,6 @@ def q_learning(
                 reward + gamma * np.max(Q[state2]) - Q[state][action]
             )
             state = state2
-            t += 1
 
             # Decays
             frac = episode / nb_episodes

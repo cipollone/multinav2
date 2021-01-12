@@ -49,7 +49,7 @@ from multinav.envs.base import AbstractFluents
 from multinav.envs.temporal_goals import SapientinoGoal
 from multinav.helpers.gym import RewardShaper, StateH, StateL
 from multinav.wrappers.reward_shaping import RewardShapingWrapper
-from multinav.wrappers.sapientino import ContinuousRobotFeatures, GridRobotFeatures
+from multinav.wrappers.sapientino import ContinuousRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
