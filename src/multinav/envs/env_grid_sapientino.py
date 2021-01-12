@@ -20,9 +20,10 @@
 # along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Reward shaping wrapper."""
+import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
@@ -32,10 +33,12 @@ from gym_sapientino.core.configurations import (
 )
 from gym_sapientino.core.types import Colors, color2id
 
+from multinav.algorithms.agents import ValueFunctionModel
 from multinav.envs import sapientino_defs
 from multinav.envs.env_cont_sapientino import Fluents
 from multinav.envs.temporal_goals import SapientinoGoal
-from multinav.helpers.gym import RewardShaper
+from multinav.helpers.gym import RewardShaper, StateH, StateL
+from multinav.wrappers.reward_shaping import RewardShapingWrapper
 from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
@@ -52,10 +55,10 @@ class GridSapientinoRewardShaper(RewardShaper):
         color = agent_state["color"]
         return (color,) + tuple(*automata_states)
 
-    def __init__(self, value_function_table):
+    def __init__(self, value_function_table, gamma):
         """Initialize the Sapientino reward shaper."""
         self.value_function_table = value_function_table
-        super().__init__(self._value_function_callable, self._mapping_function)
+        super().__init__(self._value_function_callable, self._mapping_function, gamma)
 
 
 def generate_grid(
@@ -89,11 +92,43 @@ def generate_grid(
     output_file.write_text(content)
 
 
-def make(params: Dict[str, Any]):
+def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
+    """Load a reward shaper.
+
+    This loads a saved agent for `AbstractSapientinoTemporalGoal` then
+    it uses it to compute the reward shaping to apply to this environment.
+
+    :param path: path to saved checkpoint for `AbstractSapientinoTemporalGoal`
+    :param gamma: RL discount factor.
+    :return: reward shaper to apply.
+    """
+    # AbstractSapientinoTemporalGoal's agent is a ValueFunctionModel
+    agent = ValueFunctionModel.load(path=path)
+
+    # Define mapping
+    def _map(state: StateL) -> StateH:
+        # NOTE: this assumes that the automaton and ids remain the same!
+        #  Maybe it should be loaded too
+        agent_state, automata_states = state[0], state[1:]
+        color = agent_state["color"]
+        return (color,) + tuple(*automata_states)
+
+    # Shaper
+    shaper = RewardShaper(
+        value_function=lambda s: agent.value_function[s],
+        mapping_function=_map,
+        gamma=gamma,
+    )
+
+    return shaper
+
+
+def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     """Make the sapientino grid state environment.
 
     :param params: a dictionary of parameters; see in this function the
         only ones that are used.
+    :param log_dir: directory where logs can be saved.
     :return: an object that respects the gym.Env interface.
     """
     # Define the robot
@@ -125,8 +160,22 @@ def make(params: Dict[str, Any]):
         colors=sapientino_defs.sapientino_color_sequence,
         fluents=fluents,
         reward=params["tg_reward"],
+        save_to=os.path.join(log_dir, "reward-dfa.dot") if log_dir else None,
     )
-    env = GridRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
+    env = MyTemporalGoalWrapper(env, [tg])
+
+    # Time limit (this should be before reward shaping)
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
+
+    # Maybe apply reward shaping
+    if params["shaping"]:
+        reward_shaper = _load_reward_shaper(
+            path=params["shaping"],
+            gamma=params["gamma"],
+        )
+        env = RewardShapingWrapper(env, reward_shaper=reward_shaper)
+
+    # Final features
+    env = GridRobotFeatures(env)
 
     return env

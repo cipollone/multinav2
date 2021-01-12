@@ -351,6 +351,11 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     :param log_dir: directory where logs can be saved.
     :return: an object that respects the gym.Env interface.
     """
+    # Check
+    if params["shaping"]:
+        raise ValueError("Can't shape rewards in the most abstract environment.")
+
+    # Build
     env = AbstractSapientinoTemporalGoal(
         nb_colors=params["nb_colors"],
         failure_probability=params["sapientino_fail_p"],

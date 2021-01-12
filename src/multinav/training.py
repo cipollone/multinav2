@@ -26,6 +26,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
+import numpy as np
 from gym import Env
 from matplotlib import pyplot as plt
 from PIL import Image
@@ -42,7 +43,8 @@ from multinav.envs import (
     env_grid_sapientino,
     env_ros_controls,
 )
-from multinav.helpers.callbacks import SaverCallback
+from multinav.helpers.callbacks import CallbackList as CustomCallbackList
+from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
@@ -53,20 +55,24 @@ from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
 default_parameters = dict(
     # Common
     resume_file=None,
+    shaping=None,
     episode_time_limit=100,
     learning_rate=5e-4,
     gamma=0.99,
-    save_freq=1000,
+    log_interval=100,  # In #of episodes
     # DQN params
     learning_starts=5000,
     exploration_fraction=0.8,
     exploration_initial_eps=1.0,
     exploration_final_eps=0.02,
-    log_interval=100,  # In #of episodes
+    save_freq=1000,
     total_timesteps=2000000,
+    render=False,
     # Q params
     nb_episodes=1000,
     q_eps=0.5,
+    learning_rate_end=0.0,
+    epsilon_end=0.05,
     # ValueIteration params
     max_iterations=2000,
     # Ros agent env
@@ -132,7 +138,10 @@ def train(
         )
     elif env_name == "sapientino-grid":
         trainer = TrainQ(
-            env=env_grid_sapientino.make(params=params),
+            env=env_grid_sapientino.make(
+                params=params,
+                log_dir=log_path,
+            ),
             params=params,
             model_path=model_path,
             log_path=log_path,
@@ -180,8 +189,12 @@ class TrainStableBaselines(Trainer):
             save_freq=params["save_freq"],
             extra=None,
         )
-        renderer_callback = RendererCallback()
-        all_callbacks = CallbackList([renderer_callback, checkpoint_callback])
+        callbacks_list = [checkpoint_callback]
+        if params["render"]:
+            renderer_callback = RendererCallback()
+            callbacks_list.append(renderer_callback)
+
+        all_callbacks = CallbackList(callbacks_list)
 
         # Define agent
         resuming = bool(params["resume_file"])
@@ -275,7 +288,22 @@ class TrainQ(Trainer):
             model_ext=agent.file_ext,
             extra=None,
         )
-        env = CallbackWrapper(env=env, callback=self.saver)
+
+        # Logger
+        self.logger = FnCallback(
+            ep_freq=params["log_interval"], ep_fn=lambda _o, _i: self.log()
+        )
+
+        # Wrap callbacks
+        self.callbacks = CustomCallbackList([self.saver, self.logger])
+        env = CallbackWrapper(env=env, callback=self.callbacks)
+
+        # Log properties
+        self._log_properties = ["episode_lengths", "episode_rewards"]
+        self._draw_fig, self._draw_axes = plt.subplots(
+            nrows=len(self._log_properties), ncols=1, figsize=(20, 12)
+        )
+        self._draw_lines = [None for i in range(len(self._log_properties))]
 
         # Stats recorder
         env = MyStatsRecorder(env)
@@ -297,6 +325,9 @@ class TrainQ(Trainer):
             gamma=self.params["gamma"],
             learning_rate_decay=False,
             epsilon_decay=True,
+            learning_rate_end=self.params["learning_rate_end"],
+            epsilon_end=self.params["epsilon_end"],
+            verbose=True,
         )
 
         # Save
@@ -307,16 +338,26 @@ class TrainQ(Trainer):
 
     def log(self):
         """Save logs to files."""
-        properties = ["episode_lengths", "episode_rewards"]
+        for i in range(len(self._log_properties)):
+            name = self._log_properties[i]
+            ax = self._draw_axes[i]
+            line = self._draw_lines[i]
+            data = getattr(self.env, name)
 
-        fig, axes = plt.subplots(nrows=len(properties), ncols=1)
-        for name, ax in zip(properties, axes):
-            ax.plot(getattr(self.env, name))
-            ax.set_ylabel(name)
-            if name == properties[-1]:
-                ax.set_xlabel("timesteps")
+            if line is None:
+                (self._draw_lines[i],) = ax.plot(data)
+                ax.set_ylabel(name)
+                if name == self._log_properties[-1]:
+                    ax.set_xlabel("episodes")
 
-        fig.savefig(os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight")
+            else:
+                line.set_data(np.arange(len(data)), data)
+                ax.relim()
+                ax.autoscale(tight=True)
+
+        self._draw_fig.savefig(
+            os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight"
+        )
 
 
 class TrainValueIteration(Trainer):
