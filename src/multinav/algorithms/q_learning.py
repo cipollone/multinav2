@@ -23,7 +23,7 @@
 import sys
 from collections import defaultdict
 from functools import partial
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import gym
 import numpy as np
@@ -47,12 +47,20 @@ def q_learning(
     gamma: float = 0.9,
     learning_rate_decay: bool = False,
     epsilon_decay: bool = False,
+    epsilon_end: float = 0.0,
+    learning_rate_end: float = 0.0,
+    verbose: bool = False,
 ) -> Dict[Any, np.ndarray]:
     """
     Learn a Q-function from a Gym env using vanilla Q-Learning.
 
     :return the Q function: a dictionary from states to array of Q values for every action.
     """
+    # Store
+    alpha0 = alpha
+    eps0 = eps
+
+    # Init
     t = 0
     nb_actions = env.action_space.n
     Q: Dict[Any, np.ndarray] = defaultdict(partial(_random_action, nb_actions))
@@ -63,7 +71,7 @@ def q_learning(
         else:
             return np.argmax(Q[state])
 
-    for _ in range(nb_episodes):
+    for episode in range(nb_episodes):
         state = env.reset()
         done = False
         while not done:
@@ -74,8 +82,15 @@ def q_learning(
             )
             state = state2
             t += 1
-            if learning_rate_decay and t != 1:
-                alpha *= (t - 1) / t
-            if epsilon_decay and t != 1:
-                eps *= (t - 1) / t
+
+            # Decays
+            frac = episode / nb_episodes
+            if learning_rate_decay:
+                alpha = alpha0 * (1 - frac) + learning_rate_end * frac
+            if epsilon_decay:
+                eps = eps0 * (1 - frac) + epsilon_end * frac
+
+        # Log
+        if verbose:
+            print(" Eps:", round(eps, 3), end="\r")
     return Q

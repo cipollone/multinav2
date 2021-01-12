@@ -95,14 +95,14 @@ def generate_grid(
 def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
     """Load a reward shaper.
 
-    Loads a saved agent for `AbstractSapientinoTemporalGoal` this model is
-    then used to compute the reward shaping.
+    This loads a saved agent for `AbstractSapientinoTemporalGoal` then
+    it uses it to compute the reward shaping to apply to this environment.
 
     :param path: path to saved checkpoint for `AbstractSapientinoTemporalGoal`
     :param gamma: RL discount factor.
     :return: reward shaper to apply.
     """
-    # AbstractSapientinoTemporalGoal is a ValueFunctionModel
+    # AbstractSapientinoTemporalGoal's agent is a ValueFunctionModel
     agent = ValueFunctionModel.load(path=path)
 
     # Define mapping
@@ -113,7 +113,7 @@ def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
         color = agent_state["color"]
         return (color,) + tuple(*automata_states)
 
-    # Mapping
+    # Shaper
     shaper = RewardShaper(
         value_function=lambda s: agent.value_function[s],
         mapping_function=_map,

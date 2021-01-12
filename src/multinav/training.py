@@ -67,9 +67,12 @@ default_parameters = dict(
     exploration_final_eps=0.02,
     save_freq=1000,
     total_timesteps=2000000,
+    render=False,
     # Q params
     nb_episodes=1000,
     q_eps=0.5,
+    learning_rate_end=0.0,
+    epsilon_end=0.05,
     # ValueIteration params
     max_iterations=2000,
     # Ros agent env
@@ -186,8 +189,12 @@ class TrainStableBaselines(Trainer):
             save_freq=params["save_freq"],
             extra=None,
         )
-        renderer_callback = RendererCallback()
-        all_callbacks = CallbackList([renderer_callback, checkpoint_callback])
+        callbacks_list = [checkpoint_callback]
+        if params["render"]:
+            renderer_callback = RendererCallback()
+            callbacks_list.append(renderer_callback)
+
+        all_callbacks = CallbackList(callbacks_list)
 
         # Define agent
         resuming = bool(params["resume_file"])
@@ -294,7 +301,7 @@ class TrainQ(Trainer):
         # Log properties
         self._log_properties = ["episode_lengths", "episode_rewards"]
         self._draw_fig, self._draw_axes = plt.subplots(
-            nrows=len(self._log_properties), ncols=1, figsize=(15, 11)
+            nrows=len(self._log_properties), ncols=1, figsize=(20, 12)
         )
         self._draw_lines = [None for i in range(len(self._log_properties))]
 
@@ -318,6 +325,9 @@ class TrainQ(Trainer):
             gamma=self.params["gamma"],
             learning_rate_decay=False,
             epsilon_decay=True,
+            learning_rate_end=self.params["learning_rate_end"],
+            epsilon_end=self.params["epsilon_end"],
+            verbose=True,
         )
 
         # Save
@@ -338,7 +348,7 @@ class TrainQ(Trainer):
                 (self._draw_lines[i],) = ax.plot(data)
                 ax.set_ylabel(name)
                 if name == self._log_properties[-1]:
-                    ax.set_xlabel("timesteps")
+                    ax.set_xlabel("episodes")
 
             else:
                 line.set_data(np.arange(len(data)), data)
