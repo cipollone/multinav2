@@ -109,15 +109,12 @@ def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
         y = state[0]["discrete_y"]
         return (x, y, *state[1])
 
-    # TODO: Verify that you have a sensible value function then rm
     def _valuefn(state: StateH):
         q = agent.q_function[state]
-        print("Valuefn of state", state, ":", np.around(np.amax(q), 3))
         return np.amax(q)
 
     # Shaper
     shaper = RewardShaper(
-        #value_function=lambda state: np.amax(agent.q_function[state]),
         value_function=_valuefn,
         mapping_function=_map,
         gamma=gamma,

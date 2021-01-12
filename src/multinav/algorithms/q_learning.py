@@ -47,6 +47,8 @@ def q_learning(
     gamma: float = 0.9,
     learning_rate_decay: bool = False,
     epsilon_decay: bool = False,
+    epsilon_end: float = 0.0,
+    learning_rate_end: float = 0.0,
     verbose: bool = False,
 ) -> Dict[Any, np.ndarray]:
     """
@@ -84,9 +86,9 @@ def q_learning(
             # Decays
             frac = episode / nb_episodes
             if learning_rate_decay:
-                alpha = alpha0 * (1 - frac) + 0.0 * frac
+                alpha = alpha0 * (1 - frac) + learning_rate_end * frac
             if epsilon_decay:
-                eps = eps0 * (1 - frac) + 0.0 * frac
+                eps = eps0 * (1 - frac) + epsilon_end * frac
 
         # Log
         if verbose:
