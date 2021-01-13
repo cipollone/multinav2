@@ -23,9 +23,10 @@
 
 import numpy as np
 from gym import Env, ObservationWrapper
-from gym.spaces import Discrete, MultiDiscrete, Box
+from gym.spaces import Box, Discrete, MultiDiscrete
 from temprl.wrapper import TemporalGoalWrapper
 
+from multinav.helpers.gym import combine_boxes
 from multinav.helpers.notebooks import automaton_to_rgb
 
 
@@ -133,17 +134,17 @@ class BoxAutomataStates(ObservationWrapper):
         assert type(space[0]) == Box, "Env state must be a box"
         assert type(space[1]) == MultiDiscrete, "Automata states are discrete"
 
-        # TODO: continue here. Combine boxes etc
+        automata_highs = space[1].nvec.astype(np.float32)
+        automata_lows = np.zeros_like(automata_highs)
+        automata_box = Box(automata_lows, automata_highs)
 
-        self.observation_space = MultiDiscrete(
-            (np.insert(space[1].nvec, 0, space[0].n))
-        )
+        self.observation_space = combine_boxes(space[0], automata_box)
 
     def observation(self, observation):
         """Flatten."""
-        env_state = observation[0]
-        automata_states = tuple(observation[1])
-        return (env_state,) + automata_states
+        env_state, automata_states = observation
+        obs = np.concatenate((env_state, automata_states))
+        return obs
 
 
 def _add_channel(frame: np.ndarray):

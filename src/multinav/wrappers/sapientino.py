@@ -101,7 +101,6 @@ class GridRobotFeatures(AbstractRobotFeatures):
         return new_state
 
 
-# TODO: Wrap with BoxAutomataStates and check that nothing changes
 class ContinuousRobotFeatures(AbstractRobotFeatures):
     """Wrapper for features extraction in continuous Sapientino with temporal goal."""
 
