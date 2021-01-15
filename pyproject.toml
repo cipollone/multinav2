@@ -46,6 +46,7 @@ jupyter = "^1.0.0"
 mknotebooks = "^0.6.0"
 markdown = "^3.2.2"
 rope = "^0.18.0"
+jedi = "<0.18.0"
 
 [build-system]
 requires = ["setuptools", "poetry-core>=1.0.0"]
