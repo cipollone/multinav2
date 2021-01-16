@@ -21,62 +21,131 @@
 #
 """Wrappers related to the training library: stable_baselines."""
 
-from typing import Optional, Sequence
+from typing import Optional
 
 import gym
+import numpy as np
 from gym.spaces import Tuple as GymTuple
-from stable_baselines.common.vec_env import DummyVecEnv, VecEnv, VecNormalize
+from stable_baselines.common.running_mean_std import RunningMeanStd
+from stable_baselines.common.vec_env import VecEnv
+
+from multinav.helpers.gym import Observation
 
 
 class NormalizeEnvWrapper(gym.Wrapper):
     """Wrap an env and normalize features and rewards.
 
-    Using a running average, this wrapper normalizes features, and optionally
-    reward, of the input environment. When the input environment
-    generates tuples as observations, you can specify which of these entries
-    should be normalized.
+    Using a running average, this wrapper normalizes features of the input
+    environment. When the input environment generates a tuple of observations,
+    you can specify which of these entries should be normalized.
     """
 
-    def __init__(self, env: gym.Env, entry: Optional[int] = None):
+    def __init__(
+        self,
+        env: gym.Env,
+        training: bool,
+        entry: Optional[int] = None,
+    ):
         """Initialize.
 
         :param env: gym environment to wrap.
-        :param entry: entry to normalize
+        :param training: set this to true, if averages should be updated
+            (during training in fact).
+        :param entry: entry to normalize (can be None if observation is a
+            single array).
         """
-        # Super
-        gym.Wrapper.__init__(self, env)
-
         # Check input space
-        self._entry = entry
+        if type(env.observation_space) not in (gym.spaces.Box, GymTuple):
+            raise TypeError("Environment observation_space not supported")
         if entry is not None and type(env.observation_space) != GymTuple:
             raise ValueError("'entry' is only supported for tuple observation spaces")
 
-        # Stable baselines normalization class
-        self._venv = DummyVecEnv([lambda: env])
-        self._venv = VecNormalize(
-            self._venv,
-            # TODO: other args
+        # Wrap
+        gym.Wrapper.__init__(self, env)
+
+        # Store
+        self._training = training
+        self._entry = entry
+        self._calc_eps = 1e-7
+
+        # Observation to normalize
+        self._observation_rms = RunningMeanStd(
+            shape=self.observation_space.shape
+            if self._entry is None
+            else self.observation_space[entry].shape,
+            epsilon=0.0,
         )
 
-        # TODO: how to unwrap obs?
+    def __getstate__(self) -> dict:
+        """Get pickleable state."""
+        state = self.__dict__.copy()
+        state.pop("env")  # Env is not pickleable
+        return state
 
-    def observation(self, observation: Sequence) -> Sequence:
+    def __setstate__(self, state: dict):
+        """Restore the pickled state.
+
+        :param state: a namespace.
+        """
+        self.__dict__.update(state)
+        assert "env" not in state
+        self.env = None  # To be set with set_env
+
+    def set_env(self, env: gym.Env):
+        """Set the wrapped gym env.
+
+        This must be done after unpickling.
+        :param env: the reconstructed gym environment to re-wrap.
+        """
+        if self.env is not None:
+            raise TypeError("Environment already set")
+        gym.Wrapper.__init__(self, env)
+        if self._observation_rms.mean.shape != self.observation_space.shape:
+            raise ValueError("Initialized with different environment.")
+
+    def _standardize_vec(self, data: np.ndarray, rms: RunningMeanStd) -> np.ndarray:
+        """Normalize and return an observation entry.
+
+        :param data: data to normalize
+        :param rms: object that contains the moments
+        :return: standardized data
+        """
+        shifted_data = data - rms.mean
+        standardized_data = shifted_data / np.sqrt(rms.var + self._calc_eps)
+        return standardized_data
+
+    def reset(self):
+        """Reset the environment."""
+        observation = self.env.reset()
+        return self.observation(observation)
+
+    def step(self, action):
+        """Make one action and observe."""
+        observation, reward, done, info = self.env.step(action)
+        observation = self.observation(observation)
+        return observation, reward, done, info
+
+    def observation(self, observation: Observation) -> Observation:
         """Normalize the observation.
 
         :param observation: the input observation
         :return: observation with normalized entry
         """
-        # TODO
-        pass
+        # Get entry
+        obs = observation if self._entry is None else observation[self._entry]
 
-    def reward(self, reward: float) -> float:
-        """Normalize the reward.
+        # Normalize
+        if self._training:
+            obs_batch = np.expand_dims(obs, 0)
+            self._observation_rms.update(obs_batch)
+        obs = self._standardize_vec(obs, self._observation_rms)
 
-        :param reward: original reward
-        :return: normalized reward
-        """
-        # TODO
-        pass
+        # Set entry
+        if self._entry is None:
+            observation = obs
+        else:
+            observation[self._entry] = obs
+        return observation
 
 
 class UnVenv(gym.Env):
@@ -102,7 +171,6 @@ class UnVenv(gym.Env):
         # Properties
         self.inner_venv = venv
         self.metadata = {"render.modes": VecEnv.metadata["render.modes"]}
-        self.reward_range = (-float('inf'), float('inf'))  # least constraint
         self.action_space = venv.action_space
         self.observation_space = venv.observation_space
 

@@ -34,6 +34,7 @@ from gym.spaces import Box, Discrete, MultiDiscrete
 from gym.wrappers import TimeLimit
 
 State = Any
+Observation = Any
 Action = int
 Probability = float
 Reward = float
