@@ -25,7 +25,6 @@ from typing import Optional
 
 import gym
 import numpy as np
-from gym.spaces import Tuple as GymTuple
 from stable_baselines.common.running_mean_std import RunningMeanStd
 from stable_baselines.common.vec_env import VecEnv
 
@@ -55,9 +54,9 @@ class NormalizeEnvWrapper(gym.Wrapper):
             single array).
         """
         # Check input space
-        if type(env.observation_space) not in (gym.spaces.Box, GymTuple):
+        if type(env.observation_space) not in (gym.spaces.Box, gym.spaces.Tuple):
             raise TypeError("Environment observation_space not supported")
-        if entry is not None and type(env.observation_space) != GymTuple:
+        if entry is not None and type(env.observation_space) != gym.spaces.Tuple:
             raise ValueError("'entry' is only supported for tuple observation spaces")
 
         # Wrap
@@ -66,15 +65,15 @@ class NormalizeEnvWrapper(gym.Wrapper):
         # Store
         self._training = training
         self._entry = entry
-        self._calc_eps = 1e-7
+        self._calc_eps = 1e-8
+        self._entry_shape = (
+            self.observation_space.shape
+            if self._entry is None
+            else self.observation_space[entry].shape
+        )
 
         # Observation to normalize
-        self._observation_rms = RunningMeanStd(
-            shape=self.observation_space.shape
-            if self._entry is None
-            else self.observation_space[entry].shape,
-            epsilon=0.0,
-        )
+        self._observation_rms = RunningMeanStd(shape=self._entry_shape)
 
     def __getstate__(self) -> dict:
         """Get pickleable state."""
@@ -100,8 +99,6 @@ class NormalizeEnvWrapper(gym.Wrapper):
         if self.env is not None:
             raise TypeError("Environment already set")
         gym.Wrapper.__init__(self, env)
-        if self._observation_rms.mean.shape != self.observation_space.shape:
-            raise ValueError("Initialized with different environment.")
 
     def _standardize_vec(self, data: np.ndarray, rms: RunningMeanStd) -> np.ndarray:
         """Normalize and return an observation entry.
@@ -113,6 +110,10 @@ class NormalizeEnvWrapper(gym.Wrapper):
         shifted_data = data - rms.mean
         standardized_data = shifted_data / np.sqrt(rms.var + self._calc_eps)
         return standardized_data
+
+    def set_training(self, value: bool):
+        """Assign a value to training (see __init__ for doc)."""
+        self._training = value
 
     def reset(self):
         """Reset the environment."""
@@ -144,7 +145,10 @@ class NormalizeEnvWrapper(gym.Wrapper):
         if self._entry is None:
             observation = obs
         else:
+            observation = list(observation)
             observation[self._entry] = obs
+            observation = tuple(observation)
+
         return observation
 
 

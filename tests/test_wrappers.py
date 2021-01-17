@@ -54,9 +54,24 @@ def test_unvenv():
     assert env2.action_space == env1.action_space
 
 
+class DuplicateObsWrapper(gym.ObservationWrapper):
+    """Class to duplicate the observations."""
+
+    def __init__(self, env):
+        """Initialize."""
+        gym.Wrapper.__init__(self, env)
+        self.observation_space = gym.spaces.Tuple(
+            (env.observation_space, env.observation_space)
+        )
+
+    def observation(self, observation):
+        """Process observation."""
+        return (observation, observation)
+
+
 def test_normalizer():
     """Test NormalizeEnvWrapper."""
-    env1 = gym.make("BreakoutDeterministic-v0")
+    env1 = gym.make("BreakoutDeterministic-v4")
 
     # Not a tuple environment
     with pytest.raises(ValueError):
@@ -68,7 +83,7 @@ def test_normalizer():
     obs1 = env1.reset()
     obs2 = env2.reset()
     assert np.any(obs2 != obs1)
-    assert np.all(env2._observation_rms.mean == obs1)
+    assert np.allclose(env2._observation_rms.mean, obs1, rtol=0.001)
 
     # Save and load
     with tempfile.TemporaryFile() as fp:
@@ -80,6 +95,23 @@ def test_normalizer():
     env3._training = False
     env3.set_env(env1)
     env3.step(0)
-    assert np.all(env3._observation_rms.mean == obs1)
     assert np.all(env3._observation_rms.mean == env2._observation_rms.mean)
     assert np.all(env3._observation_rms.var == env2._observation_rms.var)
+
+    # Normalize just one entry
+    env4 = DuplicateObsWrapper(env1)
+    env5 = NormalizeEnvWrapper(env4, training=True, entry=1)
+    assert env5.observation_space == env4.observation_space
+
+    obs3 = env5.reset()
+    assert np.all(env5._observation_rms.mean == env3._observation_rms.mean)
+    assert np.all(obs3[0] == obs1)
+    assert np.all(obs3[1] == obs2)
+
+    # Freeze weights
+    env5.set_training(False)
+    env5.step(1)
+    env5.step(0)
+    obs4, _, _, _ = env5.step(0)
+    assert np.any(obs4[1] != obs3)
+    assert np.all(env5._observation_rms.mean == env3._observation_rms.mean)

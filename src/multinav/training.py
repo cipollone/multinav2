@@ -48,6 +48,8 @@ from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
+from multinav.wrappers.temprl import BoxAutomataStates
+from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
 
 # Default environments and algorithms parameters
@@ -178,7 +180,9 @@ class TrainStableBaselines(Trainer):
     def __init__(self, env, params, model_path, log_path):
         """Initialize.
 
-        :param env: gym environment.
+        :param env: gym environment. Assuming observation space is a tuple,
+            where first component is from original env, and the second is
+            temporal goal state.
         :param params: dict of parameters, like `default_parameters`.
         :param model_path: directory where to save models.
         :param log_path: directory where to save tensorboard logs.
@@ -196,14 +200,23 @@ class TrainStableBaselines(Trainer):
 
         all_callbacks = CallbackList(callbacks_list)
 
-        # TODO: normalize env features (not automata)
-
-        # Define agent
+        # Define or load
         resuming = bool(params["resume_file"])
         if not resuming:
+            # Normalizer
+            normalized_env = NormalizeEnvWrapper(
+                env=env,
+                training=True,
+                entry=0,  # Only env features, not temporal goal state
+            )
+            flat_env = BoxAutomataStates(normalized_env)
+            # Saving normalizer too
+            checkpoint_callback.saver.extra_model = normalized_env
+
+            # Agent
             model = DQN(
                 policy=LnMlpPolicy,
-                env=env,
+                env=flat_env,
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
                 double_q=True,
@@ -218,13 +231,19 @@ class TrainStableBaselines(Trainer):
             )
         else:
             # Reload model
-            model, _, counters = checkpoint_callback.load(
+            model, extra_model, counters = checkpoint_callback.load(
                 path=params["resume_file"],
             )
+
+            # Restore normalizer and env
+            normalized_env: NormalizeEnvWrapper = extra_model
+            normalized_env.set_env(env)
+            flat_env = BoxAutomataStates(normalized_env)
+
             # Restore properties
             model.tensorboard_log = log_path
             model.num_timesteps = counters["step"]
-            model.set_env(env)
+            model.set_env(flat_env)
 
         # Store
         self.params = params
