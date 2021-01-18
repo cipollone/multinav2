@@ -46,6 +46,11 @@ def main():
         action="store_true",
         help="Test with an interactive episode (used for debugging).",
     )
+    parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="Test with a deterministic policy",
+    )
 
     # Parse
     args = parser.parse_args()
@@ -57,6 +62,7 @@ def main():
     if args.shaping:
         cmd_params["shaping"] = args.shaping
     cmd_params["interactive"] = args.interactive
+    cmd_params["deterministic"] = args.deterministic
 
     # Go
     if args.do == "train":

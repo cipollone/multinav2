@@ -126,7 +126,12 @@ def test(
         raise RuntimeError("Environment not supported")
 
     # Same testing loop for all
-    tester = Tester(env=env, model=model, interactive=params["interactive"])
+    tester = Tester(
+        env=env,
+        model=model,
+        interactive=params["interactive"],
+        deterministic=params["deterministic"],
+    )
 
     # Start
     tester.test()
@@ -135,12 +140,33 @@ def test(
 class Tester:
     """Define the testing loop."""
 
-    def __init__(self, env: gym.Env, model: AgentModel, interactive: bool):
+    def __init__(
+        self,
+        env: gym.Env,
+        model: AgentModel,
+        interactive: bool = False,
+        deterministic: bool = False,
+    ):
         """Initialize."""
         self.env = env
         self.model = model
         self._interactive = interactive
+        self._deterministic = deterministic
         self._is_stable_baselines_model = isinstance(model, BaseRLModel)
+
+        if self._is_stable_baselines_model:
+            self._wrap_baserlmodel_predict()
+
+    def _wrap_baserlmodel_predict(self):
+        """Wrap instance BaseRLModel.predict appropriately."""
+        original_predict = self.model.predict
+
+        def _predict_fn(observation):
+            ret = original_predict(observation, deterministic=self._deterministic)
+            assert ret[1] is None
+            return ret[0]
+
+        self.model.predict = _predict_fn
 
     def test(self):
         """Test loop."""
@@ -159,9 +185,6 @@ class Tester:
 
                 # Compute action
                 action = self.model.predict(obs)
-                if self._is_stable_baselines_model:
-                    assert action[1] is None
-                    action = action[0]
 
                 # Maybe interact
                 if self._interactive:
