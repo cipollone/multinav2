@@ -30,9 +30,12 @@ def split_agent_and_automata(ob_space: Box) -> Tuple[gym.Space, Discrete]:
     return Box(agent_lows, agent_highs), Discrete(nb_states)
 
 
-# TODO: maybe add options to allow few layers in common
 class ModularPolicy(DQNPolicy):
-    """Similar to DQN, but with many subnetworks"""
+    """A model similar to DQN but with separate subnets.
+
+    This model assumes that the last entry of the observation is an index
+    that selects one of N DQN subnetworks.
+    """
 
     def __init__(
         self,
@@ -42,6 +45,7 @@ class ModularPolicy(DQNPolicy):
         n_env,
         n_steps,
         n_batch,
+        shared_layers=0,
         layers=None,
         reuse=False,
         dueling=False,
@@ -49,6 +53,11 @@ class ModularPolicy(DQNPolicy):
         act_fun=tf.nn.relu,
         obs_phs=None,
     ):
+        """Initialize.
+
+        See DQNPolicy for most parameters.
+        :param shared_layers: this number of layers is shared between all subnets.
+        """
         super(ModularPolicy, self).__init__(
             sess,
             ob_space,
@@ -63,14 +72,18 @@ class ModularPolicy(DQNPolicy):
         )
         assert not dueling, "Dueling not supported."
         # NOTE assumption: only one automaton component, and at the end.
-        agent_space, automaton_space = split_agent_and_automata(ob_space)
+        _agent_space, automaton_space = split_agent_and_automata(ob_space)
 
         # Default sizes
         if layers is None:
             layers = [64, 64]
 
-        # Duplicate weights for each subtask
-        layers = [units * automaton_space.n for units in layers]
+        # Duplicate weights for each subtask (if not shared)
+        assert 0 <= shared_layers <= len(layers)
+        layers = [
+            layers[i] if i < shared_layers else layers[i] * automaton_space.n
+            for i in range(len(layers))
+        ]
 
         # Model scope
         with tf.variable_scope("model", reuse=reuse):

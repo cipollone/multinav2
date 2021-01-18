@@ -53,7 +53,6 @@ from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
 
 # TODO: reward normalization
-# TODO: shared layers
 
 # Default environments and algorithms parameters
 #   Always prefer to specify them with a json; do not rely on defaults.
@@ -68,6 +67,7 @@ default_parameters = dict(
     # DQN params
     batch_size=32,
     layers=[64, 64],
+    shared_layers=1,
     learning_starts=5000,
     train_freq=2,
     exploration_fraction=0.8,
@@ -227,6 +227,7 @@ class TrainStableBaselines(Trainer):
                 policy_kwargs={
                     "layer_norm": True,
                     "layers": params["layers"],
+                    "shared_layers": params["shared_layers"],
                 },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
