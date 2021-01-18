@@ -75,26 +75,24 @@ def test(
     )
 
     if env_name == "ros":
-        # Make env
-        env = env_ros_controls.make(params=params)
         # Make and load agent
         model = TrainStableBaselines(
-            env=env,
+            env=env_ros_controls.make(params=params),
             params=params,
             model_path=model_path,
             log_path=log_path,
         ).model
+        env = model.env
 
     elif env_name == "sapientino-cont":
-        # Make env
-        env = env_cont_sapientino.make(params=params)
         # Make and load agent
         model = TrainStableBaselines(
-            env=env,
+            env=env_cont_sapientino.make(params=params),
             params=params,
             model_path=model_path,
             log_path=log_path,
         ).model
+        env = model.env
 
     elif env_name == "sapientino-grid":
         resume_file = params.pop("resume_file")
