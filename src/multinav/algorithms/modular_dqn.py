@@ -65,9 +65,14 @@ class ModularPolicy(DQNPolicy):
         # NOTE assumption: only one automaton component, and at the end.
         agent_space, automaton_space = split_agent_and_automata(ob_space)
 
+        # Default sizes
         if layers is None:
             layers = [64, 64]
 
+        # Duplicate weights for each subtask
+        layers = [units * automaton_space.n for units in layers]
+
+        # Model scope
         with tf.variable_scope("model", reuse=reuse):
 
             # Split observations
@@ -79,11 +84,9 @@ class ModularPolicy(DQNPolicy):
                 tf.cast(automaton_feature, tf.int64), shape=(-1, 1)
             )
 
-            # Main net
+            # Net
             with tf.variable_scope("action_value"):
-
-                # Duplicate for each subtask
-                x = tf.tile(agent_features, [automaton_space.n, 1])
+                x = agent_features
 
                 # Layers
                 for layer_size in layers:
@@ -99,15 +102,12 @@ class ModularPolicy(DQNPolicy):
                 # Output layer
                 x = tf_layers.fully_connected(
                     x,
-                    num_outputs=self.n_actions,
+                    num_outputs=self.n_actions * automaton_space.n,
                     activation_fn=None,
                 )
 
-                # Recompose with batch first
-                x = tf.reshape(x, (automaton_space.n, -1, self.n_actions))
-                x = tf.transpose(x, [1, 0, 2])
-
                 # Select q-values based on subtask
+                x = tf.reshape(x, (-1, automaton_space.n, self.n_actions))
                 x = tf.gather_nd(x, automaton_feature, batch_dims=1)
 
         self.q_values = x

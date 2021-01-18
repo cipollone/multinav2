@@ -52,6 +52,9 @@ from multinav.wrappers.temprl import BoxAutomataStates
 from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
 
+# TODO: reward normalization
+# TODO: shared layers
+
 # Default environments and algorithms parameters
 #   Always prefer to specify them with a json; do not rely on defaults.
 default_parameters = dict(
@@ -66,11 +69,13 @@ default_parameters = dict(
     batch_size=32,
     layers=[64, 64],
     learning_starts=5000,
+    train_freq=2,
     exploration_fraction=0.8,
     exploration_initial_eps=1.0,
     exploration_final_eps=0.02,
     save_freq=1000,
     total_timesteps=2000000,
+    buffer_size=50000,
     render=False,
     # Q params
     nb_episodes=1000,
@@ -225,8 +230,10 @@ class TrainStableBaselines(Trainer):
                 },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
+                train_freq=params["train_freq"],
                 double_q=True,
                 batch_size=params["batch_size"],
+                buffer_size=params["buffer_size"],
                 learning_starts=params["learning_starts"],
                 prioritized_replay=True,
                 exploration_fraction=params["exploration_fraction"],
