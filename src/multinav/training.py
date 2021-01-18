@@ -32,9 +32,9 @@ from matplotlib import pyplot as plt
 from PIL import Image
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
-from stable_baselines.deepq.policies import LnMlpPolicy
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
+from multinav.algorithms.modular_dqn import ModularPolicy
 from multinav.algorithms.q_learning import q_learning
 from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
 from multinav.envs import (
@@ -63,6 +63,8 @@ default_parameters = dict(
     gamma=0.99,
     log_interval=100,  # In #of episodes
     # DQN params
+    batch_size=32,
+    layers=[64, 64],
     learning_starts=5000,
     exploration_fraction=0.8,
     exploration_initial_eps=1.0,
@@ -215,11 +217,16 @@ class TrainStableBaselines(Trainer):
 
             # Agent
             model = DQN(
-                policy=LnMlpPolicy,
                 env=flat_env,
+                policy=ModularPolicy,
+                policy_kwargs={
+                    "layer_norm": True,
+                    "layers": params["layers"],
+                },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
                 double_q=True,
+                batch_size=params["batch_size"],
                 learning_starts=params["learning_starts"],
                 prioritized_replay=True,
                 exploration_fraction=params["exploration_fraction"],
@@ -243,6 +250,7 @@ class TrainStableBaselines(Trainer):
             # Restore properties
             model.tensorboard_log = log_path
             model.num_timesteps = counters["step"]
+            model.learning_starts = params["learning_starts"] + counters["step"]
             model.set_env(flat_env)
 
         # Store

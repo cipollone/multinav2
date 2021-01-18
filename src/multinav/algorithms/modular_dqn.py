@@ -30,6 +30,7 @@ def split_agent_and_automata(ob_space: Box) -> Tuple[gym.Space, Discrete]:
     return Box(agent_lows, agent_highs), Discrete(nb_states)
 
 
+# TODO: maybe add options to allow few layers in common
 class ModularPolicy(DQNPolicy):
     """Similar to DQN, but with many subnetworks"""
 
@@ -61,19 +62,15 @@ class ModularPolicy(DQNPolicy):
             obs_phs=obs_phs,
         )
         assert not dueling, "Dueling not supported."
-        # TODO assumption: only one automaton component, and at the end.
-        _agent_space, automaton_space = split_agent_and_automata(ob_space)
+        # NOTE assumption: only one automaton component, and at the end.
+        agent_space, automaton_space = split_agent_and_automata(ob_space)
 
         if layers is None:
             layers = [64, 64]
 
         with tf.variable_scope("model", reuse=reuse):
-            # extracted_features = tf.layers.flatten(self.processed_obs)
-            # nb_features = int(extracted_features.shape[1])
-            # agent_features, automaton_feature = tf.split(
-            #     extracted_features, num_or_size_splits=[nb_features - 1, 1], axis=1
-            # )
-            # automaton_feature = tf.cast(automaton_feature, tf.int64)
+
+            # Split observations
             agent_features, automaton_feature = (
                 self.processed_obs[:, :-1],
                 self.processed_obs[:, -1],
@@ -81,41 +78,39 @@ class ModularPolicy(DQNPolicy):
             automaton_feature = tf.reshape(
                 tf.cast(automaton_feature, tf.int64), shape=(-1, 1)
             )
-            final_q_action_out = []
-            with tf.variable_scope("action_value"):
-                for _q in range(automaton_space.n):
-                    q_action_out = agent_features
-                    for layer_size in layers:
-                        q_action_out = tf_layers.fully_connected(
-                            q_action_out,
-                            num_outputs=layer_size,
-                            activation_fn=None,
-                        )
-                        if layer_norm:
-                            q_action_out = tf_layers.layer_norm(
-                                q_action_out, center=True, scale=True
-                            )
-                        q_action_out = act_fun(q_action_out)
 
-                    q_action_out = tf_layers.fully_connected(
-                        q_action_out,
-                        num_outputs=self.n_actions,
+            # Main net
+            with tf.variable_scope("action_value"):
+
+                # Duplicate for each subtask
+                x = tf.tile(agent_features, [automaton_space.n, 1])
+
+                # Layers
+                for layer_size in layers:
+                    x = tf_layers.fully_connected(
+                        x,
+                        num_outputs=layer_size,
                         activation_fn=None,
                     )
-                    final_q_action_out.append(q_action_out)
+                    if layer_norm:
+                        x = tf_layers.layer_norm(x, center=True, scale=True)
+                    x = act_fun(x)
 
-                indices = tf.reshape(automaton_feature, shape=(-1, 1, 1))
-                action_scores = tf.stack(final_q_action_out, axis=1)
-                final_action_scores = tf.gather_nd(
-                    params=action_scores, indices=indices, batch_dims=1
+                # Output layer
+                x = tf_layers.fully_connected(
+                    x,
+                    num_outputs=self.n_actions,
+                    activation_fn=None,
                 )
-                final_action_scores = tf.reshape(
-                    final_action_scores, shape=(-1, self.n_actions)
-                )
 
-            q_out = final_action_scores
+                # Recompose with batch first
+                x = tf.reshape(x, (automaton_space.n, -1, self.n_actions))
+                x = tf.transpose(x, [1, 0, 2])
 
-        self.q_values = q_out
+                # Select q-values based on subtask
+                x = tf.gather_nd(x, automaton_feature, batch_dims=1)
+
+        self.q_values = x
         self._setup_init()
 
     def step(self, obs, state=None, _mask=None, deterministic=True):
