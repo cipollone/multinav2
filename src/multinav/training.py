@@ -95,6 +95,9 @@ default_parameters = dict(
     max_angular_vel=40,
     initial_position=[1, 1],
     tg_reward=1.0,
+    reward_per_step=-0.01,
+    reward_outside_grid=0.0,
+    reward_duplicate_beep=-0.5,
     # Abs sapientino env
     nb_colors=3,
     sapientino_fail_p=0.2,

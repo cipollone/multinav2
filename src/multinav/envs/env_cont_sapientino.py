@@ -145,9 +145,9 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     configuration = SapientinoConfiguration(
         [agent_configuration],
         path_to_map=map_file,
-        reward_per_step=-0.01,
-        reward_outside_grid=0.0,
-        reward_duplicate_beep=0.0,
+        reward_per_step=params["reward_per_step"],
+        reward_outside_grid=params["reward_outside_grid"],
+        reward_duplicate_beep=params["reward_duplicate_beep"],
         acceleration=params["acceleration"],
         angular_acceleration=params["angular_acceleration"],
         max_velocity=params["max_velocity"],

@@ -215,7 +215,7 @@ class RewardShaper:
         value_function: Callable[[StateH], float],
         mapping_function: Callable[[StateL], StateH],
         gamma: float,
-        zero_terminal_state: bool = True,
+        zero_terminal_state: bool = False,
     ):
         """
         Initialize the reward shaping wrapper.
