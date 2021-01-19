@@ -4,8 +4,6 @@
 
 import argparse
 
-# TODO: normalize the environment features. Look in 736e60d for example.
-
 
 def main():
     """Is the main function."""
@@ -48,6 +46,11 @@ def main():
         action="store_true",
         help="Test with an interactive episode (used for debugging).",
     )
+    parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="Test with a deterministic policy",
+    )
 
     # Parse
     args = parser.parse_args()
@@ -59,6 +62,7 @@ def main():
     if args.shaping:
         cmd_params["shaping"] = args.shaping
     cmd_params["interactive"] = args.interactive
+    cmd_params["deterministic"] = args.deterministic
 
     # Go
     if args.do == "train":

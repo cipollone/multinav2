@@ -23,9 +23,10 @@
 
 import numpy as np
 from gym import Env, ObservationWrapper
-from gym.spaces import Discrete, MultiDiscrete
+from gym.spaces import Box, Discrete, MultiDiscrete
 from temprl.wrapper import TemporalGoalWrapper
 
+from multinav.helpers.gym import combine_boxes
 from multinav.helpers.notebooks import automaton_to_rgb
 
 
@@ -88,6 +89,7 @@ class FlattenAutomataStates(ObservationWrapper):
     """Flatten the observation space to one array.
 
     A state (x, [q1, q2]) becomes (x, q1, q2).
+    Discrete features x.
     """
 
     def __init__(self, env: Env):
@@ -111,6 +113,38 @@ class FlattenAutomataStates(ObservationWrapper):
         env_state = observation[0]
         automata_states = tuple(observation[1])
         return (env_state,) + automata_states
+
+
+class BoxAutomataStates(ObservationWrapper):
+    """Flatten the observation space to one array.
+
+    A state (x, [q1, q2]) becomes (x, q1, q2).
+    Continuous features x.
+    """
+
+    def __init__(self, env: Env):
+        """Initialize.
+
+        :param env: gym environment to wrap.
+        """
+        ObservationWrapper.__init__(self, env)
+
+        space = env.observation_space
+        assert len(space) == 2, "Expected: environment state, automata states"
+        assert type(space[0]) == Box, "Env state must be a box"
+        assert type(space[1]) == MultiDiscrete, "Automata states are discrete"
+
+        automata_highs = space[1].nvec.astype(np.float32)
+        automata_lows = np.zeros_like(automata_highs)
+        automata_box = Box(automata_lows, automata_highs)
+
+        self.observation_space = combine_boxes(space[0], automata_box)
+
+    def observation(self, observation):
+        """Flatten."""
+        env_state, automata_states = observation
+        obs = np.concatenate((env_state, automata_states))
+        return obs
 
 
 def _add_channel(frame: np.ndarray):

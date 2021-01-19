@@ -32,9 +32,9 @@ from matplotlib import pyplot as plt
 from PIL import Image
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
-from stable_baselines.deepq.policies import LnMlpPolicy
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
+from multinav.algorithms.modular_dqn import ModularPolicy
 from multinav.algorithms.q_learning import q_learning
 from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
 from multinav.envs import (
@@ -48,7 +48,11 @@ from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
+from multinav.wrappers.temprl import BoxAutomataStates
+from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
+
+# TODO: reward normalization
 
 # Default environments and algorithms parameters
 #   Always prefer to specify them with a json; do not rely on defaults.
@@ -61,12 +65,18 @@ default_parameters = dict(
     gamma=0.99,
     log_interval=100,  # In #of episodes
     # DQN params
+    batch_size=32,
+    layers=[64, 64],
+    shared_layers=1,
+    layer_norm=True,
     learning_starts=5000,
+    train_freq=2,
     exploration_fraction=0.8,
     exploration_initial_eps=1.0,
     exploration_final_eps=0.02,
     save_freq=1000,
     total_timesteps=2000000,
+    buffer_size=50000,
     render=False,
     # Q params
     nb_episodes=1000,
@@ -85,6 +95,9 @@ default_parameters = dict(
     max_angular_vel=40,
     initial_position=[1, 1],
     tg_reward=1.0,
+    reward_per_step=-0.01,
+    reward_outside_grid=0.0,
+    reward_duplicate_beep=-0.5,
     # Abs sapientino env
     nb_colors=3,
     sapientino_fail_p=0.2,
@@ -178,7 +191,9 @@ class TrainStableBaselines(Trainer):
     def __init__(self, env, params, model_path, log_path):
         """Initialize.
 
-        :param env: gym environment.
+        :param env: gym environment. Assuming observation space is a tuple,
+            where first component is from original env, and the second is
+            temporal goal state.
         :param params: dict of parameters, like `default_parameters`.
         :param model_path: directory where to save models.
         :param log_path: directory where to save tensorboard logs.
@@ -196,15 +211,34 @@ class TrainStableBaselines(Trainer):
 
         all_callbacks = CallbackList(callbacks_list)
 
-        # Define agent
+        # Define or load
         resuming = bool(params["resume_file"])
         if not resuming:
-            model = DQN(
-                policy=LnMlpPolicy,
+            # Normalizer
+            normalized_env = NormalizeEnvWrapper(
                 env=env,
+                training=True,
+                entry=0,  # Only env features, not temporal goal state
+            )
+            flat_env = BoxAutomataStates(normalized_env)
+            # Saving normalizer too
+            checkpoint_callback.saver.extra_model = normalized_env
+
+            # Agent
+            model = DQN(
+                env=flat_env,
+                policy=ModularPolicy,
+                policy_kwargs={
+                    "layer_norm": params["layer_norm"],
+                    "layers": params["layers"],
+                    "shared_layers": params["shared_layers"],
+                },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
+                train_freq=params["train_freq"],
                 double_q=True,
+                batch_size=params["batch_size"],
+                buffer_size=params["buffer_size"],
                 learning_starts=params["learning_starts"],
                 prioritized_replay=True,
                 exploration_fraction=params["exploration_fraction"],
@@ -216,13 +250,20 @@ class TrainStableBaselines(Trainer):
             )
         else:
             # Reload model
-            model, _, counters = checkpoint_callback.load(
+            model, extra_model, counters = checkpoint_callback.load(
                 path=params["resume_file"],
             )
+
+            # Restore normalizer and env
+            normalized_env: NormalizeEnvWrapper = extra_model
+            normalized_env.set_env(env)
+            flat_env = BoxAutomataStates(normalized_env)
+
             # Restore properties
             model.tensorboard_log = log_path
             model.num_timesteps = counters["step"]
-            model.set_env(env)
+            model.learning_starts = params["learning_starts"] + counters["step"]
+            model.set_env(flat_env)
 
         # Store
         self.params = params

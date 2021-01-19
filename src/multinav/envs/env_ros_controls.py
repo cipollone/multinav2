@@ -280,4 +280,5 @@ def make(params):
             notmoving_limit=params["notmoving_limit"],
         )
     )
+    # TODO: define temporal goal here
     return input_env

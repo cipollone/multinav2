@@ -25,6 +25,7 @@ from abc import abstractmethod
 import gym
 import numpy as np
 from gym.spaces import Box, Discrete, MultiDiscrete
+from gym.spaces import Tuple as GymTuple
 
 from multinav.helpers.gym import combine_boxes
 
@@ -108,36 +109,35 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
         x_space: Box = self.robot_space.spaces["x"]
         y_space: Box = self.robot_space.spaces["y"]
         velocity_space: Box = self.robot_space.spaces["velocity"]
-        angle_space: Box = self.robot_space.spaces["angle"]
         ang_velocity_space: Box = self.robot_space.spaces["ang_velocity"]
-        automata_space_boxes = [
-            Box(0.0, float(dim), shape=[1]) for dim in self.automata_space.nvec
-        ]
-        # TODO decide how to handle automata state.
-        #  Now the automata components are flattened, but
-        #  we could consider different approaches (e.g. a tuple to separate
-        #  robot features with automata features.
-        composite_space = combine_boxes(
+
+        # Try with cos, sin, instead
+        cos_space = Box(-1, 1, shape=[1])
+        sin_space = Box(-1, 1, shape=[1])
+
+        # Join sapientino features
+        sapientino_space = combine_boxes(
             x_space,
             y_space,
             velocity_space,
-            angle_space,
+            cos_space,
+            sin_space,
             ang_velocity_space,
-            *automata_space_boxes
         )
-        return composite_space
+
+        return GymTuple((sapientino_space, self.automata_space))
 
     def _process_state(self, state):
         """Process the observation."""
-        robot_state, automata_states = state[0], state[1]
-        new_state = np.array(
+        robot_state, automata_states = state
+        sapientino_state = np.array(
             [
                 robot_state["x"],
                 robot_state["y"],
                 robot_state["velocity"],
-                robot_state["angle"],
+                np.cos(robot_state["angle"]),
+                np.sin(robot_state["angle"]),
                 robot_state["ang_velocity"],
-                *automata_states,
             ]
         )
-        return new_state
+        return sapientino_state, automata_states
