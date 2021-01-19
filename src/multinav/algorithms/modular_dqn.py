@@ -70,20 +70,16 @@ class ModularPolicy(DQNPolicy):
             scale=False,
             obs_phs=obs_phs,
         )
+        # Checks
         assert not dueling, "Dueling not supported."
+        assert 0 <= shared_layers <= len(layers)
+
         # NOTE assumption: only one automaton component, and at the end.
         _agent_space, automaton_space = split_agent_and_automata(ob_space)
 
         # Default sizes
         if layers is None:
             layers = [64, 64]
-
-        # Duplicate weights for each subtask (if not shared)
-        assert 0 <= shared_layers <= len(layers)
-        layers = [
-            layers[i] if i < shared_layers else layers[i] * automaton_space.n
-            for i in range(len(layers))
-        ]
 
         # Model scope
         with tf.variable_scope("model", reuse=reuse):
@@ -102,25 +98,39 @@ class ModularPolicy(DQNPolicy):
                 x = agent_features
 
                 # Layers
-                for layer_size in layers:
-                    x = tf_layers.fully_connected(
-                        x,
-                        num_outputs=layer_size,
-                        activation_fn=None,
-                    )
+                for i, layer_size in enumerate(layers):
+
+                    # Shared weights
+                    if i < shared_layers:
+                        x = tf_layers.fully_connected(
+                            x,
+                            num_outputs=layer_size,
+                            activation_fn=None,
+                        )
+                    # Partitioned layers
+                    else:
+                        x = fully_connected_blocks(
+                            x,
+                            units=layer_size,
+                            blocks=automaton_space.n,
+                            name="dense_blocks" + str(i),
+                        )
+
+                    # Activation
                     if layer_norm:
-                        x = tf_layers.layer_norm(x, center=True, scale=True)
+                        x = tf_layers.layer_norm(x, center=False, scale=False)
                     x = act_fun(x)
 
                 # Output layer
-                x = tf_layers.fully_connected(
+                x = fully_connected_blocks(
                     x,
-                    num_outputs=self.n_actions * automaton_space.n,
-                    activation_fn=None,
+                    units=self.n_actions,
+                    blocks=automaton_space.n,
+                    name="dense_blocks_output",
                 )
 
                 # Select q-values based on subtask
-                x = tf.reshape(x, (-1, automaton_space.n, self.n_actions))
+                x = tf.transpose(x, (0, 2, 1))
                 x = tf.gather_nd(x, automaton_feature, batch_dims=1)
 
         self.q_values = x
@@ -144,3 +154,69 @@ class ModularPolicy(DQNPolicy):
 
     def proba_step(self, obs, state=None, _mask=None):
         return self.sess.run(self.policy_proba, {self.obs_ph: obs})
+
+
+def fully_connected_blocks(
+    x,
+    *,
+    units: int,
+    blocks: int,
+    name: str,
+    kernel_initializer=None,
+    bias_initializer=None,
+):
+    """Define a partitioned dense layer.
+
+    This is similar to a Dense layer with `units` outputs, but it defines
+    a `blocks` number of parallel computations.
+    The computation of each block is independent.
+    No activation, regularization, constraints.
+
+    :param x: input tensor of shape (batch, features)
+        or (batch, features, blocks). If the input is a 2D tensor, the
+        same input is used to compute the output for all blocks.
+    :param units: size of each output
+    :param blocks: number of outputs
+    :param name: layer unique name_scope.
+    :param kernel_initializer: see tf doc.
+    :param bias_initializer: see tf doc.
+    :return: a tensor of shape (batch_size, features, blocks)
+    """
+    # Set defaults
+    if kernel_initializer is None:
+        kernel_initializer = tf.initializers.glorot_uniform
+    if bias_initializer is None:
+        bias_initializer = tf.initializers.zeros
+
+    # Name scope
+    with tf.variable_scope(name):
+
+        # Duplicate if not partitioned
+        assert 2 <= x.shape.rank <= 3
+        if x.shape.rank == 2:
+            x = tf.tile(tf.expand_dims(x, -1), [1, 1, blocks])
+        assert x.shape[2] == blocks
+        features = x.shape[1]
+
+        # Create parameters
+        kernel = tf.get_variable(
+            name="block_kernel",
+            shape=(features, units, blocks),
+            dtype=tf.float32,
+            initializer=tf.initializers.glorot_uniform,
+            trainable=True,
+        )
+        bias = tf.get_variable(
+            name="block_bias",
+            shape=(units, blocks),
+            dtype=tf.float32,
+            initializer=tf.initializers.zeros,
+            trainable=True,
+        )
+
+        # Computation
+        #   (b: batch, f: features, u: units, k: block)
+        x = tf.einsum("bfk,fuk->buk", x, kernel)
+        x = x + tf.expand_dims(bias, 0)
+
+    return x

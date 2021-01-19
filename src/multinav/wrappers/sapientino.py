@@ -109,15 +109,19 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
         x_space: Box = self.robot_space.spaces["x"]
         y_space: Box = self.robot_space.spaces["y"]
         velocity_space: Box = self.robot_space.spaces["velocity"]
-        angle_space: Box = self.robot_space.spaces["angle"]
         ang_velocity_space: Box = self.robot_space.spaces["ang_velocity"]
+
+        # Try with cos, sin, instead
+        cos_space = Box(-1, 1, shape=[1])
+        sin_space = Box(-1, 1, shape=[1])
 
         # Join sapientino features
         sapientino_space = combine_boxes(
             x_space,
             y_space,
             velocity_space,
-            angle_space,
+            cos_space,
+            sin_space,
             ang_velocity_space,
         )
 
@@ -131,7 +135,8 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
                 robot_state["x"],
                 robot_state["y"],
                 robot_state["velocity"],
-                robot_state["angle"],
+                np.cos(robot_state["angle"]),
+                np.sin(robot_state["angle"]),
                 robot_state["ang_velocity"],
             ]
         )

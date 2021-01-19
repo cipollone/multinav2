@@ -68,6 +68,7 @@ default_parameters = dict(
     batch_size=32,
     layers=[64, 64],
     shared_layers=1,
+    layer_norm=True,
     learning_starts=5000,
     train_freq=2,
     exploration_fraction=0.8,
@@ -225,7 +226,7 @@ class TrainStableBaselines(Trainer):
                 env=flat_env,
                 policy=ModularPolicy,
                 policy_kwargs={
-                    "layer_norm": True,
+                    "layer_norm": params["layer_norm"],
                     "layers": params["layers"],
                     "shared_layers": params["shared_layers"],
                 },
