@@ -263,10 +263,10 @@ class RewardShaper:
         shaping_reward = self.gamma * v2 - v1
 
         logger.debug(
-            "\n" +
-            f"  mapped s1: {previous_state}, value: {v1}\n" +
-            f"  mapped s2: {current_state}, value: {v2}\n" +
-            f"  shaping reward: {shaping_reward}\n"
+            "\n"
+            + f"  mapped s1: {previous_state}, value: {v1}\n"
+            + f"  mapped s2: {current_state}, value: {v2}\n"
+            + f"  shaping reward: {shaping_reward}\n"
         )
 
         self._last_state = state_p

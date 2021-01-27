@@ -79,7 +79,7 @@ default_parameters = dict(
     buffer_size=50000,
     render=False,
     # Q params
-    #   total_timesteps=2000,
+    #   total_timesteps
     nb_episodes=1000,
     q_eps=0.5,
     learning_rate_end=0.0,
