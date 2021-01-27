@@ -368,7 +368,6 @@ class TrainQ(Trainer):
             epsilon_decay=True,
             learning_rate_end=self.params["learning_rate_end"],
             epsilon_end=self.params["epsilon_end"],
-            verbose=True,
         )
 
         # Save

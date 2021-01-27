@@ -49,7 +49,6 @@ def q_learning(
     epsilon_decay: bool = False,
     epsilon_end: float = 0.0,
     learning_rate_end: float = 0.0,
-    verbose: bool = False,
 ) -> Dict[Any, np.ndarray]:
     """
     Learn a Q-function from a Gym env using vanilla Q-Learning.
@@ -89,6 +88,7 @@ def q_learning(
                 eps = eps0 * (1 - frac) + epsilon_end * frac
 
         # Log
-        if verbose:
-            print(" Eps:", round(eps, 3), end="\r")
+        print(" Eps:", round(eps, 3), end="\r")
+
+    print()
     return Q

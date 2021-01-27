@@ -21,6 +21,7 @@
 #
 """This module contains helpers related to OpenAI Gym."""
 import itertools
+import logging
 import random
 from copy import deepcopy
 from functools import singledispatch
@@ -44,6 +45,8 @@ Transitions = Dict[State, Dict[Action, List[Transition]]]
 # Other aliases
 StateL = State
 StateH = State
+
+logger = logging.getLogger(__name__)
 
 
 def from_discrete_env_to_graphviz(
@@ -227,7 +230,6 @@ class RewardShaper:
           a trajectory should have potential equal to zero.
           For details, please see:
             http://www.ifaamas.org/Proceedings/aamas2017/pdfs/p565.pdf
-
         """
         self.value_function = value_function
         self.mapping_function = mapping_function
@@ -252,7 +254,6 @@ class RewardShaper:
         """
         previous_state = self.mapping_function(self._last_state)
         current_state = self.mapping_function(state_p)
-        self._last_state = state_p
 
         v1 = self.value_function(previous_state)
         v2 = self.value_function(current_state)
@@ -261,4 +262,12 @@ class RewardShaper:
             v2 = 0
         shaping_reward = self.gamma * v2 - v1
 
+        logger.debug(
+            "\n" +
+            f"  mapped s1: {previous_state}, value: {v1}\n" +
+            f"  mapped s2: {current_state}, value: {v2}\n" +
+            f"  shaping reward: {shaping_reward}\n"
+        )
+
+        self._last_state = state_p
         return shaping_reward
