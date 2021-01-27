@@ -25,6 +25,7 @@ These classes are just interfaces of agents that have been computed from these
 algorithms.
 """
 
+import logging
 import pickle
 from typing import Dict
 
@@ -32,6 +33,8 @@ import numpy as np
 from typing_extensions import Protocol
 
 from multinav.helpers.gym import Action, State
+
+logger = logging.getLogger(__name__)
 
 
 class AgentModel(Protocol):
@@ -73,6 +76,7 @@ class QFunctionModel(AgentModel):
 
     def predict(self, observation: State) -> Action:
         """Compute best action from q function."""
+        logger.debug("value: {}".format(np.max(self.q_function[observation])))
         return np.argmax(self.q_function[observation]).item()
 
     def save(self, path: str) -> str:
