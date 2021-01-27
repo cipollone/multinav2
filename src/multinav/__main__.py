@@ -3,12 +3,18 @@
 """Main script."""
 
 import argparse
+import logging
 
 
 def main():
     """Is the main function."""
     parser = argparse.ArgumentParser(
         description="RL on navigation environments with different abstractions"
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print debug information",
     )
 
     # What to do
@@ -54,6 +60,10 @@ def main():
 
     # Parse
     args = parser.parse_args()
+
+    # logging
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
 
     # Other params
     cmd_params = dict()

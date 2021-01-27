@@ -79,6 +79,7 @@ default_parameters = dict(
     buffer_size=50000,
     render=False,
     # Q params
+    #   total_timesteps
     nb_episodes=1000,
     q_eps=0.5,
     learning_rate_end=0.0,
@@ -360,7 +361,7 @@ class TrainQ(Trainer):
         # Learn
         self.agent.q_function = q_learning(
             env=self.env,
-            nb_episodes=self.params["nb_episodes"],
+            total_timesteps=self.params["total_timesteps"],
             alpha=self.params["learning_rate"],
             eps=self.params["q_eps"],
             gamma=self.params["gamma"],
@@ -368,7 +369,6 @@ class TrainQ(Trainer):
             epsilon_decay=True,
             learning_rate_end=self.params["learning_rate_end"],
             epsilon_end=self.params["epsilon_end"],
-            verbose=True,
         )
 
         # Save

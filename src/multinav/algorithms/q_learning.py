@@ -41,7 +41,7 @@ def _random_action(nb_actions):
 
 def q_learning(
     env: gym.Env,
-    nb_episodes: int = 100,
+    total_timesteps: int = 2000000,
     alpha: float = 0.1,
     eps: float = 0.1,
     gamma: float = 0.9,
@@ -49,14 +49,13 @@ def q_learning(
     epsilon_decay: bool = False,
     epsilon_end: float = 0.0,
     learning_rate_end: float = 0.0,
-    verbose: bool = False,
 ) -> Dict[Any, np.ndarray]:
     """
     Learn a Q-function from a Gym env using vanilla Q-Learning.
 
     :return the Q function: a dictionary from states to array of Q values for every action.
     """
-    # Store
+    # Vars
     alpha0 = alpha
     eps0 = eps
 
@@ -70,25 +69,30 @@ def q_learning(
         else:
             return np.argmax(Q[state])
 
-    for episode in range(nb_episodes):
-        state = env.reset()
-        done = False
-        while not done:
-            action = choose_action(state)
-            state2, reward, done, info = env.step(action)
-            Q[state][action] += alpha * (
-                reward + gamma * np.max(Q[state2]) - Q[state][action]
-            )
-            state = state2
+    done = True
+    for step in range(total_timesteps):
 
-            # Decays
-            frac = episode / nb_episodes
+        if done:
+            state = env.reset()
+            done = False
+
+        action = choose_action(state)
+        state2, reward, done, _info = env.step(action)
+        Q[state][action] += alpha * (
+            reward + gamma * np.max(Q[state2]) - Q[state][action]
+        )
+        state = state2
+
+        # Decays
+        if step % 10 == 0:
+            frac = step / total_timesteps
             if learning_rate_decay:
                 alpha = alpha0 * (1 - frac) + learning_rate_end * frac
             if epsilon_decay:
                 eps = eps0 * (1 - frac) + epsilon_end * frac
 
-        # Log
-        if verbose:
+            # Log
             print(" Eps:", round(eps, 3), end="\r")
+
+    print()
     return Q

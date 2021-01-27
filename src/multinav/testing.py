@@ -171,7 +171,7 @@ class Tester:
     def test(self):
         """Test loop."""
         # Episodes
-        for _ in range(100):
+        for _ in range(1):
 
             # Init episode
             obs = self.env.reset()
