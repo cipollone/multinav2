@@ -155,7 +155,8 @@ class ValueFunctionRS(PotentialRewardShaper):
 class AutomatonRS(PotentialRewardShaper):
     """Reward shaping based on a DFA.
 
-    It can be applied to environments that have a single temporal goal.
+    It can be applied to environments that have a single temporal goal wrapper
+    applied.
     The purpose of these rewards is to replace (or be summed to) the original
     reward generated when a temporal goal is complete. It is possible to proof
     that, for a class of temporal goals, these reward induce the same optimal
@@ -213,7 +214,7 @@ class AutomatonRS(PotentialRewardShaper):
     def _potential_function(self, state: State) -> float:
         """Definition of the potential function."""
         assert len(state) == 2, "Expected a tuple of states: (env, automaton)"
-        assert state[1] in self.__dfa.states
+        assert len(state[1]) == 1, "Expected only one temporal goal"
 
         # Tabular lookup
-        return self.__potential_table[state[1]]
+        return self.__potential_table[state[1][0]]

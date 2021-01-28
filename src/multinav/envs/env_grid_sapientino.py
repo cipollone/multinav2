@@ -37,7 +37,7 @@ from multinav.algorithms.agents import ValueFunctionModel
 from multinav.envs import sapientino_defs
 from multinav.envs.env_cont_sapientino import Fluents
 from multinav.envs.temporal_goals import SapientinoGoal
-from multinav.helpers.reward_shaping import StateH, StateL, ValueFunctionRS
+from multinav.helpers.reward_shaping import AutomatonRS, StateH, StateL, ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper
 from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
@@ -98,8 +98,8 @@ def generate_grid(
     output_file.write_text(content)
 
 
-def _load_reward_shaper(path: str, gamma: float) -> ValueFunctionRS:
-    """Load a reward shaper.
+def _abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
+    """Define a reward shaper on the previous environment.
 
     This loads a saved agent for `AbstractSapientinoTemporalGoal` then
     it uses it to compute the reward shaping to apply to this environment.
@@ -124,7 +124,7 @@ def _load_reward_shaper(path: str, gamma: float) -> ValueFunctionRS:
         value_function=lambda s: agent.value_function[s],
         mapping_function=_map,
         gamma=gamma,
-        zero_terminal_state=False,
+        zero_terminal_state=True,
     )
 
     return shaper
@@ -176,11 +176,18 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
 
     # Maybe apply reward shaping
     if params["shaping"]:
-        reward_shaper = _load_reward_shaper(
+        # NOTE: This is likely to change, since we're experimenting
+
+        # From previous level
+        abstraction_shaper = _abs_sapientino_shaper(
             path=params["shaping"],
             gamma=params["gamma"],
         )
-        env = RewardShapingWrapper(env, reward_shaper=reward_shaper)
+        env = RewardShapingWrapper(env, reward_shaper=abstraction_shaper)
+
+        # From DFA
+        dfa_shaper = AutomatonRS(dfa=tg.automaton, gamma=params["gamma"], rescale=True)
+        env = RewardShapingWrapper(env, reward_shaper=dfa_shaper)
 
     # Final features
     env = GridRobotFeatures(env)

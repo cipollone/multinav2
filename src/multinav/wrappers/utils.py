@@ -81,7 +81,7 @@ class MyMonitor(Wrapper):
 class MyStatsRecorder(gym.Wrapper):
     """Stats recorder."""
 
-    def __init__(self, env: gym.Env, prefix: str = ""):
+    def __init__(self, env: gym.Env, gamma: float, prefix: str = ""):
         """
         Initialize stats recorder.
 
@@ -90,12 +90,16 @@ class MyStatsRecorder(gym.Wrapper):
         """
         super().__init__(env)
         self._prefix = prefix
+        self._gamma = gamma
         self._episode_lengths: List[int] = []
         self._episode_rewards: List[float] = []
+        self._episode_returns: List[float] = []
         self._timestamps: List[float] = []
         self._steps = None
         self._total_steps = 0
         self._rewards = None
+        self._discount = None
+        self._returns = None
         self._done = False
         self._set_attributes()
 
@@ -103,6 +107,7 @@ class MyStatsRecorder(gym.Wrapper):
         """Set main attributes with the prefix."""
         setattr(self, self._prefix + "episode_lengths", self._episode_lengths)
         setattr(self, self._prefix + "episode_rewards", self._episode_rewards)
+        setattr(self, self._prefix + "episode_returns", self._episode_returns)
         setattr(self, self._prefix + "total_steps", self._total_steps)
         setattr(self, self._prefix + "timestamps", self._timestamps)
 
@@ -112,6 +117,8 @@ class MyStatsRecorder(gym.Wrapper):
         self._steps += 1
         self._total_steps += 1
         self._rewards += reward
+        self._returns += self._discount * reward
+        self._discount *= self._gamma
         self._done = done
         if done:
             self.save_complete()
@@ -123,6 +130,7 @@ class MyStatsRecorder(gym.Wrapper):
         if self._steps is not None:
             self._episode_lengths.append(self._steps)
             self._episode_rewards.append(float(self._rewards))
+            self._episode_returns.append(float(self._returns))
             self._timestamps.append(time.time())
 
     def reset(self, **kwargs):
@@ -131,6 +139,8 @@ class MyStatsRecorder(gym.Wrapper):
         self._done = False
         self._steps = 0
         self._rewards = 0
+        self._discount = 1.0
+        self._returns = 0.0
         return result
 
 

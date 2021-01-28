@@ -341,14 +341,14 @@ class TrainQ(Trainer):
         env = CallbackWrapper(env=env, callback=self.callbacks)
 
         # Log properties
-        self._log_properties = ["episode_lengths", "episode_rewards"]
+        self._log_properties = ["episode_lengths", "episode_returns", "episode_rewards"]
         self._draw_fig, self._draw_axes = plt.subplots(
             nrows=len(self._log_properties), ncols=1, figsize=(20, 12)
         )
         self._draw_lines = [None for i in range(len(self._log_properties))]
 
         # Stats recorder
-        env = MyStatsRecorder(env)
+        env = MyStatsRecorder(env, gamma=params["gamma"])
 
         # Store
         self.env = env
@@ -441,7 +441,7 @@ class TrainValueIteration(Trainer):
         env = CallbackWrapper(env=env, callback=self.saver)
 
         # Stats recorder
-        env = MyStatsRecorder(env)
+        env = MyStatsRecorder(env, gamma=params["gamma"])
 
         # Store
         self.env = env

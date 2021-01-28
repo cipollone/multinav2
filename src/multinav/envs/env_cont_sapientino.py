@@ -88,8 +88,8 @@ class Fluents(AbstractFluents):
         return PLInterpretation(true_fluents)
 
 
-def _load_reward_shaper(path: str, gamma: float) -> ValueFunctionRS:
-    """Load a reward shaper.
+def _grid_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
+    """Define a reward shaper on the previous environment.
 
     This loads a saved agent for `sapientino-grid` then
     it uses it to compute the reward shaping to apply to this environment.
@@ -174,7 +174,9 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
 
     # Maybe apply reward shaping
     if params["shaping"]:
-        reward_shaper = _load_reward_shaper(
+        # TODO: I'm currently experimenting with grid sapientino. Do the same here
+
+        reward_shaper = _grid_sapientino_shaper(
             path=params["shaping"],
             gamma=params["gamma"],
         )
