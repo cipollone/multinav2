@@ -21,7 +21,6 @@
 #
 """This module contains helpers related to OpenAI Gym."""
 import itertools
-import logging
 import random
 from copy import deepcopy
 from functools import singledispatch

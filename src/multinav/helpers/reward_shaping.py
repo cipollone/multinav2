@@ -23,7 +23,9 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, Dict
+
+from pythomata.dfa import DFA
 
 from multinav.helpers.gym import State
 
@@ -90,7 +92,7 @@ class PotentialRewardShaper(RewardShaper):
         """See super."""
         self._last_state = state
 
-    def step(self, state: State, reward: float, done: bool):
+    def step(self, state: State, reward: float, done: bool) -> float:
         """See super."""
         # Compute potentials
         v1 = self.potential_function(self._last_state)
@@ -99,6 +101,8 @@ class PotentialRewardShaper(RewardShaper):
             v2 = 0
 
         shaping_reward = self._gamma * v2 - v1
+
+        logger.debug(f"State: {state}, value: {v2}, shaping: {shaping_reward}")
 
         self._last_state = state
         return shaping_reward
@@ -146,3 +150,70 @@ class ValueFunctionRS(PotentialRewardShaper):
         stateH: StateH = self._mapping_function(state)
         potential = self._value_function(stateH)
         return potential
+
+
+class AutomatonRS(PotentialRewardShaper):
+    """Reward shaping based on a DFA.
+
+    It can be applied to environments that have a single temporal goal.
+    The purpose of these rewards is to replace (or be summed to) the original
+    reward generated when a temporal goal is complete. It is possible to proof
+    that, for a class of temporal goals, these reward induce the same optimal
+    policies. The idea is to anticipate the rewards down the path that leads
+    to the goal. It assumes that maximizing the policy is equivalent to
+    reaching the final states. Rewards generated are negative, because they
+    represent how bad is a state (how far from the goal).
+    """
+
+    def __init__(self, dfa: DFA, gamma: float, rescale: bool = True):
+        """Initialize.
+
+        :param dfa: the reward automaton. The reward associated to this
+            temporal goal must be positive.
+        :param gamma: RL discount factor.
+        :param rescale: if true, the potential function is scaled in [-1, 0]
+        """
+        # Init
+        self.__dfa = dfa
+        self.__rescale = rescale
+        self.__potential_table = self._compute_potential()
+
+        # Super
+        PotentialRewardShaper.__init__(
+            self,
+            potential_function=self._potential_function,
+            gamma=gamma,
+            zero_terminal_state=False,  # Policy invariance guaranteed
+        )
+
+    def _compute_potential(self) -> Dict[int, float]:
+        """Compute the potential function from the DFA.
+
+        :return: a dictionary from automaton states to value of the potential
+            function.
+        """
+        # Distance from final states
+        distances: Dict[State, int] = self.__dfa.levels_to_accepting_states()
+        dist_max = max(distances.values())
+        d_min = -dist_max - 1
+
+        # Potential
+        potential = {
+            s: float(-distances[s]) if distances[s] >= 0 else float(d_min)
+            for s in self.__dfa.states
+        }
+
+        logger.debug(f"DFA states potential: {potential}")
+
+        if self.__rescale:
+            potential = {q: p / d_min for q, p in potential.items()}
+
+        return potential
+
+    def _potential_function(self, state: State) -> float:
+        """Definition of the potential function."""
+        assert len(state) == 2, "Expected a tuple of states: (env, automaton)"
+        assert state[1] in self.__dfa.states
+
+        # Tabular lookup
+        return self.__potential_table[state[1]]

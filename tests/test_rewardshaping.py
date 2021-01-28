@@ -22,7 +22,8 @@
 
 """Tests for Reward shapers."""
 
-from multinav.helpers.reward_shaping import ValueFunctionRS
+from multinav.envs.temporal_goals import SapientinoGoal
+from multinav.helpers.reward_shaping import AutomatonRS, ValueFunctionRS
 
 
 def test_reward_shaper():
@@ -57,3 +58,18 @@ def test_null_shaper():
     assert shaper.step(-1, 0.0, False) == 0.0
     assert shaper.step(2, 0.0, False) == 0.0
     assert shaper.step(3, 0.0, False) == 0.0
+
+
+def test_automatonrs():
+    """Test reward shaping from DFA."""
+    dfa = SapientinoGoal._make_sapientino_automaton(["red", "green"])
+
+    shaper = AutomatonRS(dfa=dfa, gamma=1.0, rescale=False)
+
+    shaper.reset(("", 0))
+    assert shaper.step(("", 0), 0.0, False) == 0.0
+    assert shaper.step(("", 0), 0.0, False) == 0.0
+    assert shaper.step(("", 1), 0.0, False) == 1.0
+    assert shaper.step(("", 2), 0.0, False) == 1.0
+    assert shaper.step(("", 2), 0.0, False) == 0.0
+    assert shaper.step(("", "sink"), 0.0, False) == -3.0
