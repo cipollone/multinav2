@@ -22,14 +22,14 @@
 
 """Tests for Reward shapers."""
 
-from multinav.helpers.gym import RewardShaper
+from multinav.helpers.reward_shaping import ValueFunctionRS
 
 
 def test_reward_shaper():
-    """Test RewardShaper."""
+    """Test ValueFunctionRS."""
     gamma = 0.5
 
-    shaper = RewardShaper(
+    shaper = ValueFunctionRS(
         value_function=lambda x: x,
         mapping_function=lambda x: x + 1,
         gamma=gamma,
@@ -37,16 +37,16 @@ def test_reward_shaper():
     )
 
     shaper.reset(-1)
-    assert shaper.step(-1, False) == 0
-    assert shaper.step(0, False) == 0.5
-    assert shaper.step(2, False) == 0.5
-    assert shaper.step(2, False) == -1.5
-    assert shaper.step(2, True) == -3
+    assert shaper.step(-1, 0.0, False) == 0
+    assert shaper.step(0, 0.0, False) == 0.5
+    assert shaper.step(2, 0.0, False) == 0.5
+    assert shaper.step(2, 0.0, False) == -1.5
+    assert shaper.step(2, 0.0, True) == -3
 
 
 def test_null_shaper():
     """Test null reward shaping."""
-    shaper = RewardShaper(
+    shaper = ValueFunctionRS(
         value_function=lambda _: 0.0,
         mapping_function=lambda x: x,
         gamma=0.9,
@@ -54,6 +54,6 @@ def test_null_shaper():
     )
 
     shaper.reset(-1)
-    assert shaper.step(-1, False) == 0.0
-    assert shaper.step(2, False) == 0.0
-    assert shaper.step(3, False) == 0.0
+    assert shaper.step(-1, 0.0, False) == 0.0
+    assert shaper.step(2, 0.0, False) == 0.0
+    assert shaper.step(3, 0.0, False) == 0.0

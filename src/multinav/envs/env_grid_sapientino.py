@@ -37,20 +37,20 @@ from multinav.algorithms.agents import ValueFunctionModel
 from multinav.envs import sapientino_defs
 from multinav.envs.env_cont_sapientino import Fluents
 from multinav.envs.temporal_goals import SapientinoGoal
-from multinav.helpers.gym import RewardShaper, StateH, StateL
+from multinav.helpers.reward_shaping import StateH, StateL, ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper
 from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
 
-class GridSapientinoRewardShaper(RewardShaper):
+class GridSapientinoRewardShaper(ValueFunctionRS):
     """Reward shaper for grid Sapientino."""
 
-    def _value_function_callable(self, state):
+    def __value_function_callable(self, state):
         return self.value_function_table[state]
 
-    def _mapping_function(self, state):
+    def __mapping_function(self, state):
         agent_state, automata_states = state[0], state[1:]
         color = agent_state["color"]
         return (color,) + tuple(*automata_states)
@@ -58,7 +58,13 @@ class GridSapientinoRewardShaper(RewardShaper):
     def __init__(self, value_function_table, gamma):
         """Initialize the Sapientino reward shaper."""
         self.value_function_table = value_function_table
-        super().__init__(self._value_function_callable, self._mapping_function, gamma)
+        ValueFunctionRS.__init__(
+            self,
+            value_function=self.__value_function_callable,
+            mapping_function=self.__mapping_function,
+            gamma=gamma,
+            zero_terminal_state=False,
+        )
 
 
 def generate_grid(
@@ -92,7 +98,7 @@ def generate_grid(
     output_file.write_text(content)
 
 
-def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
+def _load_reward_shaper(path: str, gamma: float) -> ValueFunctionRS:
     """Load a reward shaper.
 
     This loads a saved agent for `AbstractSapientinoTemporalGoal` then
@@ -114,10 +120,11 @@ def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
         return (color,) + tuple(*automata_states)
 
     # Shaper
-    shaper = RewardShaper(
+    shaper = ValueFunctionRS(
         value_function=lambda s: agent.value_function[s],
         mapping_function=_map,
         gamma=gamma,
+        zero_terminal_state=False,
     )
 
     return shaper

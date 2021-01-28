@@ -42,11 +42,6 @@ Reward = float
 Done = bool
 Transition = Tuple[Probability, State, Reward, Done]
 Transitions = Dict[State, Dict[Action, List[Transition]]]
-# Other aliases
-StateL = State
-StateH = State
-
-logger = logging.getLogger(__name__)
 
 
 def from_discrete_env_to_graphviz(
@@ -201,73 +196,3 @@ def combine_boxes(*spaces: Box) -> Box:
     highs = np.concatenate([space.high for space in spaces])
 
     return Box(lows, highs)
-
-
-class RewardShaper:
-    r"""A Reward shaper computes a modified reward.
-
-    It takes in input:
-    - a value function on the domain of states H.
-    - a mapping function of states L -> H.
-    The reward shaping applied to l \in L is computed on the value function
-    of the corresponding l -> h.
-    """
-
-    def __init__(
-        self,
-        value_function: Callable[[StateH], float],
-        mapping_function: Callable[[StateL], StateH],
-        gamma: float,
-        zero_terminal_state: bool = False,
-    ):
-        """
-        Initialize the reward shaping wrapper.
-
-        :param value_function: the value function.
-        :param mapping_function: the mapping function.
-        :param gamma: MDP discount factor.
-        :param zero_terminal_state: if the terminal state of
-          a trajectory should have potential equal to zero.
-          For details, please see:
-            http://www.ifaamas.org/Proceedings/aamas2017/pdfs/p565.pdf
-        """
-        self.value_function = value_function
-        self.mapping_function = mapping_function
-        self.gamma = gamma
-        self.zero_terminal_state = zero_terminal_state
-
-        self._last_state: StateL = None
-
-    def reset(self, state: StateL):
-        """Reset the environment.
-
-        :param state: state returned by env.reset().
-        """
-        self._last_state = state
-
-    def step(self, state_p: StateL, done: bool) -> float:
-        """Do a step, and get shaping reward.
-
-        :param state_p: new state of last transition on the environment.
-        :param done: is the new state terminal?
-        :return: shaping reward, it should be added to the original reward.
-        """
-        previous_state = self.mapping_function(self._last_state)
-        current_state = self.mapping_function(state_p)
-
-        v1 = self.value_function(previous_state)
-        v2 = self.value_function(current_state)
-        if done and self.zero_terminal_state:
-            # see http://www.ifaamas.org/Proceedings/aamas2017/pdfs/p565.pdf
-            v2 = 0
-        shaping_reward = self.gamma * v2 - v1
-
-        logger.debug(
-            "\n"
-            + f"  mapped s1: {previous_state}, value: {v1}\n"
-            + f"  mapped s2: {current_state}, value: {v2}\n"
-            + f"  shaping reward: {shaping_reward}\n"
-        )
-
-        self._last_state = state_p
-        return shaping_reward

@@ -47,7 +47,7 @@ from multinav.algorithms.agents import QFunctionModel
 from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
 from multinav.envs.temporal_goals import SapientinoGoal
-from multinav.helpers.gym import RewardShaper, StateH, StateL
+from multinav.helpers.reward_shaping import StateH, StateL, ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper
 from multinav.wrappers.sapientino import ContinuousRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
@@ -88,7 +88,7 @@ class Fluents(AbstractFluents):
         return PLInterpretation(true_fluents)
 
 
-def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
+def _load_reward_shaper(path: str, gamma: float) -> ValueFunctionRS:
     """Load a reward shaper.
 
     This loads a saved agent for `sapientino-grid` then
@@ -114,10 +114,11 @@ def _load_reward_shaper(path: str, gamma: float) -> RewardShaper:
         return np.amax(q)
 
     # Shaper
-    shaper = RewardShaper(
+    shaper = ValueFunctionRS(
         value_function=_valuefn,
         mapping_function=_map,
         gamma=gamma,
+        zero_terminal_state=False,
     )
 
     return shaper
