@@ -86,25 +86,26 @@ class PotentialRewardShaper(RewardShaper):
         self._gamma = gamma
         self._zero_terminal_state = zero_terminal_state
 
-        self._last_state: State = None
+        self._last_potential: float = None
 
     def reset(self, state: State):
         """See super."""
-        self._last_state = state
+        self._last_potential = self.potential_function(state)
+
+        logger.debug(f"Initial state: {state}, potential: {self._last_potential}")
 
     def step(self, state: State, reward: float, done: bool) -> float:
         """See super."""
         # Compute potentials
-        v1 = self.potential_function(self._last_state)
-        v2 = self.potential_function(state)
+        potential = self.potential_function(state)
         if done and self._zero_terminal_state:
-            v2 = 0
+            potential = 0
 
-        shaping_reward = self._gamma * v2 - v1
+        shaping_reward = self._gamma * potential - self._last_potential
 
-        logger.debug(f"State: {state}, value: {v2}, shaping: {shaping_reward}")
+        logger.debug(f"State: {state}, potential: {potential}, shaping: {shaping_reward}")
 
-        self._last_state = state
+        self._last_potential = potential
         return shaping_reward
 
 
@@ -218,3 +219,9 @@ class AutomatonRS(PotentialRewardShaper):
 
         # Tabular lookup
         return self.__potential_table[state[1][0]]
+
+    # def step(self, state: State, reward: float, done: bool) -> float:
+    #     """See super.step."""
+    #     # TODO: this doesn't log. Why with this it doesn't converge?
+    #     shaping_reward = PotentialRewardShaper.step(self, state, reward, done)
+    #     return shaping_reward - reward

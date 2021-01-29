@@ -55,7 +55,7 @@ def test_grid_sapientino_rb_q_learning(disable_debug_logging):
 
     Q = q_learning(env, total_timesteps=40000)
 
-    env = MyStatsRecorder(env)
+    env = MyStatsRecorder(env, gamma=0.9)
     rollout(env, policy=lambda _env, state: np.argmax(Q[state]))
 
     assert np.mean(env.episode_rewards) == 9.9

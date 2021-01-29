@@ -66,10 +66,10 @@ def test_automatonrs():
 
     shaper = AutomatonRS(dfa=dfa, gamma=1.0, rescale=False)
 
-    shaper.reset(("", 0))
-    assert shaper.step(("", 0), 0.0, False) == 0.0
-    assert shaper.step(("", 0), 0.0, False) == 0.0
-    assert shaper.step(("", 1), 0.0, False) == 1.0
-    assert shaper.step(("", 2), 0.0, False) == 1.0
-    assert shaper.step(("", 2), 0.0, False) == 0.0
-    assert shaper.step(("", "sink"), 0.0, False) == -3.0
+    shaper.reset(("", [0]))
+    assert shaper.step(("", [0]), 0.0, False) == 0.0
+    assert shaper.step(("", [0]), 0.0, False) == 0.0
+    assert shaper.step(("", [1]), 0.0, False) == 1.0
+    assert shaper.step(("", [2]), 0.0, False) == 1.0
+    assert shaper.step(("", [2]), 0.0, False) == 0.0
+    assert shaper.step(("", ["sink"]), 0.0, False) == -3.0
