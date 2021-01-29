@@ -81,7 +81,9 @@ class MyTemporalGoalWrapper(TemporalGoalWrapper):
         for tg in self.temp_goals:
             if tg.is_true():
                 reward += tg.reward
-        done = all(tg.is_true() for tg in self.temp_goals)
+        done = all(tg.is_true() for tg in self.temp_goals) or all(
+            tg.is_failed() for tg in self.temp_goals
+        )
         return state, reward, done, info
 
 

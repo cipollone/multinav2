@@ -20,6 +20,7 @@
 # along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Utilities for the OpenAI Gym wrappers."""
+import logging
 import shutil
 import time
 from pathlib import Path
@@ -32,6 +33,8 @@ from gym.spaces import Tuple as GymTuple
 from PIL import Image
 
 from multinav.helpers.callbacks import Callback
+
+logger = logging.getLogger(__name__)
 
 
 class MyMonitor(Wrapper):

@@ -178,16 +178,21 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     if params["shaping"]:
         # NOTE: This is likely to change, since we're experimenting
 
+        # From DFA
+        dfa_shaper = AutomatonRS(
+            goal=tg.automaton,
+            gamma=params["gamma"],
+            rescale=True,
+            cancel_reward=True,
+        )
+        env = RewardShapingWrapper(env, reward_shaper=dfa_shaper)
+
         # From previous level
         abstraction_shaper = _abs_sapientino_shaper(
             path=params["shaping"],
             gamma=params["gamma"],
         )
         env = RewardShapingWrapper(env, reward_shaper=abstraction_shaper)
-
-        # From DFA
-        dfa_shaper = AutomatonRS(dfa=tg.automaton, gamma=params["gamma"], rescale=True)
-        env = RewardShapingWrapper(env, reward_shaper=dfa_shaper)
 
     # Final features
     env = GridRobotFeatures(env)

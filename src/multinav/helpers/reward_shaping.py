@@ -25,7 +25,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Callable, Dict
 
-from pythomata.dfa import DFA
+from temprl.automata import RewardDFA
 
 from multinav.helpers.gym import State
 
@@ -86,7 +86,7 @@ class PotentialRewardShaper(RewardShaper):
         self._gamma = gamma
         self._zero_terminal_state = zero_terminal_state
 
-        self._last_potential: float = None
+        self._last_potential = 0.0
 
     def reset(self, state: State):
         """See super."""
@@ -103,7 +103,9 @@ class PotentialRewardShaper(RewardShaper):
 
         shaping_reward = self._gamma * potential - self._last_potential
 
-        logger.debug(f"State: {state}, potential: {potential}, shaping: {shaping_reward}")
+        logger.debug(
+            f"State: {state}, potential: {potential}, shaping: {shaping_reward}"
+        )
 
         self._last_potential = potential
         return shaping_reward
@@ -157,7 +159,7 @@ class AutomatonRS(PotentialRewardShaper):
     """Reward shaping based on a DFA.
 
     It can be applied to environments that have a single temporal goal wrapper
-    applied.
+    applied (make sure that reward shaping from TemporalGoal is off).
     The purpose of these rewards is to replace (or be summed to) the original
     reward generated when a temporal goal is complete. It is possible to proof
     that, for a class of temporal goals, these reward induce the same optimal
@@ -165,20 +167,34 @@ class AutomatonRS(PotentialRewardShaper):
     to the goal. It assumes that maximizing the policy is equivalent to
     reaching the final states. Rewards generated are negative, because they
     represent how bad is a state (how far from the goal).
+
+    Better not to apply reward shaping before this, because it can
+    interfere with cancel_reward option.
     """
 
-    def __init__(self, dfa: DFA, gamma: float, rescale: bool = True):
+    def __init__(
+        self,
+        goal: RewardDFA,
+        gamma: float,
+        rescale: bool = True,
+        cancel_reward: bool = False,
+    ):
         """Initialize.
 
-        :param dfa: the reward automaton. The reward associated to this
-            temporal goal must be positive.
+        :param goal: an automaton with associated reward.
         :param gamma: RL discount factor.
         :param rescale: if true, the potential function is scaled in [-1, 0]
+        :param cancel_reward: if true, cancels the original reward.
+            It should still converge to the same optimal policy.
         """
         # Init
-        self.__dfa = dfa
+        self.goal_automaton = goal
         self.__rescale = rescale
         self.__potential_table = self._compute_potential()
+        self.__cancel_reward = cancel_reward
+
+        if self.goal_automaton.reward <= 0:
+            logger.warning("The goal automaton has a negative reward associated.")
 
         # Super
         PotentialRewardShaper.__init__(
@@ -195,20 +211,20 @@ class AutomatonRS(PotentialRewardShaper):
             function.
         """
         # Distance from final states
-        distances: Dict[State, int] = self.__dfa.levels_to_accepting_states()
+        distances: Dict[State, int] = self.goal_automaton.levels_to_accepting_states()
         dist_max = max(distances.values())
         d_min = -dist_max - 1
 
         # Potential
         potential = {
             s: float(-distances[s]) if distances[s] >= 0 else float(d_min)
-            for s in self.__dfa.states
+            for s in self.goal_automaton.states
         }
 
-        logger.debug(f"DFA states potential: {potential}")
-
         if self.__rescale:
-            potential = {q: p / d_min for q, p in potential.items()}
+            potential = {q: p / abs(d_min) for q, p in potential.items()}
+
+        logger.debug(f"DFA states potential: {potential}")
 
         return potential
 
@@ -220,8 +236,15 @@ class AutomatonRS(PotentialRewardShaper):
         # Tabular lookup
         return self.__potential_table[state[1][0]]
 
-    # def step(self, state: State, reward: float, done: bool) -> float:
-    #     """See super.step."""
-    #     # TODO: this doesn't log. Why with this it doesn't converge?
-    #     shaping_reward = PotentialRewardShaper.step(self, state, reward, done)
-    #     return shaping_reward - reward
+    def step(self, state: State, reward: float, done: bool) -> float:
+        """See super.step."""
+        shaping_reward = PotentialRewardShaper.step(self, state, reward, done)
+        if done and reward > 0 and self.__cancel_reward:
+            # Cancel the original reward; assuming that we've reached the goal
+            if reward != self.goal_automaton.reward:
+                raise RuntimeError(
+                    "Expected a positive reward for complete temporal goal"
+                )
+            shaping_reward -= self.goal_automaton.reward
+            logger.debug(f"Removed goal reward {self.goal_automaton.reward}")
+        return shaping_reward
