@@ -117,7 +117,7 @@ def test_automatonrs():
     assert shaper.step(("", [1]), 0.0, False) == 1.0
     assert shaper.step(("", [3]), 0.0, False) == 1.0
     assert shaper.step(("", [3]), 0.0, False) == 0.0
-    assert shaper.step(("", [2]), 0.0, False) == -3.0
+    assert shaper.step(("", [2]), 0.0, False) == 0.0
 
     shaper = AutomatonRS(
         goal=tg.automaton,
@@ -128,4 +128,4 @@ def test_automatonrs():
 
     shaper.reset(("", [0]))
     shaper.step(("", [1]), 0.0, False)
-    assert np.isclose(shaper.step(("", [3]), 2.0, True), -1.6666, atol=1e-3)
+    assert np.isclose(shaper.step(("", [3]), 2.0, True), -1.5, atol=1e-3)

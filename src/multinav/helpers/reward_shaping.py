@@ -23,7 +23,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from temprl.automata import RewardDFA
 
@@ -204,7 +204,8 @@ class AutomatonRS(PotentialRewardShaper):
             zero_terminal_state=False,  # Policy invariance guaranteed
         )
 
-    def _compute_potential(self) -> Dict[int, float]:
+    # TODO: comment choice for terminal states
+    def _compute_potential(self) -> Dict[int, Optional[float]]:
         """Compute the potential function from the DFA.
 
         :return: a dictionary from automaton states to value of the potential
@@ -213,16 +214,17 @@ class AutomatonRS(PotentialRewardShaper):
         # Distance from final states
         distances: Dict[State, int] = self.goal_automaton.levels_to_accepting_states()
         dist_max = max(distances.values())
-        d_min = -dist_max - 1
 
         # Potential
         potential = {
-            s: float(-distances[s]) if distances[s] >= 0 else float(d_min)
+            s: float(-distances[s]) if distances[s] >= 0 else None
             for s in self.goal_automaton.states
         }
 
         if self.__rescale:
-            potential = {q: p / abs(d_min) for q, p in potential.items()}
+            potential = {
+                q: p / dist_max if p is not None else None for q, p in potential.items()
+            }
 
         logger.debug(f"DFA states potential: {potential}")
 
@@ -234,7 +236,13 @@ class AutomatonRS(PotentialRewardShaper):
         assert len(state[1]) == 1, "Expected only one temporal goal"
 
         # Tabular lookup
-        return self.__potential_table[state[1][0]]
+        potential = self.__potential_table[state[1][0]]
+
+        # Failure states are special
+        if potential is None:
+            potential = self._last_potential
+
+        return potential
 
     def step(self, state: State, reward: float, done: bool) -> float:
         """See super.step."""
