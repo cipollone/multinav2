@@ -129,3 +129,26 @@ def test_automatonrs():
     shaper.reset(("", [0]))
     shaper.step(("", [1]), 0.0, False)
     assert np.isclose(shaper.step(("", [3]), 2.0, True), -1.5, atol=1e-3)
+
+    # Summation
+    gamma = 0.99
+    shaper = AutomatonRS(
+        goal=tg.automaton,
+        gamma=gamma,
+        rescale=True,
+        cancel_reward=False,
+    )
+
+    shaper.reset(("", [0]))
+    rewards = []
+    states = np.random.randint(0, 4, size=30)
+    states[0] = 0
+    states[-1] = 3
+    for i in range(30):
+        if i < 29:
+            rewards.append(shaper.step(("", [states[i]]), 0.0, False))
+        if i == 29:
+            rewards.append(shaper.step(("", [states[i]]), 2.0, True))
+
+    return_ = sum(((gamma ** i) * r for i, r in enumerate(rewards)))
+    assert return_ == 1

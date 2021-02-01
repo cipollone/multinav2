@@ -50,9 +50,9 @@ from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
 from multinav.wrappers.temprl import BoxAutomataStates
 from multinav.wrappers.training import NormalizeEnvWrapper
-from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
+from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
 
-# TODO: reward normalization
+# TODO: reward normalization?
 
 # Default environments and algorithms parameters
 #   Always prefer to specify them with a json; do not rely on defaults.
@@ -60,10 +60,12 @@ default_parameters = dict(
     # Common
     resume_file=None,
     shaping=None,
+    dfa_shaping=False,
     episode_time_limit=100,
     learning_rate=5e-4,
     gamma=0.99,
     log_interval=100,  # In #of episodes
+    render=False,
     # DQN params
     batch_size=32,
     layers=[64, 64],
@@ -77,7 +79,6 @@ default_parameters = dict(
     save_freq=1000,
     total_timesteps=2000000,
     buffer_size=50000,
-    render=False,
     # Q params
     #   total_timesteps
     nb_episodes=1000,
@@ -144,18 +145,23 @@ def train(
             log_path=log_path,
         )
     elif env_name == "sapientino-cont":
+        env = env_cont_sapientino.make(params=params)
+        if params["render"]:
+            env = Renderer(env)
+
         trainer = TrainStableBaselines(
-            env=env_cont_sapientino.make(params=params),
+            env=env,
             params=params,
             model_path=model_path,
             log_path=log_path,
         )
     elif env_name == "sapientino-grid":
+        env = env_grid_sapientino.make(params=params, log_dir=log_path)
+        if params["render"]:
+            env = Renderer(env)
+
         trainer = TrainQ(
-            env=env_grid_sapientino.make(
-                params=params,
-                log_dir=log_path,
-            ),
+            env=env,
             params=params,
             model_path=model_path,
             log_path=log_path,

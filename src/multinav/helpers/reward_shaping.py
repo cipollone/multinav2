@@ -165,7 +165,7 @@ class AutomatonRS(PotentialRewardShaper):
     that, for a class of temporal goals, these reward induce the same optimal
     policies. The idea is to anticipate the rewards down the path that leads
     to the goal. It assumes that maximizing the policy is equivalent to
-    reaching the final states. Rewards generated are negative, because they
+    reaching the final states. Potentials are negative, because they
     represent how bad is a state (how far from the goal).
 
     Better not to apply reward shaping before this, because it can
@@ -204,9 +204,13 @@ class AutomatonRS(PotentialRewardShaper):
             zero_terminal_state=False,  # Policy invariance guaranteed
         )
 
-    # TODO: comment choice for terminal states
     def _compute_potential(self) -> Dict[int, Optional[float]]:
         """Compute the potential function from the DFA.
+
+        Failure states have a potential dynamically assigned, equal to
+        the potential of the previous state (the idea is: an error after some
+        correct steps is better than an error at the beginning).
+        Just testing with this.
 
         :return: a dictionary from automaton states to value of the potential
             function.

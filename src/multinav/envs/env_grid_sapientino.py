@@ -174,11 +174,8 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     # Time limit (this should be before reward shaping)
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
 
-    # Maybe apply reward shaping
-    if params["shaping"]:
-        # NOTE: This is likely to change, since we're experimenting
-
-        # From DFA
+    # Testing with DFA shaping
+    if params["dfa_shaping"]:
         dfa_shaper = AutomatonRS(
             goal=tg.automaton,
             gamma=params["gamma"],
@@ -187,7 +184,8 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         )
         env = RewardShapingWrapper(env, reward_shaper=dfa_shaper)
 
-        # From previous level
+    # Reward shaping on previous env
+    if params["shaping"]:
         abstraction_shaper = _abs_sapientino_shaper(
             path=params["shaping"],
             gamma=params["gamma"],

@@ -126,6 +126,8 @@ class MyStatsRecorder(gym.Wrapper):
         if done:
             self.save_complete()
 
+        logger.debug(f"state {state}, reward {reward}, done {done}, info {info}")
+
         return state, reward, done, info
 
     def save_complete(self):
@@ -144,6 +146,9 @@ class MyStatsRecorder(gym.Wrapper):
         self._rewards = 0
         self._discount = 1.0
         self._returns = 0.0
+
+        logger.debug(f"reset state {result}")
+
         return result
 
 
@@ -237,3 +242,19 @@ class AbstractSapientinoRenderer(Wrapper):
             self.__img.set_data(img_array)
         plt.pause(0.01)
         plt.draw()
+
+
+class Renderer(Wrapper):
+    """Just render the env while executing."""
+
+    def reset(self, **kwargs):
+        """Reset the env."""
+        obs = self.env.reset(**kwargs)
+        self.env.render()
+        return obs
+
+    def step(self, action):
+        """Gym interfact for step."""
+        ret = self.env.step(action)
+        self.env.render()
+        return ret
