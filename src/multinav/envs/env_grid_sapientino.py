@@ -124,7 +124,7 @@ def _abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
         value_function=lambda s: agent.value_function[s],
         mapping_function=_map,
         gamma=gamma,
-        zero_terminal_state=True,
+        zero_terminal_state=False,  # NOTE
     )
 
     return shaper
