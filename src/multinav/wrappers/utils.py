@@ -24,7 +24,7 @@ import logging
 import shutil
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import gym
 import matplotlib.pyplot as plt
@@ -104,6 +104,11 @@ class MyStatsRecorder(gym.Wrapper):
         self._discount = None
         self._returns = None
         self._done = False
+
+        # Extra attributes
+        self._episode_td_max: List[float] = []
+        self._td_max = 0.0
+
         self._set_attributes()
 
     def _set_attributes(self):
@@ -113,6 +118,8 @@ class MyStatsRecorder(gym.Wrapper):
         setattr(self, self._prefix + "episode_returns", self._episode_returns)
         setattr(self, self._prefix + "total_steps", self._total_steps)
         setattr(self, self._prefix + "timestamps", self._timestamps)
+
+        setattr(self, self._prefix + "episode_td_max", self._episode_td_max)
 
     def step(self, action):
         """Do a step."""
@@ -138,6 +145,8 @@ class MyStatsRecorder(gym.Wrapper):
             self._episode_returns.append(float(self._returns))
             self._timestamps.append(time.time())
 
+            self._episode_td_max.append(self._td_max)
+
     def reset(self, **kwargs):
         """Do reset."""
         result = super().reset(**kwargs)
@@ -147,9 +156,24 @@ class MyStatsRecorder(gym.Wrapper):
         self._discount = 1.0
         self._returns = 0.0
 
+        self._td_max = 0.0
+
         logger.debug(f"reset state {result}")
 
         return result
+
+    def update_extras(self, *, td: Optional[float] = None):
+        """Update the value of extra logs.
+
+        These variables are upted with the given values.
+        At the end of the episode they will be available along with other
+        logs. This is necessary for quantities that cannot be computed
+        from the environment.
+
+        :param td: temporal difference error
+        """
+        if td is not None and td > self._td_max:
+            self._td_max = td
 
 
 class SingleAgentWrapper(Wrapper):

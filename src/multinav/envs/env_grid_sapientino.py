@@ -178,7 +178,6 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     if params["dfa_shaping"]:
         dfa_shaper = AutomatonRS(
             goal=tg.automaton,
-            gamma=params["gamma"],
             rescale=True,
             cancel_reward=True,
         )

@@ -20,13 +20,16 @@
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Q-Learning implementation."""
+import logging
 import sys
 from collections import defaultdict
 from functools import partial
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional
 
 import gym
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def _random_action(nb_actions):
@@ -49,10 +52,13 @@ def q_learning(
     epsilon_decay: bool = False,
     epsilon_end: float = 0.0,
     learning_rate_end: float = 0.0,
+    update_extras: Optional[Callable] = None,
 ) -> Dict[Any, np.ndarray]:
     """
     Learn a Q-function from a Gym env using vanilla Q-Learning.
 
+    :param update_extras: an optional callable that can be used to
+        log values during training.
     :return the Q function: a dictionary from states to array of Q values for every action.
     """
     # Vars
@@ -76,12 +82,25 @@ def q_learning(
             state = env.reset()
             done = False
 
+        # Step
         action = choose_action(state)
         state2, reward, done, _info = env.step(action)
-        Q[state][action] += alpha * (
-            reward + gamma * np.max(Q[state2]) - Q[state][action]
+
+        # Compute update
+        td_update = reward + gamma * np.max(Q[state2]) - Q[state][action]
+
+        logger.debug(
+            f"Q[{state}][{action}] = {Q[state][action]} "
+            f"-> {reward + gamma * np.max(Q[state2])}"
         )
+
+        # Apply
+        Q[state][action] += alpha * td_update
         state = state2
+
+        # Log
+        if update_extras:
+            update_extras(td=abs(td_update))
 
         # Decays
         if step % 10 == 0:

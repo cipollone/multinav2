@@ -23,7 +23,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict
 
 from temprl.automata import RewardDFA
 
@@ -155,7 +155,7 @@ class ValueFunctionRS(PotentialRewardShaper):
         return potential
 
 
-class AutomatonRS(PotentialRewardShaper):
+class AutomatonRS(RewardShaper):
     """Reward shaping based on a DFA.
 
     It can be applied to environments that have a single temporal goal wrapper
@@ -170,47 +170,43 @@ class AutomatonRS(PotentialRewardShaper):
 
     Better not to apply reward shaping before this, because it can
     interfere with cancel_reward option.
+
+    This is not a proper reward shaping; rather it's just a potential based
+    reward function. This doesn't achieve invariance of returns and
+    doesn't follow the usual PBRS equation.
     """
 
     def __init__(
         self,
         goal: RewardDFA,
-        gamma: float,
         rescale: bool = True,
         cancel_reward: bool = False,
     ):
         """Initialize.
 
         :param goal: an automaton with associated reward.
-        :param gamma: RL discount factor.
         :param rescale: if true, the potential function is scaled in [-1, 0]
         :param cancel_reward: if true, cancels the original reward.
             It should still converge to the same optimal policy.
         """
+        # Super
+        RewardShaper.__init__(self)
+
         # Init
         self.goal_automaton = goal
         self.__rescale = rescale
         self.__potential_table = self._compute_potential()
         self.__cancel_reward = cancel_reward
+        self._last_potential = 0.0
 
         if self.goal_automaton.reward <= 0:
             logger.warning("The goal automaton has a negative reward associated.")
 
-        # Super
-        PotentialRewardShaper.__init__(
-            self,
-            potential_function=self._potential_function,
-            gamma=gamma,
-            zero_terminal_state=False,  # Policy invariance guaranteed
-        )
+        # TODO: maybe add a scale factor, so that the sum of rewards is
+        #  equal to the temporal goal (even though undiscounted..)
 
-    def _compute_potential(self) -> Dict[int, Optional[float]]:
+    def _compute_potential(self) -> Dict[int, float]:
         """Compute the potential function from the DFA.
-
-        Failure states have a potential dynamically assigned, equal to
-        the potential of the previous state (the idea is: an error after some
-        correct steps is better than an error at the beginning).
-        Just testing with this.
 
         :return: a dictionary from automaton states to value of the potential
             function.
@@ -218,45 +214,53 @@ class AutomatonRS(PotentialRewardShaper):
         # Distance from final states
         distances: Dict[State, int] = self.goal_automaton.levels_to_accepting_states()
         dist_max = max(distances.values())
+        d_min = -dist_max - 1
 
         # Potential
         potential = {
-            s: float(-distances[s]) if distances[s] >= 0 else None
+            s: float(-distances[s]) if distances[s] >= 0 else float(d_min)
             for s in self.goal_automaton.states
         }
 
         if self.__rescale:
-            potential = {
-                q: p / dist_max if p is not None else None for q, p in potential.items()
-            }
+            potential = {q: p / abs(d_min) for q, p in potential.items()}
 
         logger.debug(f"DFA states potential: {potential}")
 
         return potential
 
-    def _potential_function(self, state: State) -> float:
+    def potential_function(self, state: State) -> float:
         """Definition of the potential function."""
         assert len(state) == 2, "Expected a tuple of states: (env, automaton)"
         assert len(state[1]) == 1, "Expected only one temporal goal"
 
         # Tabular lookup
-        potential = self.__potential_table[state[1][0]]
+        return self.__potential_table[state[1][0]]
 
-        # Failure states are special
-        if potential is None:
-            potential = self._last_potential
+    def reset(self, state: State):
+        """See super."""
+        self._last_potential = self.potential_function(state)
 
-        return potential
+        logger.debug(f"Initial state: {state}, potential: {self._last_potential}")
 
     def step(self, state: State, reward: float, done: bool) -> float:
-        """See super.step."""
-        shaping_reward = PotentialRewardShaper.step(self, state, reward, done)
+        """See super."""
+        # Compute potentials
+        potential = self.potential_function(state)
+        shaping_reward = potential - self._last_potential
+        self._last_potential = potential
+
+        logger.debug(
+            f"State: {state}, potential: {potential}, reward: {shaping_reward}"
+        )
+
+        # Cancel the original reward; assuming that we've reached the goal
         if done and reward > 0 and self.__cancel_reward:
-            # Cancel the original reward; assuming that we've reached the goal
             if reward != self.goal_automaton.reward:
                 raise RuntimeError(
                     "Expected a positive reward for complete temporal goal"
                 )
             shaping_reward -= self.goal_automaton.reward
             logger.debug(f"Removed goal reward {self.goal_automaton.reward}")
+
         return shaping_reward

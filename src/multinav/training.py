@@ -347,7 +347,7 @@ class TrainQ(Trainer):
         env = CallbackWrapper(env=env, callback=self.callbacks)
 
         # Log properties
-        self._log_properties = ["episode_lengths", "episode_returns", "episode_rewards"]
+        self._log_properties = ["episode_lengths", "episode_returns", "episode_td_max"]
         self._draw_fig, self._draw_axes = plt.subplots(
             nrows=len(self._log_properties), ncols=1, figsize=(20, 12)
         )
@@ -375,6 +375,7 @@ class TrainQ(Trainer):
             epsilon_decay=True,
             learning_rate_end=self.params["learning_rate_end"],
             epsilon_end=self.params["epsilon_end"],
+            update_extras=self.env.update_extras,
         )
 
         # Save
