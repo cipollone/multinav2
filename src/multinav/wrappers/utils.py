@@ -20,10 +20,11 @@
 # along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Utilities for the OpenAI Gym wrappers."""
+import logging
 import shutil
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import gym
 import matplotlib.pyplot as plt
@@ -32,6 +33,8 @@ from gym.spaces import Tuple as GymTuple
 from PIL import Image
 
 from multinav.helpers.callbacks import Callback
+
+logger = logging.getLogger(__name__)
 
 
 class MyMonitor(Wrapper):
@@ -81,7 +84,7 @@ class MyMonitor(Wrapper):
 class MyStatsRecorder(gym.Wrapper):
     """Stats recorder."""
 
-    def __init__(self, env: gym.Env, prefix: str = ""):
+    def __init__(self, env: gym.Env, gamma: float, prefix: str = ""):
         """
         Initialize stats recorder.
 
@@ -90,21 +93,33 @@ class MyStatsRecorder(gym.Wrapper):
         """
         super().__init__(env)
         self._prefix = prefix
+        self._gamma = gamma
         self._episode_lengths: List[int] = []
         self._episode_rewards: List[float] = []
+        self._episode_returns: List[float] = []
         self._timestamps: List[float] = []
         self._steps = None
         self._total_steps = 0
         self._rewards = None
+        self._discount = None
+        self._returns = None
         self._done = False
+
+        # Extra attributes
+        self._episode_td_max: List[float] = []
+        self._td_max = 0.0
+
         self._set_attributes()
 
     def _set_attributes(self):
         """Set main attributes with the prefix."""
         setattr(self, self._prefix + "episode_lengths", self._episode_lengths)
         setattr(self, self._prefix + "episode_rewards", self._episode_rewards)
+        setattr(self, self._prefix + "episode_returns", self._episode_returns)
         setattr(self, self._prefix + "total_steps", self._total_steps)
         setattr(self, self._prefix + "timestamps", self._timestamps)
+
+        setattr(self, self._prefix + "episode_td_max", self._episode_td_max)
 
     def step(self, action):
         """Do a step."""
@@ -112,9 +127,13 @@ class MyStatsRecorder(gym.Wrapper):
         self._steps += 1
         self._total_steps += 1
         self._rewards += reward
+        self._returns += self._discount * reward
+        self._discount *= self._gamma
         self._done = done
         if done:
             self.save_complete()
+
+        logger.debug(f"state {state}, reward {reward}, done {done}, info {info}")
 
         return state, reward, done, info
 
@@ -123,7 +142,10 @@ class MyStatsRecorder(gym.Wrapper):
         if self._steps is not None:
             self._episode_lengths.append(self._steps)
             self._episode_rewards.append(float(self._rewards))
+            self._episode_returns.append(float(self._returns))
             self._timestamps.append(time.time())
+
+            self._episode_td_max.append(self._td_max)
 
     def reset(self, **kwargs):
         """Do reset."""
@@ -131,7 +153,27 @@ class MyStatsRecorder(gym.Wrapper):
         self._done = False
         self._steps = 0
         self._rewards = 0
+        self._discount = 1.0
+        self._returns = 0.0
+
+        self._td_max = 0.0
+
+        logger.debug(f"reset state {result}")
+
         return result
+
+    def update_extras(self, *, td: Optional[float] = None):
+        """Update the value of extra logs.
+
+        These variables are upted with the given values.
+        At the end of the episode they will be available along with other
+        logs. This is necessary for quantities that cannot be computed
+        from the environment.
+
+        :param td: temporal difference error
+        """
+        if td is not None and td > self._td_max:
+            self._td_max = td
 
 
 class SingleAgentWrapper(Wrapper):
@@ -224,3 +266,19 @@ class AbstractSapientinoRenderer(Wrapper):
             self.__img.set_data(img_array)
         plt.pause(0.01)
         plt.draw()
+
+
+class Renderer(Wrapper):
+    """Just render the env while executing."""
+
+    def reset(self, **kwargs):
+        """Reset the env."""
+        obs = self.env.reset(**kwargs)
+        self.env.render()
+        return obs
+
+    def step(self, action):
+        """Gym interfact for step."""
+        ret = self.env.step(action)
+        self.env.render()
+        return ret

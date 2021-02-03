@@ -75,10 +75,6 @@ class SapientinoGoal(TemporalGoal):
         # Make automaton for this sequence
         automaton = self._make_sapientino_automaton(colors)
 
-        # Maybe save
-        if save_to:
-            automaton.to_dot(save_to)
-
         # Super
         TemporalGoal.__init__(
             self,
@@ -90,6 +86,10 @@ class SapientinoGoal(TemporalGoal):
             reward_shaping=False,
             zero_terminal_state=False,
         )
+
+        # Maybe save
+        if save_to:
+            self.automaton.to_dot(save_to)
 
     @staticmethod
     def _make_sapientino_automaton(colors: Sequence[str]) -> DFA:

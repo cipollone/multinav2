@@ -22,7 +22,7 @@
 """Helpers related to Reward shaping wrappers."""
 import gym
 
-from multinav.helpers.gym import RewardShaper
+from multinav.helpers.reward_shaping import RewardShaper
 
 
 class RewardShapingWrapper(gym.Wrapper):
@@ -36,7 +36,7 @@ class RewardShapingWrapper(gym.Wrapper):
     def step(self, action):
         """Do the step."""
         state, reward, done, info = super().step(action)
-        shaping_reward = self.reward_shaper.step(state, done)
+        shaping_reward = self.reward_shaper.step(state, reward, done)
         return state, reward + shaping_reward, done, info
 
     def reset(self, **kwargs):
