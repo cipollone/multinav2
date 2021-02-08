@@ -78,7 +78,7 @@ class NormalizeEnvWrapper(gym.Wrapper):
     def __getstate__(self) -> dict:
         """Get pickleable state."""
         state = self.__dict__.copy()
-        state.pop("env")  # Env is not pickleable
+        del state["env"]  # Env is not pickleable
         return state
 
     def __setstate__(self, state: dict):

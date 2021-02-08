@@ -247,7 +247,7 @@ class TrainStableBaselines(Trainer):
                 batch_size=params["batch_size"],
                 buffer_size=params["buffer_size"],
                 learning_starts=params["learning_starts"],
-                prioritized_replay=True,
+                prioritized_replay=False,  # Maybe inefficient implementation
                 exploration_fraction=params["exploration_fraction"],
                 exploration_final_eps=params["exploration_final_eps"],
                 exploration_initial_eps=params["exploration_initial_eps"],
@@ -263,6 +263,7 @@ class TrainStableBaselines(Trainer):
 
             # Restore normalizer and env
             normalized_env: NormalizeEnvWrapper = extra_model
+            normalized_env.set_training(False)
             normalized_env.set_env(env)
             flat_env = BoxAutomataStates(normalized_env)
 

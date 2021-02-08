@@ -108,20 +108,24 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
         """Get the observation space."""
         x_space: Box = self.robot_space.spaces["x"]
         y_space: Box = self.robot_space.spaces["y"]
-        velocity_space: Box = self.robot_space.spaces["velocity"]
         ang_velocity_space: Box = self.robot_space.spaces["ang_velocity"]
 
         # Try with cos, sin, instead
         cos_space = Box(-1, 1, shape=[1])
         sin_space = Box(-1, 1, shape=[1])
 
+        # Try with derivative in components
+        dx_space = Box(-float("inf"), float("inf"), shape=[1])
+        dy_space = Box(-float("inf"), float("inf"), shape=[1])
+
         # Join sapientino features
         sapientino_space = combine_boxes(
             x_space,
             y_space,
-            velocity_space,
             cos_space,
             sin_space,
+            dx_space,
+            dy_space,
             ang_velocity_space,
         )
 
@@ -130,13 +134,18 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
     def _process_state(self, state):
         """Process the observation."""
         robot_state, automata_states = state
+
+        cos = np.cos(robot_state["angle"])
+        sin = np.sin(robot_state["angle"])
+
         sapientino_state = np.array(
             [
                 robot_state["x"],
                 robot_state["y"],
-                robot_state["velocity"],
-                np.cos(robot_state["angle"]),
-                np.sin(robot_state["angle"]),
+                cos,
+                sin,
+                robot_state["velocity"] * cos,
+                robot_state["velocity"] * sin,
                 robot_state["ang_velocity"],
             ]
         )
