@@ -35,7 +35,7 @@ from stable_baselines.common.callbacks import CallbackList
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.algorithms.modular_dqn import ModularPolicy
-from multinav.algorithms.q_learning import q_learning
+from multinav.algorithms.q_learning import QLearning
 from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
 from multinav.envs import (
     env_abstract_sapientino,
@@ -357,27 +357,31 @@ class TrainQ(Trainer):
         # Stats recorder
         env = MyStatsRecorder(env, gamma=params["gamma"])
 
+        # Learner and bind to agent
+        learner = QLearning(
+            env=env,
+            total_timesteps=params["total_timesteps"],
+            alpha=params["learning_rate"],
+            eps=params["q_eps"],
+            gamma=params["gamma"],
+            learning_rate_decay=True,
+            learning_rate_end=params["learning_rate_end"],
+            epsilon_decay=True,
+            epsilon_end=params["epsilon_end"],
+        )
+        agent.q_function = learner.Q
+
         # Store
         self.env = env
         self.params = params
         self.agent = agent
+        self.learner = learner
         self._log_path = log_path
 
     def train(self):
         """Start training."""
         # Learn
-        self.agent.q_function = q_learning(
-            env=self.env,
-            total_timesteps=self.params["total_timesteps"],
-            alpha=self.params["learning_rate"],
-            eps=self.params["q_eps"],
-            gamma=self.params["gamma"],
-            learning_rate_decay=False,
-            epsilon_decay=True,
-            learning_rate_end=self.params["learning_rate_end"],
-            epsilon_end=self.params["epsilon_end"],
-            update_extras=self.env.update_extras,
-        )
+        self.learner.learn()
 
         # Save
         self.saver.save()
