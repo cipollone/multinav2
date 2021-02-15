@@ -52,13 +52,12 @@ from multinav.wrappers.temprl import BoxAutomataStates
 from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
 
-# TODO: reward normalization?
-
 # Default environments and algorithms parameters
 #   Always prefer to specify them with a json; do not rely on defaults.
 default_parameters = dict(
     # Common
     resume_file=None,
+    initialize_file=None,
     shaping=None,
     dfa_shaping=False,
     episode_time_limit=100,
@@ -128,7 +127,7 @@ def train(
         params.update(cmd_params)
 
     # Init output directories and save params
-    resuming = bool(params["resume_file"])
+    resuming = bool(params["resume_file"]) or bool(params["initialize_file"])
     model_path, log_path = prepare_directories(
         env_name=env_name,
         resuming=resuming,
@@ -192,6 +191,7 @@ class Trainer(ABC):
         pass
 
 
+# TODO: initialize_file is not supported
 class TrainStableBaselines(Trainer):
     """Define the agnent and training loop for stable_baselines."""
 
@@ -263,7 +263,7 @@ class TrainStableBaselines(Trainer):
 
             # Restore normalizer and env
             normalized_env: NormalizeEnvWrapper = extra_model
-            normalized_env.set_training(False)
+            normalized_env.set_training(False)  # TODO: Maybe this should be set in testing instead
             normalized_env.set_env(env)
             flat_env = BoxAutomataStates(normalized_env)
 
@@ -324,17 +324,29 @@ class TrainQ(Trainer):
         if "resume_file" in params and params["resume_file"]:
             raise TypeError("Resuming a trainingg is not supported for this algorithm.")
 
-        # Agent
-        agent = QFunctionModel(q_function=dict())
+        # Store
+        self.env = env
+        self.params = params
+        self._log_path = log_path
+
+        # New agent
+        if params["initialize_file"] is None:
+            self.agent = QFunctionModel(q_function=dict())
+            self._reinitialized = False
+
+        # Load agent
+        else:
+            self.agent = QFunctionModel.load(path=params["initialize_file"])
+            self._reinitialized = True
 
         # Saver
         self.saver = SaverCallback(
             save_freq=None,  # Not needed
-            saver=agent.save,
-            loader=agent.load,
+            saver=self.agent.save,
+            loader=self.agent.load,
             save_path=model_path,
             name_prefix="model",
-            model_ext=agent.file_ext,
+            model_ext=self.agent.file_ext,
             extra=None,
         )
 
@@ -345,7 +357,7 @@ class TrainQ(Trainer):
 
         # Wrap callbacks
         self.callbacks = CustomCallbackList([self.saver, self.logger])
-        env = CallbackWrapper(env=env, callback=self.callbacks)
+        self.env = CallbackWrapper(env=self.env, callback=self.callbacks)
 
         # Log properties
         self._log_properties = ["episode_lengths", "episode_returns", "episode_td_max"]
@@ -355,11 +367,11 @@ class TrainQ(Trainer):
         self._draw_lines = [None for i in range(len(self._log_properties))]
 
         # Stats recorder
-        env = MyStatsRecorder(env, gamma=params["gamma"])
+        self.env = MyStatsRecorder(self.env, gamma=params["gamma"])
 
-        # Learner and bind to agent
-        learner = QLearning(
-            env=env,
+        # Learner
+        self.learner = QLearning(
+            env=self.env,
             total_timesteps=params["total_timesteps"],
             alpha=params["learning_rate"],
             eps=params["q_eps"],
@@ -369,14 +381,11 @@ class TrainQ(Trainer):
             epsilon_decay=True,
             epsilon_end=params["epsilon_end"],
         )
-        agent.q_function = learner.Q
-
-        # Store
-        self.env = env
-        self.params = params
-        self.agent = agent
-        self.learner = learner
-        self._log_path = log_path
+        # Initialized from learner or reinitialized?
+        if not self._reinitialized:
+            self.agent.q_function = self.learner.Q
+        else:
+            self.learner.Q = self.agent.q_function
 
     def train(self):
         """Start training."""
