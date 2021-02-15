@@ -60,9 +60,12 @@ default_parameters = dict(
     initialize_file=None,
     shaping=None,
     dfa_shaping=False,
+    action_bias=None,
+    action_bias_eps=0.0,
     episode_time_limit=100,
     learning_rate=5e-4,
     gamma=0.99,
+    end_on_failure=False,
     log_interval=100,  # In #of episodes
     render=False,
     # DQN params
@@ -84,8 +87,6 @@ default_parameters = dict(
     q_eps=0.5,
     learning_rate_end=0.0,
     epsilon_end=0.05,
-    action_bias=None,
-    action_bias_eps=0.0,
     # ValueIteration params
     max_iterations=2000,
     # Ros agent env
@@ -198,7 +199,7 @@ class Trainer(ABC):
 class TrainStableBaselines(Trainer):
     """Define the agnent and training loop for stable_baselines."""
 
-    def __init__(self, env, params, model_path, log_path):
+    def __init__(self, env: Env, params: dict, model_path: str, log_path: str):
         """Initialize.
 
         :param env: gym environment. Assuming observation space is a tuple,
@@ -211,6 +212,20 @@ class TrainStableBaselines(Trainer):
         # Check
         if params["initialize_file"]:
             raise ValueError("Initialization not supported; use resuming option")
+
+        # Load a saved agent for the action bias
+        self.biased_agent: Optional[DQN] = None
+        if params["action_bias"]:
+            loading_params = dict(params)
+            loading_params["resume_file"] = params["action_bias"]
+            loading_params["action_bias"] = None
+
+            self.biased_agent = TrainStableBaselines(
+                env=env,
+                params=loading_params,
+                model_path=model_path,
+                log_path=log_path,
+            ).model
 
         # Callbacks
         checkpoint_callback = CustomCheckpointCallback(
@@ -246,6 +261,8 @@ class TrainStableBaselines(Trainer):
                     "layer_norm": params["layer_norm"],
                     "layers": params["layers"],
                     "shared_layers": params["shared_layers"],
+                    "action_bias": self.biased_agent,
+                    "action_bias_eps": params["action_bias_eps"],
                 },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
@@ -285,7 +302,7 @@ class TrainStableBaselines(Trainer):
         self.resuming = resuming
         self.saver = checkpoint_callback
         self.callbacks = all_callbacks
-        self.model = model
+        self.model: DQN = model
 
     def train(self):
         """Do train.
@@ -454,8 +471,10 @@ class TrainValueIteration(Trainer):
         :param log_path: directory where to save training logs.
         """
         # Check
-        if "resume_file" in params and params["resume_file"]:
+        if params["resume_file"]:
             raise TypeError("Resuming a trainingg is not supported for this algorithm.")
+        if params["action_bias"]:
+            raise TypeError("Action bias is not supported here.")
 
         # Agent
         agent = ValueFunctionModel(

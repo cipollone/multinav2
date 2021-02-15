@@ -204,7 +204,12 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         reward=params["tg_reward"],
         save_to=os.path.join(log_dir, "reward-dfa.dot") if log_dir else None,
     )
-    env = MyTemporalGoalWrapper(env=env, temp_goals=[tg])
+    env = MyTemporalGoalWrapper(
+        env=env,
+        temp_goals=[tg],
+        end_on_success=True,
+        end_on_failure=params["end_on_failure"],
+    )
 
     # Time limit (this should be before reward shaping)
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
