@@ -24,7 +24,7 @@ import logging
 import sys
 from collections import defaultdict
 from functools import partial
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import gym
 import numpy as np
@@ -51,6 +51,8 @@ class QLearning:
         learning_rate_end: float = 0.0,
         epsilon_decay: bool = False,
         epsilon_end: float = 0.0,
+        action_bias: Optional[QTableType] = None,
+        action_bias_eps: float = 0.0,
     ):
         """Initialize.
 
@@ -65,7 +67,14 @@ class QLearning:
         :param learning_rate_end: last value of alpha.
         :param epsilon_decay: whether epsilon should decay to epsilon_end.
         :param epsilon_end: last value of epsilon.
-        :return the Q function: a dictionary from states to array of Q values for every action.
+        :param action_bias: A Q function that is used just as bias to select
+            the actions during exploration. If you find this too deterministic
+            it's possible to use action_bias_eps.
+        :param action_bias_eps: During exploration, with eps probability
+            select an action with uniform distribution, idependently of
+            action_bias.
+        :return the Q function: a dictionary from states to array of Q values
+            for every action.
         """
         # Store
         self.env = env
@@ -77,6 +86,8 @@ class QLearning:
         self.learning_rate_end = learning_rate_end
         self.epsilon_decay = epsilon_decay
         self.epsilon_end = epsilon_end
+        self.action_bias = action_bias
+        self.action_bias_eps = action_bias_eps
 
         # Initialize
         self.__rng = np.random.default_rng()
@@ -165,9 +176,26 @@ class QLearning:
         return td_update
 
     def _choose_action(self, state: State) -> int:
-        """Select an action with epsilon greedy policy."""
+        """Select an action.
+
+        If action_bias is None, the policy is epsilon greedy.
+        Random actions are uniform, if action_bias is None, biased otherwise.
+        Biased actions means that they are chosed from action_bias, with
+        1-action_bias_eps probability.
+        """
+        # Exploration
         if self.__rng.random() < self.eps:
-            return self.__rng.integers(self.nb_actions)
+            bias_sample = self.__rng.random()
+
+            # Uniform probability
+            if self.action_bias is None or bias_sample < self.action_bias_eps:
+                return self.__rng.integers(self.nb_actions)
+
+            # Biased action
+            else:
+                return np.argmax(self.action_bias[state])
+
+        # Greedy
         else:
             return np.argmax(self.Q[state])
 

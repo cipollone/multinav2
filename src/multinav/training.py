@@ -84,6 +84,8 @@ default_parameters = dict(
     q_eps=0.5,
     learning_rate_end=0.0,
     epsilon_end=0.05,
+    action_bias=None,
+    action_bias_eps=0.0,
     # ValueIteration params
     max_iterations=2000,
     # Ros agent env
@@ -127,7 +129,9 @@ def train(
         params.update(cmd_params)
 
     # Init output directories and save params
-    resuming = bool(params["resume_file"]) or bool(params["initialize_file"])
+    resuming = any([
+        params["resume_file"], params["initialize_file"], params["action_bias"]
+    ])
     model_path, log_path = prepare_directories(
         env_name=env_name,
         resuming=resuming,
@@ -191,7 +195,6 @@ class Trainer(ABC):
         pass
 
 
-# TODO: initialize_file is not supported
 class TrainStableBaselines(Trainer):
     """Define the agnent and training loop for stable_baselines."""
 
@@ -205,6 +208,10 @@ class TrainStableBaselines(Trainer):
         :param model_path: directory where to save models.
         :param log_path: directory where to save tensorboard logs.
         """
+        # Check
+        if params["initialize_file"]:
+            raise ValueError("Initialization not supported; use resuming option")
+
         # Callbacks
         checkpoint_callback = CustomCheckpointCallback(
             save_path=model_path,
@@ -339,6 +346,11 @@ class TrainQ(Trainer):
             self.agent = QFunctionModel.load(path=params["initialize_file"])
             self._reinitialized = True
 
+        # Q function used just for action bias
+        self.biased_Q = None
+        if params["action_bias"]:
+            self.biased_Q = QFunctionModel.load(path=params["action_bias"]).q_function
+
         # Saver
         self.saver = SaverCallback(
             save_freq=None,  # Not needed
@@ -380,6 +392,8 @@ class TrainQ(Trainer):
             learning_rate_end=params["learning_rate_end"],
             epsilon_decay=True,
             epsilon_end=params["epsilon_end"],
+            action_bias=self.biased_Q,
+            action_bias_eps=params["action_bias_eps"],
         )
         # Initialized from learner or reinitialized?
         if not self._reinitialized:
