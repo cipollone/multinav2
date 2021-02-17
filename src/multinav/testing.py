@@ -75,24 +75,30 @@ def test(
     )
 
     if env_name == "ros":
-        # Make and load agent
-        model = TrainStableBaselines(
+        # Load agent and make env
+        trainer = TrainStableBaselines(
             env=env_ros_controls.make(params=params),
             params=params,
             model_path=model_path,
             log_path=log_path,
-        ).model
+        )
+        model = trainer.model
         env = model.env
+        # Freeze normalization weights
+        trainer.normalized_env.set_training(False)
 
     elif env_name == "sapientino-cont":
-        # Make and load agent
-        model = TrainStableBaselines(
+        # Load agent and make env
+        trainer = TrainStableBaselines(
             env=env_cont_sapientino.make(params=params),
             params=params,
             model_path=model_path,
             log_path=log_path,
-        ).model
+        )
+        model = trainer.model
         env = model.env
+        # Freeze normalization weights
+        trainer.normalized_env.set_training(False)
 
     elif env_name == "sapientino-grid":
         resume_file = params.pop("resume_file")
@@ -171,7 +177,7 @@ class Tester:
     def test(self):
         """Test loop."""
         # Episodes
-        for _ in range(1):
+        for _ in range(10):
 
             # Init episode
             obs = self.env.reset()

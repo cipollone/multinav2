@@ -35,7 +35,7 @@ from stable_baselines.common.callbacks import CallbackList
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.algorithms.modular_dqn import ModularPolicy
-from multinav.algorithms.q_learning import q_learning
+from multinav.algorithms.q_learning import QLearning
 from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
 from multinav.envs import (
     env_abstract_sapientino,
@@ -52,18 +52,20 @@ from multinav.wrappers.temprl import BoxAutomataStates
 from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
 
-# TODO: reward normalization?
-
 # Default environments and algorithms parameters
 #   Always prefer to specify them with a json; do not rely on defaults.
 default_parameters = dict(
     # Common
     resume_file=None,
+    initialize_file=None,
     shaping=None,
     dfa_shaping=False,
+    action_bias=None,
+    action_bias_eps=0.0,
     episode_time_limit=100,
     learning_rate=5e-4,
     gamma=0.99,
+    end_on_failure=False,
     log_interval=100,  # In #of episodes
     render=False,
     # DQN params
@@ -128,7 +130,9 @@ def train(
         params.update(cmd_params)
 
     # Init output directories and save params
-    resuming = bool(params["resume_file"])
+    resuming = any(
+        [params["resume_file"], params["initialize_file"], params["action_bias"]]
+    )
     model_path, log_path = prepare_directories(
         env_name=env_name,
         resuming=resuming,
@@ -195,7 +199,7 @@ class Trainer(ABC):
 class TrainStableBaselines(Trainer):
     """Define the agnent and training loop for stable_baselines."""
 
-    def __init__(self, env, params, model_path, log_path):
+    def __init__(self, env: Env, params: dict, model_path: str, log_path: str):
         """Initialize.
 
         :param env: gym environment. Assuming observation space is a tuple,
@@ -205,6 +209,24 @@ class TrainStableBaselines(Trainer):
         :param model_path: directory where to save models.
         :param log_path: directory where to save tensorboard logs.
         """
+        # Check
+        if params["initialize_file"]:
+            raise ValueError("Initialization not supported; use resuming option")
+
+        # Load a saved agent for the action bias
+        self.biased_agent: Optional[DQN] = None
+        if params["action_bias"]:
+            loading_params = dict(params)
+            loading_params["resume_file"] = params["action_bias"]
+            loading_params["action_bias"] = None
+
+            self.biased_agent = TrainStableBaselines(
+                env=env,
+                params=loading_params,
+                model_path=model_path,
+                log_path=log_path,
+            ).model
+
         # Callbacks
         checkpoint_callback = CustomCheckpointCallback(
             save_path=model_path,
@@ -239,6 +261,8 @@ class TrainStableBaselines(Trainer):
                     "layer_norm": params["layer_norm"],
                     "layers": params["layers"],
                     "shared_layers": params["shared_layers"],
+                    "action_bias": self.biased_agent,
+                    "action_bias_eps": params["action_bias_eps"],
                 },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
@@ -262,8 +286,7 @@ class TrainStableBaselines(Trainer):
             )
 
             # Restore normalizer and env
-            normalized_env: NormalizeEnvWrapper = extra_model
-            normalized_env.set_training(False)
+            normalized_env = extra_model
             normalized_env.set_env(env)
             flat_env = BoxAutomataStates(normalized_env)
 
@@ -278,7 +301,8 @@ class TrainStableBaselines(Trainer):
         self.resuming = resuming
         self.saver = checkpoint_callback
         self.callbacks = all_callbacks
-        self.model = model
+        self.model: DQN = model
+        self.normalized_env = normalized_env
 
     def train(self):
         """Do train.
@@ -324,17 +348,34 @@ class TrainQ(Trainer):
         if "resume_file" in params and params["resume_file"]:
             raise TypeError("Resuming a trainingg is not supported for this algorithm.")
 
-        # Agent
-        agent = QFunctionModel(q_function=dict())
+        # Store
+        self.env = env
+        self.params = params
+        self._log_path = log_path
+
+        # New agent
+        if params["initialize_file"] is None:
+            self.agent = QFunctionModel(q_function=dict())
+            self._reinitialized = False
+
+        # Load agent
+        else:
+            self.agent = QFunctionModel.load(path=params["initialize_file"])
+            self._reinitialized = True
+
+        # Q function used just for action bias
+        self.biased_Q = None
+        if params["action_bias"]:
+            self.biased_Q = QFunctionModel.load(path=params["action_bias"]).q_function
 
         # Saver
         self.saver = SaverCallback(
             save_freq=None,  # Not needed
-            saver=agent.save,
-            loader=agent.load,
+            saver=self.agent.save,
+            loader=self.agent.load,
             save_path=model_path,
             name_prefix="model",
-            model_ext=agent.file_ext,
+            model_ext=self.agent.file_ext,
             extra=None,
         )
 
@@ -345,7 +386,7 @@ class TrainQ(Trainer):
 
         # Wrap callbacks
         self.callbacks = CustomCallbackList([self.saver, self.logger])
-        env = CallbackWrapper(env=env, callback=self.callbacks)
+        self.env = CallbackWrapper(env=self.env, callback=self.callbacks)
 
         # Log properties
         self._log_properties = ["episode_lengths", "episode_returns", "episode_td_max"]
@@ -355,29 +396,32 @@ class TrainQ(Trainer):
         self._draw_lines = [None for i in range(len(self._log_properties))]
 
         # Stats recorder
-        env = MyStatsRecorder(env, gamma=params["gamma"])
+        self.env = MyStatsRecorder(self.env, gamma=params["gamma"])
 
-        # Store
-        self.env = env
-        self.params = params
-        self.agent = agent
-        self._log_path = log_path
+        # Learner
+        self.learner = QLearning(
+            env=self.env,
+            total_timesteps=params["total_timesteps"],
+            alpha=params["learning_rate"],
+            eps=params["q_eps"],
+            gamma=params["gamma"],
+            learning_rate_decay=True,
+            learning_rate_end=params["learning_rate_end"],
+            epsilon_decay=True,
+            epsilon_end=params["epsilon_end"],
+            action_bias=self.biased_Q,
+            action_bias_eps=params["action_bias_eps"],
+        )
+        # Initialized from learner or reinitialized?
+        if not self._reinitialized:
+            self.agent.q_function = self.learner.Q
+        else:
+            self.learner.Q = self.agent.q_function
 
     def train(self):
         """Start training."""
         # Learn
-        self.agent.q_function = q_learning(
-            env=self.env,
-            total_timesteps=self.params["total_timesteps"],
-            alpha=self.params["learning_rate"],
-            eps=self.params["q_eps"],
-            gamma=self.params["gamma"],
-            learning_rate_decay=False,
-            epsilon_decay=True,
-            learning_rate_end=self.params["learning_rate_end"],
-            epsilon_end=self.params["epsilon_end"],
-            update_extras=self.env.update_extras,
-        )
+        self.learner.learn()
 
         # Save
         self.saver.save()
@@ -427,8 +471,10 @@ class TrainValueIteration(Trainer):
         :param log_path: directory where to save training logs.
         """
         # Check
-        if "resume_file" in params and params["resume_file"]:
+        if params["resume_file"]:
             raise TypeError("Resuming a trainingg is not supported for this algorithm.")
+        if params["action_bias"]:
+            raise TypeError("Action bias is not supported here.")
 
         # Agent
         agent = ValueFunctionModel(

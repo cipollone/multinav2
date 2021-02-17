@@ -1,5 +1,5 @@
 """Modular DQN policy."""
-from typing import Tuple
+from typing import Optional, Tuple
 
 import gym
 import numpy as np
@@ -7,7 +7,11 @@ import tensorflow as tf
 import tensorflow.contrib.layers as tf_layers
 from gym.spaces import Box, Discrete
 from gym.spaces import Tuple as GymTuple
+from stable_baselines.deepq import DQN
 from stable_baselines.deepq.policies import DQNPolicy
+
+# Module random number generator
+_rng = np.random.default_rng()
 
 
 def split_agent_and_automata(ob_space: Box) -> Tuple[gym.Space, Discrete]:
@@ -52,11 +56,18 @@ class ModularPolicy(DQNPolicy):
         layer_norm=False,
         act_fun=tf.nn.relu,
         obs_phs=None,
+        action_bias: Optional[DQN] = None,
+        action_bias_eps: float = 0.0,
     ):
         """Initialize.
 
         See DQNPolicy for most parameters.
-        :param shared_layers: this number of layers is shared between all subnets.
+        :param shared_layers: this number of layers is shared between all
+            subnets.
+        :param action_bias: this should be an agent with same dimensions as
+            this one. It's choices will be used as a bias to select actions
+            while this agent is exploring.
+        :param action_bias_eps: the probability of an un-biased action.
         """
         super(ModularPolicy, self).__init__(
             sess,
@@ -73,6 +84,10 @@ class ModularPolicy(DQNPolicy):
         # Checks
         assert not dueling, "Dueling not supported."
         assert 0 <= shared_layers <= len(layers)
+
+        # Store
+        self._biased_agent = action_bias
+        self._biased_agent_eps = action_bias_eps
 
         # NOTE assumption: only one automaton component, and at the end.
         _agent_space, automaton_space = split_agent_and_automata(ob_space)
@@ -137,18 +152,36 @@ class ModularPolicy(DQNPolicy):
         self._setup_init()
 
     def step(self, obs, state=None, _mask=None, deterministic=True):
-        q_values, actions_proba = self.sess.run(
+        # TODO: I'm still training the first agent.. Double check biased
+        #   actions afterwards
+
+        assert _mask is None
+        assert state is None
+        batch_size = obs.shape[0]
+
+        # Compute deterministic action
+        q_values, _actions_proba = self.sess.run(
             [self.q_values, self.policy_proba], {self.obs_ph: obs}
         )
+
+        # Deterministic action
         if deterministic:
             actions = np.argmax(q_values, axis=1)
+
+        # Exploration
         else:
-            # Unefficient sampling (see original implementation)
-            actions = np.zeros((len(obs),), dtype=np.int64)
-            for action_idx in range(len(obs)):
-                actions[action_idx] = np.random.choice(
-                    self.n_actions, p=actions_proba[action_idx]
-                )
+            # Uniform probability
+            #   NOTE: before it was categorical based on current Q function
+            actions = _rng.integers(self.n_actions, size=batch_size)
+
+            # Biased actions
+            if self._biased_agent is not None:
+                biased_actions = self._biased_agent.policy.step(obs, deterministic=True)
+
+                bias_samples = _rng.random(size=batch_size)
+                biased_choices = bias_samples >= self._biased_agent_eps
+
+                actions = np.where(biased_choices, biased_actions, actions)
 
         return actions, q_values, None
 

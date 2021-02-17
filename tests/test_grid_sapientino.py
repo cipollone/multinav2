@@ -28,7 +28,7 @@ from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core.configurations import SapientinoConfiguration
 from gym_sapientino.core.types import Colors
 
-from multinav.algorithms.q_learning import q_learning
+from multinav.algorithms.q_learning import QLearning
 from multinav.envs.env_cont_sapientino import Fluents
 from multinav.envs.temporal_goals import SapientinoGoal
 from multinav.helpers.gym import rollout
@@ -53,7 +53,7 @@ def test_grid_sapientino_rb_q_learning(disable_debug_logging):
     env = GridRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
     env = TimeLimit(env, max_episode_steps=25)
 
-    Q = q_learning(env, total_timesteps=40000)
+    Q = QLearning(env, total_timesteps=40000).learn()
 
     env = MyStatsRecorder(env, gamma=0.9)
     rollout(env, policy=lambda _env, state: np.argmax(Q[state]))
