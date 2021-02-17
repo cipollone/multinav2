@@ -130,9 +130,9 @@ def train(
         params.update(cmd_params)
 
     # Init output directories and save params
-    resuming = any([
-        params["resume_file"], params["initialize_file"], params["action_bias"]
-    ])
+    resuming = any(
+        [params["resume_file"], params["initialize_file"], params["action_bias"]]
+    )
     model_path, log_path = prepare_directories(
         env_name=env_name,
         resuming=resuming,
@@ -286,8 +286,7 @@ class TrainStableBaselines(Trainer):
             )
 
             # Restore normalizer and env
-            normalized_env: NormalizeEnvWrapper = extra_model
-            normalized_env.set_training(False)  # TODO: Maybe this should be set in testing instead
+            normalized_env = extra_model
             normalized_env.set_env(env)
             flat_env = BoxAutomataStates(normalized_env)
 
@@ -303,6 +302,7 @@ class TrainStableBaselines(Trainer):
         self.saver = checkpoint_callback
         self.callbacks = all_callbacks
         self.model: DQN = model
+        self.normalized_env = normalized_env
 
     def train(self):
         """Do train.

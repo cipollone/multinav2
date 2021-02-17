@@ -151,8 +151,10 @@ class ModularPolicy(DQNPolicy):
         self.q_values = x
         self._setup_init()
 
-    # TODO: double check biased actions
     def step(self, obs, state=None, _mask=None, deterministic=True):
+        # TODO: I'm still training the first agent.. Double check biased
+        #   actions afterwards
+
         assert _mask is None
         assert state is None
         batch_size = obs.shape[0]

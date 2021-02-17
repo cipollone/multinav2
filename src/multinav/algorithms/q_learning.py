@@ -120,7 +120,13 @@ class QLearning:
 
             # Apply
             td_update = self._optimize_q_step(
-                self.Q, state, action, reward, state2, self.gamma, self.alpha,
+                self.Q,
+                state,
+                action,
+                reward,
+                state2,
+                self.gamma,
+                self.alpha,
             )
             state = state2
 
