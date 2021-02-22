@@ -271,7 +271,7 @@ class TrainStableBaselines(Trainer):
                 batch_size=params["batch_size"],
                 buffer_size=params["buffer_size"],
                 learning_starts=params["learning_starts"],
-                prioritized_replay=False,  # Maybe inefficient implementation
+                prioritized_replay=True,
                 exploration_fraction=params["exploration_fraction"],
                 exploration_final_eps=params["exploration_final_eps"],
                 exploration_initial_eps=params["exploration_initial_eps"],

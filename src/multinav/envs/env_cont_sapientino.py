@@ -118,7 +118,7 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         angular_acceleration=params["angular_acceleration"],
         max_velocity=params["max_velocity"],
         min_velocity=params["min_velocity"],
-        max_angular_vel=params["angular_acceleration"],
+        max_angular_vel=params["max_angular_vel"],
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 

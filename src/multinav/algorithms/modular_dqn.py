@@ -54,7 +54,7 @@ class ModularPolicy(DQNPolicy):
         reuse=False,
         dueling=False,
         layer_norm=False,
-        act_fun=tf.nn.relu,
+        act_fun=tf.nn.selu,
         obs_phs=None,
         action_bias: Optional[DQN] = None,
         action_bias_eps: float = 0.0,
