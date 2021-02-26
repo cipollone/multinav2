@@ -31,8 +31,8 @@ from gym import Env
 from matplotlib import pyplot as plt
 from PIL import Image
 from stable_baselines import DQN
-from stable_baselines.deepq.policies import LnMlpPolicy
 from stable_baselines.common.callbacks import CallbackList
+from stable_baselines.deepq.policies import LnMlpPolicy
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.algorithms.modular_dqn import ModularPolicy
@@ -48,7 +48,11 @@ from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
-from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
+from multinav.helpers.stable_baselines import (
+    CustomCheckpointCallback,
+    RendererCallback,
+    StatsLoggerCallback,
+)
 from multinav.wrappers.temprl import BoxAutomataStates
 from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
@@ -80,7 +84,8 @@ default_parameters = dict(
     exploration_fraction=0.8,
     exploration_initial_eps=1.0,
     exploration_final_eps=0.02,
-    save_freq=1000,
+    save_freq=100000,
+    log_freq=100000,
     total_timesteps=2000000,
     buffer_size=50000,
     # Q params
@@ -229,13 +234,23 @@ class TrainStableBaselines(Trainer):
                 log_path=log_path,
             ).model
 
+        # Collect statistics
+        #    (assuming future wrappers do not modify episodes)
+        env = MyStatsRecorder(env=env, gamma=params["gamma"])
+
         # Callbacks
         checkpoint_callback = CustomCheckpointCallback(
             save_path=model_path,
             save_freq=params["save_freq"],
             extra=None,
         )
-        callbacks_list = [checkpoint_callback]
+        stats_logger_callback = StatsLoggerCallback(
+            stats_recorder=env,
+            log_path=log_path,
+            log_freq=params["log_freq"],
+        )
+
+        callbacks_list = [checkpoint_callback, stats_logger_callback]
         if params["render"]:
             renderer_callback = RendererCallback()
             callbacks_list.append(renderer_callback)
@@ -305,6 +320,7 @@ class TrainStableBaselines(Trainer):
         self.params = params
         self.resuming = resuming
         self.saver = checkpoint_callback
+        self.logger = stats_logger_callback
         self.callbacks = all_callbacks
         self.model: DQN = model
         self.normalized_env = normalized_env
@@ -319,6 +335,7 @@ class TrainStableBaselines(Trainer):
             "last_save",
             lambda: self.saver.save(step=self.saver.num_timesteps),
         )
+        QuitWithResources.add("last_log", self.logger.log)
 
         # Start
         self.model.learn(
