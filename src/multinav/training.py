@@ -31,6 +31,7 @@ from gym import Env
 from matplotlib import pyplot as plt
 from PIL import Image
 from stable_baselines import DQN
+from stable_baselines.deepq.policies import LnMlpPolicy
 from stable_baselines.common.callbacks import CallbackList
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
@@ -245,26 +246,27 @@ class TrainStableBaselines(Trainer):
         resuming = bool(params["resume_file"])
         if not resuming:
             # Normalizer
-            normalized_env = NormalizeEnvWrapper(
-                env=env,
-                training=True,
-                entry=0,  # Only env features, not temporal goal state
-            )
-            flat_env = BoxAutomataStates(normalized_env)
+            normalized_env = None
+            #normalized_env = NormalizeEnvWrapper(
+            #    env=env,
+            #    training=True,
+            #    entry=0,  # Only env features, not temporal goal state
+            #)
+            flat_env = BoxAutomataStates(env)
             # Saving normalizer too
             checkpoint_callback.saver.extra_model = normalized_env
 
             # Agent
             model = DQN(
                 env=flat_env,
-                policy=ModularPolicy,
-                policy_kwargs={
-                    "layer_norm": params["layer_norm"],
-                    "layers": params["layers"],
-                    "shared_layers": params["shared_layers"],
-                    "action_bias": self.biased_agent,
-                    "action_bias_eps": params["action_bias_eps"],
-                },
+                policy=LnMlpPolicy,
+                # policy_kwargs={
+                #     "layer_norm": params["layer_norm"],
+                #     "layers": params["layers"],
+                #     "shared_layers": params["shared_layers"],
+                #     "action_bias": self.biased_agent,
+                #     "action_bias_eps": params["action_bias_eps"],
+                # },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
                 train_freq=params["train_freq"],
@@ -278,7 +280,7 @@ class TrainStableBaselines(Trainer):
                 exploration_final_eps=params["exploration_final_eps"],
                 exploration_initial_eps=params["exploration_initial_eps"],
                 tensorboard_log=log_path,
-                full_tensorboard_log=False,
+                full_tensorboard_log=True,
                 verbose=1,
             )
         else:
@@ -288,8 +290,9 @@ class TrainStableBaselines(Trainer):
             )
 
             # Restore normalizer and env
-            normalized_env = extra_model
-            normalized_env.set_env(env)
+            normalized_env = env
+            # normalized_env = extra_model
+            # normalized_env.set_env(env)
             flat_env = BoxAutomataStates(normalized_env)
 
             # Restore properties
