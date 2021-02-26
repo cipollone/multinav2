@@ -38,9 +38,9 @@ sapientino_color_sequence = ["red", "green", "blue"]
 
 # This is the shape and configuration of the sapientino map
 sapientino_map_str = """\
-|                  |
-|r                 |
-|          g      b|"""
+|             |
+| r           |
+|       g    b|"""
 
 
 # These mappings are often useful (from colors to ID and vice versa)

@@ -108,6 +108,9 @@ class ModularPolicy(DQNPolicy):
                 tf.cast(automaton_feature, tf.int64), shape=(-1, 1)
             )
 
+            # Logging
+            tf.summary.histogram("automaton_states", automaton_feature)
+
             # Net
             with tf.variable_scope("action_value"):
                 x = agent_features
@@ -133,7 +136,7 @@ class ModularPolicy(DQNPolicy):
 
                     # Activation
                     if layer_norm:
-                        x = tf_layers.layer_norm(x, center=False, scale=False)
+                        x = tf_layers.layer_norm(x, center=True, scale=False)
                     x = act_fun(x)
 
                 # Output layer
@@ -152,36 +155,30 @@ class ModularPolicy(DQNPolicy):
         self._setup_init()
 
     def step(self, obs, state=None, _mask=None, deterministic=True):
-        # TODO: I'm still training the first agent.. Double check biased
-        #   actions afterwards
+        # NOTE: this function is never executed during training.
 
         assert _mask is None
         assert state is None
         batch_size = obs.shape[0]
+
+        # TODO: removed action bias. You can find the logic in 8814774
+        #   but it needs to be implemented in the graph, not here.
+        assert self._biased_agent is None
 
         # Compute deterministic action
         q_values, _actions_proba = self.sess.run(
             [self.q_values, self.policy_proba], {self.obs_ph: obs}
         )
 
-        # Deterministic action
         if deterministic:
             actions = np.argmax(q_values, axis=1)
 
-        # Exploration
         else:
-            # Uniform probability
-            #   NOTE: before it was categorical based on current Q function
-            actions = _rng.integers(self.n_actions, size=batch_size)
-
-            # Biased actions
-            if self._biased_agent is not None:
-                biased_actions = self._biased_agent.policy.step(obs, deterministic=True)
-
-                bias_samples = _rng.random(size=batch_size)
-                biased_choices = bias_samples >= self._biased_agent_eps
-
-                actions = np.where(biased_choices, biased_actions, actions)
+            # Unefficient sampling
+            actions = np.zeros((len(obs),), dtype=np.int64)
+            for action_idx in range(len(obs)):
+                actions[action_idx] = np.random.choice(
+                    self.n_actions, p=_actions_proba[action_idx])
 
         return actions, q_values, None
 
