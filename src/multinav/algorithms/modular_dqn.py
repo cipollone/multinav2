@@ -159,7 +159,6 @@ class ModularPolicy(DQNPolicy):
 
         assert _mask is None
         assert state is None
-        batch_size = obs.shape[0]
 
         # TODO: removed action bias. You can find the logic in 8814774
         #   but it needs to be implemented in the graph, not here.

@@ -280,7 +280,7 @@ class TrainStableBaselines(Trainer):
                 exploration_final_eps=params["exploration_final_eps"],
                 exploration_initial_eps=params["exploration_initial_eps"],
                 tensorboard_log=log_path,
-                full_tensorboard_log=True,
+                full_tensorboard_log=False,
                 verbose=1,
             )
         else:
@@ -400,6 +400,12 @@ class TrainQ(Trainer):
         )
         self._draw_lines = [None for i in range(len(self._log_properties))]
 
+        # Create log file
+        self._log_file = os.path.join(log_path, "log_table.txt")
+        header = ", ".join(self._log_properties) + "\n"
+        with open(self._log_file, "w") as f:
+            f.write(header)
+
         # Stats recorder
         self.env = MyStatsRecorder(self.env, gamma=params["gamma"])
 
@@ -435,7 +441,7 @@ class TrainQ(Trainer):
         self.log()
 
     def log(self):
-        """Save logs to files."""
+        """Save logs to files and plots."""
         for i in range(len(self._log_properties)):
             name = self._log_properties[i]
             ax = self._draw_axes[i]
@@ -456,6 +462,19 @@ class TrainQ(Trainer):
         self._draw_fig.savefig(
             os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight"
         )
+
+        # Save to file
+        n_samples = len(data)
+        by_timestep = [
+            [getattr(self.env, name)[i] for name in self._log_properties]
+            for i in range(n_samples)
+        ]
+        lines = [
+            ", ".join([str(x) for x in values]) + "\n"
+            for values in by_timestep
+        ]
+        with open(self._log_file, "a") as f:
+            f.writelines(lines)
 
 
 class TrainValueIteration(Trainer):
