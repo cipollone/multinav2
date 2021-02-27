@@ -12,6 +12,7 @@ def main():
         description="RL on navigation environments with different abstractions"
     )
     parser.add_argument(
+        "-v",
         "--verbose",
         action="store_true",
         help="Print debug information",
@@ -53,6 +54,7 @@ def main():
         help="Test with an interactive episode (used for debugging).",
     )
     parser.add_argument(
+        "-d",
         "--deterministic",
         action="store_true",
         help="Test with a deterministic policy",

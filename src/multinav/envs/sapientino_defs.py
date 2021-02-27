@@ -34,13 +34,13 @@ from gym_sapientino.core.types import color2int as enum_color2int
 
 
 # This is the sequence of colors (positions) that the agent must visit
-sapientino_color_sequence = ["red", "green", "blue"]
+sapientino_color_sequence = ["red"]
 
 # This is the shape and configuration of the sapientino map
 sapientino_map_str = """\
+|          r  |
 |             |
-| r           |
-|       g    b|"""
+|             |"""
 
 
 # These mappings are often useful (from colors to ID and vice versa)
