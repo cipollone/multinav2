@@ -256,13 +256,12 @@ class TrainStableBaselines(Trainer):
         resuming = bool(params["resume_file"])
         if not resuming:
             # Normalizer
-            normalized_env = None
-            #normalized_env = NormalizeEnvWrapper(
-            #    env=env,
-            #    training=True,
-            #    entry=0,  # Only env features, not temporal goal state
-            #)
-            flat_env = BoxAutomataStates(env)
+            normalized_env = NormalizeEnvWrapper(
+                env=env,
+                training=True,
+                entry=0,  # Only env features, not temporal goal state
+            )
+            flat_env = BoxAutomataStates(normalized_env)
             # Saving normalizer too
             checkpoint_callback.saver.extra_model = normalized_env
 
@@ -300,9 +299,8 @@ class TrainStableBaselines(Trainer):
             )
 
             # Restore normalizer and env
-            normalized_env = env
-            # normalized_env = extra_model
-            # normalized_env.set_env(env)
+            normalized_env = extra_model
+            normalized_env.set_env(env)
             flat_env = BoxAutomataStates(normalized_env)
 
             # Restore properties

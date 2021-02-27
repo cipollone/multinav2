@@ -85,7 +85,7 @@ def test(
         model = trainer.model
         env = model.env
         # Freeze normalization weights
-        # trainer.normalized_env.set_training(False)
+        trainer.normalized_env.set_training(False)
 
     elif env_name == "sapientino-cont":
         # Load agent and make env
@@ -98,7 +98,7 @@ def test(
         model = trainer.model
         env = model.env
         # Freeze normalization weights
-        # trainer.normalized_env.set_training(False)
+        trainer.normalized_env.set_training(False)
 
     elif env_name == "sapientino-grid":
         resume_file = params.pop("resume_file")
