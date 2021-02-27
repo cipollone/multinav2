@@ -85,7 +85,6 @@ default_parameters = dict(
     exploration_initial_eps=1.0,
     exploration_final_eps=0.02,
     save_freq=100000,
-    log_freq=100000,
     total_timesteps=2000000,
     buffer_size=50000,
     # Q params
@@ -244,11 +243,7 @@ class TrainStableBaselines(Trainer):
             save_freq=params["save_freq"],
             extra=None,
         )
-        stats_logger_callback = StatsLoggerCallback(
-            stats_recorder=env,
-            log_path=log_path,
-            log_freq=params["log_freq"],
-        )
+        stats_logger_callback = StatsLoggerCallback(stats_recorder=env)
 
         callbacks_list = [checkpoint_callback, stats_logger_callback]
         if params["render"]:

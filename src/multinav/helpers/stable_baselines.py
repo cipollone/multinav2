@@ -1,7 +1,7 @@
 """Helper functions and classes related to the stable_baselines library."""
-import os
 from typing import Optional
 
+import tensorflow as tf
 from stable_baselines import DQN
 from stable_baselines.common import BaseRLModel
 from stable_baselines.common.callbacks import BaseCallback
@@ -80,63 +80,42 @@ class CustomCheckpointCallback(BaseCallback):
 class StatsLoggerCallback(BaseCallback):
     """Save statistics collected by MyStatsRecorder to a file."""
 
-    def __init__(
-        self,
-        stats_recorder: MyStatsRecorder,
-        log_path: str,
-        log_freq: int,
-    ):
+    def __init__(self, stats_recorder: MyStatsRecorder):
         """Initialize.
 
         :param stats_recorder: a MyStatsRecorder that wraps the env in use.
         :param log_path: directory where to save logs.
-        :param log_freq: number of steps between each save.
+        :param log_interval: number of episodes between each save.
         """
         # Super
         BaseCallback.__init__(self)
 
         # Store
         self._stats_recorder = stats_recorder
-        self._log_file = os.path.join(log_path, "log_table.txt")
-        self._log_freq = log_freq
-        self._log_properties = [
-            "episode_lengths",
-            "episode_returns",
-            "episode_td_max",
-        ]
-        self.__file_created = False
+        self._log_properties = ["episode_lengths", "episode_returns"]
+        self.__writer = None
 
     def log(self):
         """Save the current statistics."""
-        # TODO: tensorboard instead? or also save plot
-        # Initialize file
-        if not self.__file_created:
-            header = ", ".join(self._log_properties) + "\n"
-            with open(self._log_file, "w") as f:
-                f.write(header)
+        # Get values from last episode
+        last_episode_properties = {
+            name: getattr(self._stats_recorder, name)[-1]
+            for name in self._log_properties
+        }
 
-        # Timesteps
-        a_trace = getattr(self._stats_recorder, self._log_properties[0])
-        n_samples = len(a_trace)
+        # Log all
+        for name in last_episode_properties:
+            summary = tf.Summary(value=[
+                tf.Summary.Value(
+                    tag=name, simple_value=last_episode_properties[name]
+                )
+            ])
+            self.__writer.add_summary(summary, self.num_timesteps)
 
-        # Group by timestep, not property
-        by_timestep = [
-            [getattr(self._stats_recorder, name)[i]
-                for name in self._log_properties]
-            for i in range(n_samples)
-        ]
-
-        # String representation
-        lines = [
-            ", ".join([str(x) for x in values]) + "\n"
-            for values in by_timestep
-        ]
-
-        # Save
-        with open(self._log_file, "a") as f:
-            f.writelines(lines)
 
     def _on_step(self):
         """Save to file sometimes."""
-        if self.num_timesteps % self._log_freq == 0:
+        if "writer" in self.locals:
+            self.__writer = self.locals["writer"]
+        if self.__writer is not None and self.locals.get("done", False):
             self.log()
