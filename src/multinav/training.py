@@ -77,6 +77,7 @@ default_parameters = dict(
     batch_size=32,
     layers=[64, 64],
     shared_layers=1,
+    dueling=False,
     layer_norm=True,
     learning_starts=5000,
     train_freq=2,
@@ -268,14 +269,15 @@ class TrainStableBaselines(Trainer):
             # Agent
             model = DQN(
                 env=flat_env,
-                policy=LnMlpPolicy,
-                # policy_kwargs={
-                #     "layer_norm": params["layer_norm"],
-                #     "layers": params["layers"],
-                #     "shared_layers": params["shared_layers"],
-                #     "action_bias": self.biased_agent,
-                #     "action_bias_eps": params["action_bias_eps"],
-                # },
+                policy=ModularPolicy,
+                policy_kwargs={
+                    "layer_norm": params["layer_norm"],
+                    "layers": params["layers"],
+                    "shared_layers": params["shared_layers"],
+                    "dueling": params["dueling"],
+                    "action_bias": self.biased_agent,
+                    "action_bias_eps": params["action_bias_eps"],
+                },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
                 train_freq=params["train_freq"],

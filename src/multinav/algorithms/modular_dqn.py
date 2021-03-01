@@ -1,5 +1,5 @@
 """Modular DQN policy."""
-from typing import Optional, Tuple
+from typing import Optional, Sequence, Tuple
 
 import gym
 import numpy as np
@@ -82,15 +82,17 @@ class ModularPolicy(DQNPolicy):
             obs_phs=obs_phs,
         )
         # Checks
-        assert not dueling, "Dueling not supported."
         assert 0 <= shared_layers <= len(layers)
 
         # Store
         self._biased_agent = action_bias
         self._biased_agent_eps = action_bias_eps
+        self._shared_layers = shared_layers
+        self._layer_norm = layer_norm
+        self._act_fun = act_fun
 
         # NOTE assumption: only one automaton component, and at the end.
-        _agent_space, automaton_space = split_agent_and_automata(ob_space)
+        _agent_space, self._automaton_space = split_agent_and_automata(ob_space)
 
         # Default sizes
         if layers is None:
@@ -104,55 +106,100 @@ class ModularPolicy(DQNPolicy):
                 self.processed_obs[:, :-1],
                 self.processed_obs[:, -1],
             )
-            automaton_feature = tf.reshape(
-                tf.cast(automaton_feature, tf.int64), shape=(-1, 1)
-            )
 
             # Logging
             tf.summary.histogram("automaton_states", automaton_feature)
 
-            # Net
+            # State-action net
             with tf.variable_scope("action_value"):
-                x = agent_features
 
-                # Layers
-                for i, layer_size in enumerate(layers):
-
-                    # Shared weights
-                    if i < shared_layers:
-                        x = tf_layers.fully_connected(
-                            x,
-                            num_outputs=layer_size,
-                            activation_fn=None,
-                        )
-                    # Partitioned layers
-                    else:
-                        x = fully_connected_blocks(
-                            x,
-                            units=layer_size,
-                            blocks=automaton_space.n,
-                            name="dense_blocks" + str(i),
-                        )
-
-                    # Activation
-                    if layer_norm:
-                        x = tf_layers.layer_norm(x, center=True, scale=False)
-                    x = act_fun(x)
-
-                # Output layer
-                x = fully_connected_blocks(
-                    x,
-                    units=self.n_actions,
-                    blocks=automaton_space.n,
-                    name="dense_blocks_output",
+                action_scores = self._def_net(
+                    env_features=agent_features,
+                    automa_features=automaton_feature,
+                    layers=layers + [self.n_actions],
                 )
 
-                # Select q-values based on subtask
-                x = tf.transpose(x, (0, 2, 1))
-                x = tf.gather_nd(x, automaton_feature, batch_dims=1)
+            # Dueling duplicates the net
+            if self.dueling:
 
-        self.q_values = x
+                # State net
+                with tf.variable_scope("state_value"):
+
+                    state_scores = self._def_net(
+                        env_features=agent_features,
+                        automa_features=automaton_feature,
+                        layers=layers + [1],
+                    )
+
+                    # Combination according to "dueling"
+                    action_scores_mean = tf.reduce_mean(
+                        action_scores,
+                        axis=1,
+                        keepdims=True,
+                    )
+                    action_scores_centered = action_scores - action_scores_mean
+                    action_scores = state_scores + action_scores_centered
+
+        self.q_values = action_scores
         self._setup_init()
+
+    def _def_net(self, env_features, automa_features, layers: Sequence[int]):
+        """Define the main part of the network.
+
+        :param env_features: tensor of environment features with
+            shape (batch, n_features). 
+        :param automa_features: tensor of automaton states with
+            shape (batch, 1). env_features and automa_features, together,
+            constitute and observation of the environment.
+        :param layers: numer and size of each fully connected layer,
+            output included.
+        :return: a tensor of values, whose size is determined by layers[-1]
+        """
+        x = env_features
+
+        # As matrix of indexes 
+        automa_features = tf.reshape(
+            tf.cast(automa_features, tf.int64), shape=(-1, 1)
+        )
+
+        # Layers
+        for i, layer_size in enumerate(layers[:-1]):
+
+            # Shared weights
+            if i < self._shared_layers:
+                x = tf_layers.fully_connected(
+                    x,
+                    num_outputs=layer_size,
+                    activation_fn=None,
+                )
+            # Partitioned layers
+            else:
+                x = fully_connected_blocks(
+                    x,
+                    units=layer_size,
+                    blocks=self._automaton_space.n,
+                    name="dense_blocks" + str(i),
+                )
+
+            # Activation
+            if self._layer_norm:
+                x = tf_layers.layer_norm(x, center=True, scale=False)
+            x = self._act_fun(x)
+
+        # Output layer
+        x = fully_connected_blocks(
+            x,
+            units=layers[-1],
+            blocks=self._automaton_space.n,
+            name="dense_blocks_output",
+        )
+
+        # Select values based on subtask
+        x = tf.transpose(x, (0, 2, 1))
+        x = tf.gather_nd(x, automa_features, batch_dims=1)
+
+        return x
+
 
     def step(self, obs, state=None, _mask=None, deterministic=True):
         # NOTE: this function is never executed during training.
