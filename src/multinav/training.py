@@ -32,7 +32,6 @@ from matplotlib import pyplot as plt
 from PIL import Image
 from stable_baselines import DQN
 from stable_baselines.common.callbacks import CallbackList
-from stable_baselines.deepq.policies import LnMlpPolicy
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.algorithms.modular_dqn import ModularPolicy
@@ -156,7 +155,7 @@ def train(
             log_path=log_path,
         )
     elif env_name == "sapientino-cont":
-        env = env_cont_sapientino.make(params=params)
+        env = env_cont_sapientino.make(params=params, log_dir=log_path)
         if params["render"]:
             env = Renderer(env)
 
@@ -277,6 +276,7 @@ class TrainStableBaselines(Trainer):
                     "dueling": params["dueling"],
                     "action_bias": self.biased_agent,
                     "action_bias_eps": params["action_bias_eps"],
+                    # TODO: Maybe this is a DQN parameter
                 },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],

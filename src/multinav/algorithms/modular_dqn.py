@@ -30,7 +30,7 @@ def split_agent_and_automata(ob_space: Box) -> Tuple[gym.Space, Discrete]:
     agent_highs, automaton_high = highs[:-1], highs[-1]
 
     assert automaton_low == 0
-    nb_states = int(automaton_high) + 1
+    nb_states = int(automaton_high)
     return Box(agent_lows, agent_highs), Discrete(nb_states)
 
 
@@ -182,9 +182,11 @@ class ModularPolicy(DQNPolicy):
                 )
 
             # Activation
+            x = self._act_fun(x)
+
+            # Normalization
             if self._layer_norm:
                 x = tf_layers.layer_norm(x, center=True, scale=False)
-            x = self._act_fun(x)
 
         # Output layer
         x = fully_connected_blocks(
@@ -279,20 +281,19 @@ def fully_connected_blocks(
             name="block_kernel",
             shape=(features, units, blocks),
             dtype=tf.float32,
-            initializer=tf.initializers.glorot_uniform,
+            initializer=kernel_initializer,
             trainable=True,
         )
         bias = tf.get_variable(
             name="block_bias",
-            shape=(units, blocks),
+            shape=(1, units, blocks),
             dtype=tf.float32,
-            initializer=tf.initializers.zeros,
+            initializer=bias_initializer,
             trainable=True,
         )
 
         # Computation
         #   (b: batch, f: features, u: units, k: block)
-        x = tf.einsum("bfk,fuk->buk", x, kernel)
-        x = x + tf.expand_dims(bias, 0)
+        x = tf.einsum("bfk,fuk->buk", x, kernel) + bias
 
     return x
