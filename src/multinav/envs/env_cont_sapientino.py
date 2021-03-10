@@ -66,6 +66,9 @@ def grid_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
     # sapientino-grid's agent is a QFunctionModel
     agent = QFunctionModel.load(path=path)
 
+    # We don't want to use defaults anymore
+    q_function = dict(agent.q_function)
+
     # Define mapping
     def _map(state: StateL) -> StateH:
         # NOTE: this assumes that the automaton and ids remain the same!
@@ -74,16 +77,25 @@ def grid_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
         y = state[0]["discrete_y"]
         return (x, y, *state[1])
 
+    q_values: np.ndarray
+
+    # Define potential function
     def _valuefn(state: StateH):
-        q = agent.q_function[state]
-        return np.amax(q)
+        nonlocal q_values
+        if state in q_function:
+            q_values = q_function[state]
+        return np.amax(q_values)
+
+    # NOTE: using previous q_values is received as noise by the algorithm
+    #   because it's non-Markovian on the state. We expect it to be rare
+    #   and in irrelevant portions of the state space.
 
     # Shaper
     shaper = ValueFunctionRS(
         value_function=_valuefn,
         mapping_function=_map,
         gamma=gamma,
-        zero_terminal_state=False,  # NOTE
+        zero_terminal_state=False,  # NOTE: this is intentional
     )
 
     return shaper
