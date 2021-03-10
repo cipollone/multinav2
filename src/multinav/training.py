@@ -47,7 +47,11 @@ from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.misc import prepare_directories
-from multinav.helpers.stable_baselines import CustomCheckpointCallback, RendererCallback
+from multinav.helpers.stable_baselines import (
+    CustomCheckpointCallback,
+    RendererCallback,
+    StatsLoggerCallback,
+)
 from multinav.wrappers.temprl import BoxAutomataStates
 from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
@@ -72,13 +76,15 @@ default_parameters = dict(
     batch_size=32,
     layers=[64, 64],
     shared_layers=1,
+    dueling=False,
     layer_norm=True,
     learning_starts=5000,
     train_freq=2,
+    target_network_update_freq=10000,
     exploration_fraction=0.8,
     exploration_initial_eps=1.0,
     exploration_final_eps=0.02,
-    save_freq=1000,
+    save_freq=100000,
     total_timesteps=2000000,
     buffer_size=50000,
     # Q params
@@ -149,7 +155,7 @@ def train(
             log_path=log_path,
         )
     elif env_name == "sapientino-cont":
-        env = env_cont_sapientino.make(params=params)
+        env = env_cont_sapientino.make(params=params, log_dir=log_path)
         if params["render"]:
             env = Renderer(env)
 
@@ -227,13 +233,19 @@ class TrainStableBaselines(Trainer):
                 log_path=log_path,
             ).model
 
+        # Collect statistics
+        #    (assuming future wrappers do not modify episodes)
+        env = MyStatsRecorder(env=env, gamma=params["gamma"])
+
         # Callbacks
         checkpoint_callback = CustomCheckpointCallback(
             save_path=model_path,
             save_freq=params["save_freq"],
             extra=None,
         )
-        callbacks_list = [checkpoint_callback]
+        stats_logger_callback = StatsLoggerCallback(stats_recorder=env)
+
+        callbacks_list = [checkpoint_callback, stats_logger_callback]
         if params["render"]:
             renderer_callback = RendererCallback()
             callbacks_list.append(renderer_callback)
@@ -261,8 +273,10 @@ class TrainStableBaselines(Trainer):
                     "layer_norm": params["layer_norm"],
                     "layers": params["layers"],
                     "shared_layers": params["shared_layers"],
+                    "dueling": params["dueling"],
                     "action_bias": self.biased_agent,
                     "action_bias_eps": params["action_bias_eps"],
+                    # TODO: Maybe this is a DQN parameter
                 },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
@@ -271,7 +285,8 @@ class TrainStableBaselines(Trainer):
                 batch_size=params["batch_size"],
                 buffer_size=params["buffer_size"],
                 learning_starts=params["learning_starts"],
-                prioritized_replay=False,  # Maybe inefficient implementation
+                prioritized_replay=True,
+                target_network_update_freq=params["target_network_update_freq"],
                 exploration_fraction=params["exploration_fraction"],
                 exploration_final_eps=params["exploration_final_eps"],
                 exploration_initial_eps=params["exploration_initial_eps"],
@@ -300,6 +315,7 @@ class TrainStableBaselines(Trainer):
         self.params = params
         self.resuming = resuming
         self.saver = checkpoint_callback
+        self.logger = stats_logger_callback
         self.callbacks = all_callbacks
         self.model: DQN = model
         self.normalized_env = normalized_env
@@ -314,6 +330,7 @@ class TrainStableBaselines(Trainer):
             "last_save",
             lambda: self.saver.save(step=self.saver.num_timesteps),
         )
+        QuitWithResources.add("last_log", self.logger.log)
 
         # Start
         self.model.learn(
@@ -395,6 +412,12 @@ class TrainQ(Trainer):
         )
         self._draw_lines = [None for i in range(len(self._log_properties))]
 
+        # Create log file
+        self._log_file = os.path.join(log_path, "log_table.txt")
+        header = ", ".join(self._log_properties) + "\n"
+        with open(self._log_file, "w") as f:
+            f.write(header)
+
         # Stats recorder
         self.env = MyStatsRecorder(self.env, gamma=params["gamma"])
 
@@ -430,7 +453,7 @@ class TrainQ(Trainer):
         self.log()
 
     def log(self):
-        """Save logs to files."""
+        """Save logs to files and plots."""
         for i in range(len(self._log_properties)):
             name = self._log_properties[i]
             ax = self._draw_axes[i]
@@ -451,6 +474,19 @@ class TrainQ(Trainer):
         self._draw_fig.savefig(
             os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight"
         )
+
+        # Save to file
+        n_samples = len(data)
+        by_timestep = [
+            [getattr(self.env, name)[i] for name in self._log_properties]
+            for i in range(n_samples)
+        ]
+        lines = [
+            ", ".join([str(x) for x in values]) + "\n"
+            for values in by_timestep
+        ]
+        with open(self._log_file, "a") as f:
+            f.writelines(lines)
 
 
 class TrainValueIteration(Trainer):

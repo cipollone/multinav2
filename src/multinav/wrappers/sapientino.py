@@ -135,8 +135,8 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
         """Process the observation."""
         robot_state, automata_states = state
 
-        cos = np.cos(robot_state["angle"])
-        sin = np.sin(robot_state["angle"])
+        cos = np.cos(robot_state["angle"] / 180 * np.pi)
+        sin = np.sin(robot_state["angle"] / 180 * np.pi)
 
         sapientino_state = np.array(
             [
