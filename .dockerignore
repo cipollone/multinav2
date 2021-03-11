@@ -1,0 +1,4 @@
+# Ingnore everything except what I need to copy
+/*
+!/poetry.lock
+!/pyproject.toml
