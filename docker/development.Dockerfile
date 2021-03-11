@@ -37,4 +37,5 @@ RUN poetry install
 # I won't copy the project as I expect a bind mount in home
 
 # Entry point
-ENTRYPOINT ["bash", "-l", "-c", "tmux"]
+COPY docker/entrypoint.sh ./
+ENTRYPOINT ["bash", "-l", "./entrypoint.sh"]

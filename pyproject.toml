@@ -1,8 +1,11 @@
 [tool.poetry]
 name = "multinav"
 version = "0.1.2"
-description = "A Python project template."
-authors = ["MarcoFavorito <marco.favorito@gmail.com>"]
+description = "RL on multiple related navigation environments"
+authors = [
+	"Roberto Cipollone <cipollone.rt@gmail.com",
+	"Marco Favorito <marco.favorito@gmail.com>"
+]
 license = "GPL-3.0-or-later"
 
 [tool.poetry.dependencies]
