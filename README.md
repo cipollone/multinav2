@@ -53,8 +53,11 @@
 
 
 ## Preliminaries
+### Normal install
+This package can be installed normally with `pip install <src>[tf]`, where `<src>` can be this cloned repository or [https://github.com/cipollone/multinav.git](https://github.com/cipollone/multinav.git).
+If you omit the extra `[tf]`, TensorFlow is not installed as a dependency. This might be useful if you have a compatible Tensorflow installation already.
 
-Development mode install.
+### Development mode install.
 
 - Clone this repo with:
 ```
@@ -69,12 +72,12 @@ pip install poetry
 - Set up the virtual environment. 
 
 ```
-poetry install
+poetry install -E tf
 ```
+or omit the extra `-E ..` if you have a compatible Tensorflow already.
 
-- Now you can run parts of this software. For example
+- Now you can run parts of this software:
 ```
-poetry run python path/to/script.py
 poetry run python -m multinav train ...
 ```
 
