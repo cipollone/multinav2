@@ -1,5 +1,12 @@
 # Ingnore everything except what I need to copy
 /*
+
+# Copying files needed by a minimal install
 !/poetry.lock
 !/pyproject.toml
+!/setup.cfg/
+!/src/
+!/test/
+!/third_party/
+
 !/docker/

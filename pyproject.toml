@@ -3,7 +3,7 @@ name = "multinav"
 version = "0.1.2"
 description = "RL on multiple related navigation environments"
 authors = [
-	"Roberto Cipollone <cipollone.rt@gmail.com",
+	"Roberto Cipollone <cipollone.rt@gmail.com>",
 	"Marco Favorito <marco.favorito@gmail.com>"
 ]
 license = "GPL-3.0-or-later"

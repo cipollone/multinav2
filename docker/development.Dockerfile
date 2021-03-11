@@ -19,7 +19,8 @@ ARG PROJECT_TEMP_PATH="/opt/project-temp"
 # Apt-get installs
 RUN apt-get update -y && apt-get upgrade -y
 RUN apt-get install -y --no-install-recommends \
-	tmux htop git vim bash-completion
+	tmux htop git vim bash-completion \
+	cmake libopenmpi-dev python3-dev zlib1g-dev libgl1-mesa-glx graphviz
 
 # Install poetry 
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
@@ -28,14 +29,14 @@ ENV PATH="$POETRY_HOME/bin:$PATH"
 # Bug with non-bultin typing package
 RUN pip uninstall -y typing
 
-# Install dependencies
+# Install project
 RUN mkdir ${PROJECT_TEMP_PATH}
 WORKDIR ${PROJECT_TEMP_PATH}
-COPY poetry.lock pyproject.toml ./
+COPY . ./
 RUN poetry install 
 
 # I won't copy the project as I expect a bind mount in home
 
 # Entry point
-COPY docker/entrypoint.sh ./
-ENTRYPOINT ["bash", "-l", "./entrypoint.sh"]
+COPY docker/image-entrypoint.sh ./
+ENTRYPOINT ["bash", "-l", "./image-entrypoint.sh"]

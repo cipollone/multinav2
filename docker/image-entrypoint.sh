@@ -1,4 +1,7 @@
 #!/bin/bash
+
+# This is the main script of the docker image. Do not run this directly.
+
 tmux new-session -s main -d
 
 # The user is expected to attach to this same session
