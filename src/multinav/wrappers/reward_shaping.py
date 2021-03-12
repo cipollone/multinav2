@@ -26,16 +26,22 @@ from multinav.helpers.reward_shaping import RewardShaper
 
 
 class RewardShapingWrapper(gym.Wrapper):
-    """Wrapper for reward shaping."""
+    """Wrapper for reward shaping.
+
+    It sums the reward computed by a reward shaper. The original unmodified
+    reward is saved in `self.last_original_reward` at each step.
+    """
 
     def __init__(self, env, reward_shaper: RewardShaper):
         """Initialize the Gym wrapper."""
         super().__init__(env)
         self.reward_shaper = reward_shaper
+        self.last_original_reward = None
 
     def step(self, action):
         """Do the step."""
         state, reward, done, info = super().step(action)
+        self.last_original_reward = reward
         shaping_reward = self.reward_shaper.step(state, reward, done)
         return state, reward + shaping_reward, done, info
 
@@ -43,4 +49,5 @@ class RewardShapingWrapper(gym.Wrapper):
         """Reset the environment."""
         result = super().reset(**kwargs)
         self.reward_shaper.reset(result)
+        self.last_original_reward = None
         return result

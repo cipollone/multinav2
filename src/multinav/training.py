@@ -243,7 +243,8 @@ class TrainStableBaselines(Trainer):
             save_freq=params["save_freq"],
             extra=None,
         )
-        stats_logger_callback = StatsLoggerCallback(stats_recorder=env)
+        stats_logger_callback = StatsLoggerCallback(
+            stats_recorder=env, scope="env")
 
         callbacks_list = [checkpoint_callback, stats_logger_callback]
         if params["render"]:
