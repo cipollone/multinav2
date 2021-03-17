@@ -80,18 +80,22 @@ class CustomCheckpointCallback(BaseCallback):
 class StatsLoggerCallback(BaseCallback):
     """Save statistics collected by MyStatsRecorder to a file."""
 
-    def __init__(self, stats_recorder: MyStatsRecorder):
+    def __init__(
+        self,
+        stats_recorder: MyStatsRecorder,
+        scope: Optional[str] = None,
+    ):
         """Initialize.
 
         :param stats_recorder: a MyStatsRecorder that wraps the env in use.
-        :param log_path: directory where to save logs.
-        :param log_interval: number of episodes between each save.
+        :param scope: if given, all logs are grouped in a namescope.
         """
         # Super
         BaseCallback.__init__(self)
 
         # Store
         self._stats_recorder = stats_recorder
+        self._scope = scope
         self._log_properties = ["episode_lengths", "episode_returns"]
         self.__writer = None
 
@@ -103,15 +107,18 @@ class StatsLoggerCallback(BaseCallback):
             for name in self._log_properties
         }
 
+        # Names
+        scope = self._scope + "/" if self._scope else ""
+
         # Log all
         for name in last_episode_properties:
             summary = tf.Summary(value=[
                 tf.Summary.Value(
-                    tag=name, simple_value=last_episode_properties[name]
+                    tag=scope + name,
+                    simple_value=last_episode_properties[name]
                 )
             ])
             self.__writer.add_summary(summary, self.num_timesteps)
-
 
     def _on_step(self):
         """Save to file sometimes."""

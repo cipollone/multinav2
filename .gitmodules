@@ -4,3 +4,6 @@
 [submodule "third_party/gym-sapientino"]
 	path = third_party/gym-sapientino
 	url = https://github.com/whitemech/gym-sapientino/
+[submodule "third_party/stable-baselines"]
+	path = third_party/stable-baselines
+	url = git@github.com:cipollone/stable-baselines.git

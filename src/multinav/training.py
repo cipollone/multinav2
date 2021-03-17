@@ -52,6 +52,7 @@ from multinav.helpers.stable_baselines import (
     RendererCallback,
     StatsLoggerCallback,
 )
+from multinav.wrappers.reward_shaping import UnshapedEnv, UnshapedEnvWrapper
 from multinav.wrappers.temprl import BoxAutomataStates
 from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
@@ -63,6 +64,7 @@ default_parameters = dict(
     resume_file=None,
     initialize_file=None,
     shaping=None,
+    active_passive_agents=False,
     dfa_shaping=False,
     action_bias=None,
     action_bias_eps=0.0,
@@ -218,6 +220,11 @@ class TrainStableBaselines(Trainer):
         # Check
         if params["initialize_file"]:
             raise ValueError("Initialization not supported; use resuming option")
+        if params["action_bias"]:
+            raise ValueError("Action bias is not maintained here")
+
+        # Alias
+        original_env = env
 
         # Load a saved agent for the action bias
         self.biased_agent: Optional[DQN] = None
@@ -243,13 +250,38 @@ class TrainStableBaselines(Trainer):
             save_freq=params["save_freq"],
             extra=None,
         )
-        stats_logger_callback = StatsLoggerCallback(stats_recorder=env)
+        stats_logger_callback = StatsLoggerCallback(
+            stats_recorder=env, scope="env0")
 
         callbacks_list = [checkpoint_callback, stats_logger_callback]
         if params["render"]:
             renderer_callback = RendererCallback()
             callbacks_list.append(renderer_callback)
 
+        # If training a passive agent log this too
+        if params["active_passive_agents"]:
+
+            passive_stats_env = MyStatsRecorder(
+                env=UnshapedEnv(original_env.env),
+                gamma=params["gamma"],
+            )
+
+            passive_stats_callback = StatsLoggerCallback(
+                stats_recorder=passive_stats_env,
+                scope="env1",
+            )
+            callbacks_list.append(passive_stats_callback)
+
+            # Make it move with the original env
+            env = UnshapedEnvWrapper(
+                shaped_env=env,
+                unshaped_env=passive_stats_env,
+            )
+            original_reward_getter = env.get_reward  # alias
+        else:
+            original_reward_getter = None
+
+        # Combine callbacks
         all_callbacks = CallbackList(callbacks_list)
 
         # Define or load
@@ -274,9 +306,6 @@ class TrainStableBaselines(Trainer):
                     "layers": params["layers"],
                     "shared_layers": params["shared_layers"],
                     "dueling": params["dueling"],
-                    "action_bias": self.biased_agent,
-                    "action_bias_eps": params["action_bias_eps"],
-                    # TODO: Maybe this is a DQN parameter
                 },
                 gamma=params["gamma"],
                 learning_rate=params["learning_rate"],
@@ -290,6 +319,8 @@ class TrainStableBaselines(Trainer):
                 exploration_fraction=params["exploration_fraction"],
                 exploration_final_eps=params["exploration_final_eps"],
                 exploration_initial_eps=params["exploration_initial_eps"],
+                active_passive_agents=params["active_passive_agents"],
+                passive_reward_getter=original_reward_getter,
                 tensorboard_log=log_path,
                 full_tensorboard_log=False,
                 verbose=1,
@@ -310,6 +341,7 @@ class TrainStableBaselines(Trainer):
             model.num_timesteps = counters["step"]
             model.learning_starts = params["learning_starts"] + counters["step"]
             model.set_env(flat_env)
+            model.passive_reward_getter = original_reward_getter
 
         # Store
         self.params = params
@@ -344,6 +376,7 @@ class TrainStableBaselines(Trainer):
         self.saver.save(self.params["total_timesteps"])
 
 
+# TODO: two agents also here
 class TrainQ(Trainer):
     """Agent and training loop for Q learning."""
 
