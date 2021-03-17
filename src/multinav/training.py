@@ -278,6 +278,8 @@ class TrainStableBaselines(Trainer):
                 unshaped_env=passive_stats_env,
             )
             original_reward_getter = env.get_reward  # alias
+        else:
+            original_reward_getter = None
 
         # Combine callbacks
         all_callbacks = CallbackList(callbacks_list)
@@ -339,6 +341,7 @@ class TrainStableBaselines(Trainer):
             model.num_timesteps = counters["step"]
             model.learning_starts = params["learning_starts"] + counters["step"]
             model.set_env(flat_env)
+            model.passive_reward_getter = original_reward_getter
 
         # Store
         self.params = params
