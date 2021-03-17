@@ -402,15 +402,10 @@ class TrainQ(Trainer):
         self.params = params
         self._log_path = log_path
 
-        # New agent
-        if params["initialize_file"] is None:
-            self.agent = QFunctionModel(q_function=dict())
-            self._reinitialized = False
-
-        # Load agent
-        else:
-            self.agent = QFunctionModel.load(path=params["initialize_file"])
-            self._reinitialized = True
+        # Define agent(s)
+        self.agent = QFunctionModel(q_function=dict())
+        self.passive_agent = QFunctionModel(q_function=dict())
+        self._reinitialized = False
 
         # Q function used just for action bias
         self.biased_Q = None
@@ -427,8 +422,20 @@ class TrainQ(Trainer):
             save_path=model_path,
             name_prefix="model",
             model_ext=self.agent.file_ext,
-            extra=None,
+            extra=self.passive_agent.q_function,
         )
+
+        # Load agent
+        if params["initialize_file"] is not None:
+            self.agent, extra, _ = self.saver.load(
+                params["initialize_file"]
+            )
+            self.passive_agent.q_function = extra
+            # Update saver
+            self.saver.saver = self.agent.save
+            self.saver.loader = self.agent.load
+            self.saver.extra_model = extra
+            self._reinitialized = True
 
         # Logger
         self.logger = FnCallback(
@@ -440,17 +447,14 @@ class TrainQ(Trainer):
         self.env = CallbackWrapper(env=self.env, callback=self.callbacks)
 
         # Log properties
-        self._log_properties = ["episode_lengths", "episode_returns", "episode_td_max"]
-        self._draw_fig, self._draw_axes = plt.subplots(
-            nrows=len(self._log_properties), ncols=1, figsize=(20, 12)
-        )
-        self._draw_lines = [None for i in range(len(self._log_properties))]
-
-        # Create log file
-        self._log_file = os.path.join(log_path, "log_table.txt")
-        header = ", ".join(self._log_properties) + "\n"
-        with open(self._log_file, "w") as f:
-            f.write(header)
+        self._log_properties = [
+            "episode_lengths", "episode_returns", "episode_td_max"
+        ]
+        self._agent_plot_vars = {}
+        self._init_log("agent", self._agent_plot_vars)
+        if params["active_passive_agents"]:
+            self._passive_agent_plot_vars = {}
+            self._init_log("passive_agent", self._passive_agent_plot_vars)
 
         # Stats recorder
         self.env = MyStatsRecorder(self.env, gamma=params["gamma"])
@@ -472,6 +476,32 @@ class TrainQ(Trainer):
         )
         self.agent.q_function = self.learner.Q
 
+    def _init_log(self, name: str, variables: Dict[str, Any]):
+        """Initialize variables related to logging.
+
+        :param name: this name is appended to the saved files.
+        :param variables: a namespace of variables initialized by this
+            function.
+        """
+        # Create the plot
+        draw_fig, draw_axes = plt.subplots(
+            nrows=len(self._log_properties), ncols=1, figsize=(20, 12)
+        )
+        draw_lines = [None for i in range(len(self._log_properties))]
+
+        # Create log txt file
+        log_file = os.path.join(self._log_path, name + "_log.txt")
+        header = ", ".join(self._log_properties) + "\n"
+        with open(log_file, "w") as f:
+            f.write(header)
+
+        # Store
+        variables["figure"] = draw_fig
+        variables["axes"] = draw_axes
+        variables["lines"] = draw_lines
+        variables["txt_file"] = log_file
+        variables["name"] = name
+
     def train(self):
         """Start training."""
         # Learn
@@ -485,14 +515,23 @@ class TrainQ(Trainer):
 
     def log(self):
         """Save logs to files and plots."""
+        self._log_figure(self._agent_plot_vars)
+        if self.params["active_passive_agents"]:
+            self._log_figure(self._passive_agent_plot_vars)
+
+    def _log_figure(self, variables: Dict[str, Any]):
+        """Save logs for one figure.
+
+        :param variables: a namespace of variables for logging. See _init_log.
+        """
         for i in range(len(self._log_properties)):
             name = self._log_properties[i]
-            ax = self._draw_axes[i]
-            line = self._draw_lines[i]
+            ax = variables["axes"][i]
+            line = variables["lines"][i]
             data = getattr(self.env, name)
 
             if line is None:
-                (self._draw_lines[i],) = ax.plot(data)
+                (variables["lines"][i],) = ax.plot(data)
                 ax.set_ylabel(name)
                 if name == self._log_properties[-1]:
                     ax.set_xlabel("episodes")
@@ -502,8 +541,9 @@ class TrainQ(Trainer):
                 ax.relim()
                 ax.autoscale(tight=True)
 
-        self._draw_fig.savefig(
-            os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight"
+        variables["figure"].savefig(
+            os.path.join(self._log_path, variables["name"] + "_plots.pdf"),
+            bbox_inches="tight",
         )
 
         # Save to file
@@ -516,7 +556,7 @@ class TrainQ(Trainer):
             ", ".join([str(x) for x in values]) + "\n"
             for values in by_timestep
         ]
-        with open(self._log_file, "a") as f:
+        with open(variables["txt_file"], "a") as f:
             f.writelines(lines)
 
 

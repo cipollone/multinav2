@@ -101,7 +101,9 @@ def test(
         trainer.normalized_env.set_training(False)
 
     elif env_name == "sapientino-grid":
+        # Don't load yet
         resume_file = params.pop("resume_file")
+        params["initialize_file"] = None
         # Make env
         env = env_grid_sapientino.make(params=params)
         # Make agent
