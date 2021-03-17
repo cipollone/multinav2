@@ -376,7 +376,6 @@ class TrainStableBaselines(Trainer):
         self.saver.save(self.params["total_timesteps"])
 
 
-# TODO: two agents also here
 class TrainQ(Trainer):
     """Agent and training loop for Q learning."""
 
@@ -396,7 +395,7 @@ class TrainQ(Trainer):
         """
         # Check
         if "resume_file" in params and params["resume_file"]:
-            raise TypeError("Resuming a trainingg is not supported for this algorithm.")
+            raise TypeError("Resuming a training is not supported here")
 
         # Store
         self.env = env
@@ -416,7 +415,9 @@ class TrainQ(Trainer):
         # Q function used just for action bias
         self.biased_Q = None
         if params["action_bias"]:
-            self.biased_Q = QFunctionModel.load(path=params["action_bias"]).q_function
+            self.biased_Q = QFunctionModel.load(
+                path=params["action_bias"]
+            ).q_function
 
         # Saver
         self.saver = SaverCallback(
@@ -467,12 +468,9 @@ class TrainQ(Trainer):
             epsilon_end=params["epsilon_end"],
             action_bias=self.biased_Q,
             action_bias_eps=params["action_bias_eps"],
+            initial_Q=self.agent.q_function if self._reinitialized else None,
         )
-        # Initialized from learner or reinitialized?
-        if not self._reinitialized:
-            self.agent.q_function = self.learner.Q
-        else:
-            self.learner.Q = self.agent.q_function
+        self.agent.q_function = self.learner.Q
 
     def train(self):
         """Start training."""
@@ -541,9 +539,12 @@ class TrainValueIteration(Trainer):
         """
         # Check
         if params["resume_file"]:
-            raise TypeError("Resuming a trainingg is not supported for this algorithm.")
+            raise TypeError(
+                "Resuming a trainingg is not supported for this algorithm.")
         if params["action_bias"]:
             raise TypeError("Action bias is not supported here.")
+        if params["active_passive_agents"]:
+            raise TypeError("Not training a passive agent here.")
 
         # Agent
         agent = ValueFunctionModel(

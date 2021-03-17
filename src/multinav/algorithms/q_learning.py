@@ -53,6 +53,7 @@ class QLearning:
         epsilon_end: float = 0.0,
         action_bias: Optional[QTableType] = None,
         action_bias_eps: float = 0.0,
+        initial_Q: QTableType = None,
     ):
         """Initialize.
 
@@ -73,6 +74,7 @@ class QLearning:
         :param action_bias_eps: During exploration, with eps probability
             select an action with uniform distribution, idependently of
             action_bias.
+        :param initial_Q: the initial Q function.
         :return the Q function: a dictionary from states to array of Q values
             for every action.
         """
@@ -91,11 +93,20 @@ class QLearning:
 
         # Initialize
         self.__rng = np.random.default_rng()
-        self.nb_actions = env.action_space.n
-        self.Q: QTableType = defaultdict(
-            partial(self._Q_initialization_fn, self.__rng, self.nb_actions)
-        )
         self._with_logs = isinstance(self.env, MyStatsRecorder)
+        self.nb_actions = env.action_space.n
+
+        initialization_fn = partial(
+            self._Q_initialization_fn, self.__rng, self.nb_actions
+        )
+        # New or restore Q
+        if initial_Q is None:
+            self.Q: QTableType = defaultdict(initialization_fn)
+        else:
+            self.Q = (
+                initial_Q if isinstance(initial_Q, defaultdict) else
+                defaultdict(initialization_fn, initial_Q)
+            )
 
         # Moving vars
         self.alpha = self.alpha0
