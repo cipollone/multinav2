@@ -24,7 +24,7 @@ import logging
 import sys
 from collections import defaultdict
 from functools import partial
-from typing import Any, Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional, Sequence
 
 import gym
 import numpy as np
@@ -42,7 +42,8 @@ class QLearning:
 
     def __init__(
         self,
-        env: Union[gym.Env, MyStatsRecorder],
+        env: gym.Env,
+        stats_envs: Sequence[MyStatsRecorder],
         total_timesteps: int = 2000000,
         alpha: float = 0.1,
         eps: float = 0.1,
@@ -53,12 +54,17 @@ class QLearning:
         epsilon_end: float = 0.0,
         action_bias: Optional[QTableType] = None,
         action_bias_eps: float = 0.0,
-        initial_Q: QTableType = None,
+        initial_Q: Optional[QTableType] = None,
+        active_passive_agents: bool = False,
+        passive_reward_getter: Optional[Callable[[], float]] = None,
+        initial_passive_Q: Optional[QTableType] = None,
     ):
         """Initialize.
 
-        :param env: the environment, optionally in a wrapper that collects
-            statistics.
+        :param env: an environment with discrete actions and observations.
+        :param stats_envs: a list of MyStatsRecorder wrappers.
+            Just one is usually enough, but if active_passive_agents is True,
+            a second one is needed for the passive agent.
         :param total_timesteps: total number of optimizations.
         :param alpha: learning rate.
         :param eps: probability of random action.
@@ -75,11 +81,33 @@ class QLearning:
             select an action with uniform distribution, idependently of
             action_bias.
         :param initial_Q: the initial Q function.
+        :param active_passive_agents: if True, a second agent is instantiated.
+            This does not execute any action, but only learns from what
+            the active agent does. For the same observations, it can learn
+            on a different set of rewards, given by passive_reward_getter.
+        :param passive_reward_getter: a callable that returns the last reward
+            that should be passed to the passive agent.
+        :param initial_passive_Q: initialization for the passive agent.
         :return the Q function: a dictionary from states to array of Q values
             for every action.
         """
+        # Check
+        if active_passive_agents and not passive_reward_getter:
+            raise TypeError(
+                "passive_reward_getter is mandatory when training "
+                "a passive agent."
+            )
+        if initial_Q and active_passive_agents and not initial_passive_Q:
+            raise TypeError(
+                "You must supply an initialization for the passive agent too."
+            )
+        assert (not active_passive_agents and len(stats_envs) == 1) or (
+            active_passive_agents and len(stats_envs) == 2), (
+                "You should pass one stats environment for each agent")
+
         # Store
         self.env = env
+        self.stats_envs = stats_envs
         self.total_timesteps = total_timesteps
         self.alpha0 = alpha
         self.eps0 = eps
@@ -90,23 +118,34 @@ class QLearning:
         self.epsilon_end = epsilon_end
         self.action_bias = action_bias
         self.action_bias_eps = action_bias_eps
+        self.active_passive_agents = active_passive_agents
+        self.passive_reward_getter = passive_reward_getter
 
         # Initialize
         self.__rng = np.random.default_rng()
-        self._with_logs = isinstance(self.env, MyStatsRecorder)
         self.nb_actions = env.action_space.n
 
         initialization_fn = partial(
             self._Q_initialization_fn, self.__rng, self.nb_actions
         )
-        # New or restore Q
-        if initial_Q is None:
-            self.Q: QTableType = defaultdict(initialization_fn)
-        else:
+
+        # New agents
+        self.Q: QTableType = defaultdict(initialization_fn)
+        self.passive_Q: QTableType = defaultdict(initialization_fn)
+
+        # Maybe restore
+        if initial_Q is not None:
             self.Q = (
                 initial_Q if isinstance(initial_Q, defaultdict) else
                 defaultdict(initialization_fn, initial_Q)
             )
+            # Same for passive agent
+            if active_passive_agents:
+                self.passive_Q = (
+                    initial_passive_Q if isinstance(
+                        initial_passive_Q, defaultdict) else
+                    defaultdict(initialization_fn, initial_passive_Q)
+                )
 
         # Moving vars
         self.alpha = self.alpha0
@@ -131,15 +170,27 @@ class QLearning:
 
             # Apply
             td_update = self._optimize_q_step(
-                self.Q,
-                state,
-                action,
-                reward,
-                state2,
-                self.gamma,
-                self.alpha,
+                Q=self.Q,
+                state=state,
+                action=action,
+                reward=reward,
+                state2=state2,
+                gamma=self.gamma,
+                alpha=self.alpha,
             )
             state = state2
+
+            # Apply also for passive agent
+            if self.active_passive_agents:
+                td_passive_update = self._optimize_q_step(
+                    Q=self.passive_Q,
+                    state=state,
+                    action=action,
+                    reward=self.passive_reward_getter(),
+                    state2=state2,
+                    gamma=self.gamma,
+                    alpha=self.alpha,
+                )
 
             # Decays
             if step % 10 == 0:
@@ -147,8 +198,9 @@ class QLearning:
                 print(" Eps:", round(self.eps, 3), end="\r")
 
             # Log
-            if self._with_logs:
-                self.env.update_extras(td=abs(td_update))
+            self.stats_envs[0].update_extras(td=abs(td_update))
+            if self.active_passive_agents:
+                self.stats_envs[1].update_extras(td=abs(td_passive_update))
 
         print()
         return self.Q

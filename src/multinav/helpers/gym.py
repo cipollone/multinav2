@@ -195,3 +195,20 @@ def combine_boxes(*spaces: Box) -> Box:
     highs = np.concatenate([space.high for space in spaces])
 
     return Box(lows, highs)
+
+
+def find_wrapper(env: gym.Env, wrapper_type: type):
+    """Extract the requested class from the hierarchy of wrappers.
+
+    This utility function recursively searches the requested class along the
+    chain of gym wrappers.
+    :param env: the environment to scan.
+    :param wrapper_type: the class to search for.
+    """
+    base_env = env.unwrapped
+
+    while env is not base_env:
+        if isinstance(env, wrapper_type):
+            return env
+        env = env.env
+    return None

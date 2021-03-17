@@ -46,13 +46,18 @@ from multinav.envs import (
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.general import QuitWithResources
+from multinav.helpers.gym import find_wrapper
 from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import (
     CustomCheckpointCallback,
     RendererCallback,
     StatsLoggerCallback,
 )
-from multinav.wrappers.reward_shaping import UnshapedEnv, UnshapedEnvWrapper
+from multinav.wrappers.reward_shaping import (
+    RewardShapingWrapper,
+    UnshapedEnv,
+    UnshapedEnvWrapper,
+)
 from multinav.wrappers.temprl import BoxAutomataStates
 from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
@@ -438,12 +443,38 @@ class TrainQ(Trainer):
             self._reinitialized = True
 
         # Logger
-        self.logger = FnCallback(
+        logger = FnCallback(
             ep_freq=params["log_interval"], ep_fn=lambda _o, _i: self.log()
         )
 
+        # Stats recorder
+        self.stats_env = MyStatsRecorder(self.env, gamma=params["gamma"])
+        self.env = self.stats_env
+        stats_envs = [self.stats_env]
+
+        # If training a passive agent log the second environment too
+        if params["active_passive_agents"]:
+
+            # Find the reward shaping env
+            reward_shaping_env = find_wrapper(self.env, RewardShapingWrapper)
+
+            self.passive_stats_env = MyStatsRecorder(
+                env=UnshapedEnv(reward_shaping_env),
+                gamma=params["gamma"],
+            )
+            stats_envs.append(self.passive_stats_env)
+
+            # Make it move with the original env
+            self.env = UnshapedEnvWrapper(
+                shaped_env=self.env,
+                unshaped_env=self.passive_stats_env,
+            )
+            original_reward_getter = self.env.get_reward  # alias
+        else:
+            original_reward_getter = None
+
         # Wrap callbacks
-        self.callbacks = CustomCallbackList([self.saver, self.logger])
+        self.callbacks = CustomCallbackList([self.saver, logger])
         self.env = CallbackWrapper(env=self.env, callback=self.callbacks)
 
         # Log properties
@@ -456,12 +487,10 @@ class TrainQ(Trainer):
             self._passive_agent_plot_vars = {}
             self._init_log("passive_agent", self._passive_agent_plot_vars)
 
-        # Stats recorder
-        self.env = MyStatsRecorder(self.env, gamma=params["gamma"])
-
         # Learner
         self.learner = QLearning(
             env=self.env,
+            stats_envs=stats_envs,
             total_timesteps=params["total_timesteps"],
             alpha=params["learning_rate"],
             eps=params["q_eps"],
@@ -473,8 +502,17 @@ class TrainQ(Trainer):
             action_bias=self.biased_Q,
             action_bias_eps=params["action_bias_eps"],
             initial_Q=self.agent.q_function if self._reinitialized else None,
+            active_passive_agents=params["active_passive_agents"],
+            passive_reward_getter=original_reward_getter,
+            initial_passive_Q=(
+                self.passive_agent.q_function if self._reinitialized else None
+            ),
         )
+
+        # Link trained and saved agents
         self.agent.q_function = self.learner.Q
+        self.passive_agent.q_function = self.learner.passive_Q
+        self.saver.extra_model = self.passive_agent.q_function
 
     def _init_log(self, name: str, variables: Dict[str, Any]):
         """Initialize variables related to logging.
@@ -515,20 +553,29 @@ class TrainQ(Trainer):
 
     def log(self):
         """Save logs to files and plots."""
-        self._log_figure(self._agent_plot_vars)
+        self._log_figure(self._agent_plot_vars, self.stats_env)
         if self.params["active_passive_agents"]:
-            self._log_figure(self._passive_agent_plot_vars)
+            self._log_figure(
+                variables=self._passive_agent_plot_vars,
+                stats_env=self.passive_stats_env,
+            )
 
-    def _log_figure(self, variables: Dict[str, Any]):
+    def _log_figure(
+        self,
+        variables: Dict[str, Any],
+        stats_env: MyStatsRecorder,
+    ):
         """Save logs for one figure.
 
         :param variables: a namespace of variables for logging. See _init_log.
+        :param stats_env: a MyStatsRecorder environment wrapper that
+            stores the current statistics.
         """
         for i in range(len(self._log_properties)):
             name = self._log_properties[i]
             ax = variables["axes"][i]
             line = variables["lines"][i]
-            data = getattr(self.env, name)
+            data = getattr(stats_env, name)
 
             if line is None:
                 (variables["lines"][i],) = ax.plot(data)
@@ -549,7 +596,7 @@ class TrainQ(Trainer):
         # Save to file
         n_samples = len(data)
         by_timestep = [
-            [getattr(self.env, name)[i] for name in self._log_properties]
+            [getattr(stats_env, name)[i] for name in self._log_properties]
             for i in range(n_samples)
         ]
         lines = [
