@@ -186,7 +186,7 @@ class Saver:
 
     def __init__(
         self,
-        saver: Callable[[str], None],
+        saver: Callable[[str], Any],
         loader: Callable[[str], Any],
         save_path: str,
         name_prefix: str = "model",

@@ -94,16 +94,15 @@ class QLearning:
         # Check
         if active_passive_agents and not passive_reward_getter:
             raise TypeError(
-                "passive_reward_getter is mandatory when training "
-                "a passive agent."
+                "passive_reward_getter is mandatory when training " "a passive agent."
             )
         if initial_Q and active_passive_agents and not initial_passive_Q:
             raise TypeError(
                 "You must supply an initialization for the passive agent too."
             )
         assert (not active_passive_agents and len(stats_envs) == 1) or (
-            active_passive_agents and len(stats_envs) == 2), (
-                "You should pass one stats environment for each agent")
+            active_passive_agents and len(stats_envs) == 2
+        ), "You should pass one stats environment for each agent"
 
         # Store
         self.env = env
@@ -136,15 +135,17 @@ class QLearning:
         # Maybe restore
         if initial_Q is not None:
             self.Q = (
-                initial_Q if isinstance(initial_Q, defaultdict) else
-                defaultdict(initialization_fn, initial_Q)
+                initial_Q
+                if isinstance(initial_Q, defaultdict)
+                else defaultdict(initialization_fn, initial_Q)
             )
             # Same for passive agent
             if active_passive_agents:
+                assert initial_passive_Q is not None  # mypy fix
                 self.passive_Q = (
-                    initial_passive_Q if isinstance(
-                        initial_passive_Q, defaultdict) else
-                    defaultdict(initialization_fn, initial_passive_Q)
+                    initial_passive_Q
+                    if isinstance(initial_passive_Q, defaultdict)
+                    else defaultdict(initialization_fn, initial_passive_Q)
                 )
 
         # Moving vars
@@ -181,6 +182,7 @@ class QLearning:
 
             # Apply also for passive agent
             if self.active_passive_agents:
+                assert self.passive_reward_getter is not None  # mypy fix
                 td_passive_update = self._optimize_q_step(
                     Q=self.passive_Q,
                     state=state,

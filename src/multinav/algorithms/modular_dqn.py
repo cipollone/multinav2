@@ -147,7 +147,7 @@ class ModularPolicy(DQNPolicy):
         """Define the main part of the network.
 
         :param env_features: tensor of environment features with
-            shape (batch, n_features). 
+            shape (batch, n_features).
         :param automa_features: tensor of automaton states with
             shape (batch, 1). env_features and automa_features, together,
             constitute and observation of the environment.
@@ -157,10 +157,8 @@ class ModularPolicy(DQNPolicy):
         """
         x = env_features
 
-        # As matrix of indexes 
-        automa_features = tf.reshape(
-            tf.cast(automa_features, tf.int64), shape=(-1, 1)
-        )
+        # As matrix of indexes
+        automa_features = tf.reshape(tf.cast(automa_features, tf.int64), shape=(-1, 1))
 
         # Layers
         for i, layer_size in enumerate(layers[:-1]):
@@ -202,7 +200,6 @@ class ModularPolicy(DQNPolicy):
 
         return x
 
-
     def step(self, obs, state=None, _mask=None, deterministic=True):
         # NOTE: this function is never executed during training.
 
@@ -226,7 +223,8 @@ class ModularPolicy(DQNPolicy):
             actions = np.zeros((len(obs),), dtype=np.int64)
             for action_idx in range(len(obs)):
                 actions[action_idx] = np.random.choice(
-                    self.n_actions, p=_actions_proba[action_idx])
+                    self.n_actions, p=_actions_proba[action_idx]
+                )
 
         return actions, q_values, None
 

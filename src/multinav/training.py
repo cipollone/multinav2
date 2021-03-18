@@ -24,7 +24,7 @@
 import json
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import numpy as np
 from gym import Env
@@ -276,8 +276,7 @@ class TrainStableBaselines(Trainer):
             save_freq=params["save_freq"],
             extra=None,
         )
-        stats_logger_callback = StatsLoggerCallback(
-            stats_recorder=env, scope="env0")
+        stats_logger_callback = StatsLoggerCallback(stats_recorder=env, scope="env0")
 
         callbacks_list = [checkpoint_callback, stats_logger_callback]
         if params["render"]:
@@ -407,10 +406,10 @@ class TrainQ(Trainer):
 
     def __init__(
         self,
-        env: Env,
+        env: Optional[Env],
         params: Dict[str, Any],
         model_path: str,
-        log_path: str,
+        log_path: Optional[str],
         agent_only: bool = False,
     ):
         """Initialize.
@@ -426,11 +425,6 @@ class TrainQ(Trainer):
         # Check
         if "resume_file" in params and params["resume_file"]:
             raise TypeError("Resuming a training is not supported here")
-
-        # Store
-        self.env = env
-        self.params = params
-        self._log_path = log_path
 
         # Define agent(s)
         self.agent = QFunctionModel(q_function=dict())
@@ -450,9 +444,7 @@ class TrainQ(Trainer):
 
         # Load agent
         if params["initialize_file"] is not None:
-            self.agent, extra, _ = self.saver.load(
-                params["initialize_file"]
-            )
+            self.agent, extra, _ = self.saver.load(params["initialize_file"])
             self.passive_agent.q_function = extra
             # Update saver
             self.saver.saver = self.agent.save
@@ -463,13 +455,17 @@ class TrainQ(Trainer):
         # Q function used just for action bias
         self.biased_Q = None
         if params["action_bias"]:
-            self.biased_Q = QFunctionModel.load(
-                path=params["action_bias"]
-            ).q_function
+            self.biased_Q = QFunctionModel.load(path=params["action_bias"]).q_function
 
         # Maybe stop
         if agent_only:
             return
+        assert log_path is not None  # mypy
+
+        # Store
+        self.env = env
+        self.params = params
+        self._log_path = log_path
 
         # Logger
         logger = FnCallback(
@@ -498,7 +494,9 @@ class TrainQ(Trainer):
                 shaped_env=self.env,
                 unshaped_env=self.passive_stats_env,
             )
-            original_reward_getter = self.env.get_reward  # alias
+            original_reward_getter: Optional[
+                Callable[[], float]
+            ] = self.env.get_reward  # alias
         else:
             original_reward_getter = None
 
@@ -507,13 +505,11 @@ class TrainQ(Trainer):
         self.env = CallbackWrapper(env=self.env, callback=self.callbacks)
 
         # Log properties
-        self._log_properties = [
-            "episode_lengths", "episode_returns", "episode_td_max"
-        ]
-        self._agent_plot_vars = {}
+        self._log_properties = ["episode_lengths", "episode_returns", "episode_td_max"]
+        self._agent_plot_vars: Dict[str, Any] = {}
         self._init_log("agent", self._agent_plot_vars)
         if params["active_passive_agents"]:
-            self._passive_agent_plot_vars = {}
+            self._passive_agent_plot_vars: Dict[str, Any] = {}
             self._init_log("passive_agent", self._passive_agent_plot_vars)
 
         # Learner
@@ -628,10 +624,7 @@ class TrainQ(Trainer):
             [getattr(stats_env, name)[i] for name in self._log_properties]
             for i in range(n_samples)
         ]
-        lines = [
-            ", ".join([str(x) for x in values]) + "\n"
-            for values in by_timestep
-        ]
+        lines = [", ".join([str(x) for x in values]) + "\n" for values in by_timestep]
         with open(variables["txt_file"], "a") as f:
             f.writelines(lines)
 
@@ -655,8 +648,7 @@ class TrainValueIteration(Trainer):
         """
         # Check
         if params["resume_file"]:
-            raise TypeError(
-                "Resuming a trainingg is not supported for this algorithm.")
+            raise TypeError("Resuming a trainingg is not supported for this algorithm.")
         if params["action_bias"]:
             raise TypeError("Action bias is not supported here.")
         if params["active_passive_agents"]:
