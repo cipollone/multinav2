@@ -52,10 +52,18 @@ def test_grid_sapientino_rb_q_learning(disable_debug_logging):
     )
     env = GridRobotFeatures(MyTemporalGoalWrapper(env, [tg]))
     env = TimeLimit(env, max_episode_steps=25)
-
-    Q = QLearning(env, total_timesteps=40000).learn()
-
     env = MyStatsRecorder(env, gamma=0.9)
+
+    Q = QLearning(
+        env=env,
+        stats_envs=[env],
+        total_timesteps=40000,
+        gamma=0.9,
+    ).learn()
+
+    # Reset stats for rollout
+    env = MyStatsRecorder(env.env, gamma=0.9)
+
     rollout(env, policy=lambda _env, state: np.argmax(Q[state]))
 
     assert np.mean(env.episode_rewards) == 9.9

@@ -112,12 +112,13 @@ class StatsLoggerCallback(BaseCallback):
 
         # Log all
         for name in last_episode_properties:
-            summary = tf.Summary(value=[
-                tf.Summary.Value(
-                    tag=scope + name,
-                    simple_value=last_episode_properties[name]
-                )
-            ])
+            summary = tf.Summary(
+                value=[
+                    tf.Summary.Value(
+                        tag=scope + name, simple_value=last_episode_properties[name]
+                    )
+                ]
+            )
             self.__writer.add_summary(summary, self.num_timesteps)
 
     def _on_step(self):

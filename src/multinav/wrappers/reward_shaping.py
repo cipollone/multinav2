@@ -88,9 +88,9 @@ class UnshapedEnv(gym.Env):
 
     def step(self, action):
         """gym.Env step."""
-        assert action == self.shaped_env.last_action, (
-            "Expecting the same action as the original env"
-        )
+        assert (
+            action == self.shaped_env.last_action
+        ), "Expecting the same action as the original env"
         return self.shaped_env.last_experience
 
     def reset(self):
@@ -122,8 +122,11 @@ class UnshapedEnvWrapper(CallbackWrapper):
             callback=self.MoveEnvCallback(self.unshaped_env),
         )
 
-    def get_reward(self):
+    def get_reward(self) -> float:
         """Return the last reward."""
+        assert (
+            self.unshaped_env.shaped_env.last_experience is not None
+        ), "No experience yet"
         return self.unshaped_env.shaped_env.last_experience[1]
 
     class MoveEnvCallback(Callback):

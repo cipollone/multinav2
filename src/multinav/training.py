@@ -24,7 +24,7 @@
 import json
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import numpy as np
 from gym import Env
@@ -46,13 +46,18 @@ from multinav.envs import (
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.general import QuitWithResources
+from multinav.helpers.gym import find_wrapper
 from multinav.helpers.misc import prepare_directories
 from multinav.helpers.stable_baselines import (
     CustomCheckpointCallback,
     RendererCallback,
     StatsLoggerCallback,
 )
-from multinav.wrappers.reward_shaping import UnshapedEnv, UnshapedEnvWrapper
+from multinav.wrappers.reward_shaping import (
+    RewardShapingWrapper,
+    UnshapedEnv,
+    UnshapedEnvWrapper,
+)
 from multinav.wrappers.temprl import BoxAutomataStates
 from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
@@ -64,6 +69,7 @@ default_parameters = dict(
     resume_file=None,
     initialize_file=None,
     shaping=None,
+    shaping_passive=False,
     active_passive_agents=False,
     dfa_shaping=False,
     action_bias=None,
@@ -150,40 +156,60 @@ def train(
     # Make
     trainer: Trainer
     if env_name == "ros":
+        # Ros env
+        env = env_ros_controls.make(params=params)
+
+        # Trainer
         trainer = TrainStableBaselines(
             env=env_ros_controls.make(params=params),
             params=params,
             model_path=model_path,
             log_path=log_path,
         )
+        # TODO: define _load_cont_shaping_agent just like _load_grid_shaping_agent
+
     elif env_name == "sapientino-cont":
-        env = env_cont_sapientino.make(params=params, log_dir=log_path)
+        # Continuous env
+        shaping_agent = _load_grid_shaping_agent(params)
+        env = env_cont_sapientino.make(
+            params=params,
+            log_dir=log_path,
+            shaping_agent=shaping_agent,
+        )
         if params["render"]:
             env = Renderer(env)
 
+        # Trainer
         trainer = TrainStableBaselines(
             env=env,
             params=params,
             model_path=model_path,
             log_path=log_path,
         )
+
     elif env_name == "sapientino-grid":
+        # Grid env
         env = env_grid_sapientino.make(params=params, log_dir=log_path)
         if params["render"]:
             env = Renderer(env)
 
+        # Trainer
         trainer = TrainQ(
             env=env,
             params=params,
             model_path=model_path,
             log_path=log_path,
         )
+
     elif env_name == "sapientino-abs":
+        # Abstract env
+        env = env_abstract_sapientino.make(
+            params=params,
+            log_dir=log_path,
+        )
+        # Trainer
         trainer = TrainValueIteration(
-            env=env_abstract_sapientino.make(
-                params=params,
-                log_dir=log_path,
-            ),
+            env=env,
             params=params,
             model_path=model_path,
             log_path=log_path,
@@ -250,8 +276,7 @@ class TrainStableBaselines(Trainer):
             save_freq=params["save_freq"],
             extra=None,
         )
-        stats_logger_callback = StatsLoggerCallback(
-            stats_recorder=env, scope="env0")
+        stats_logger_callback = StatsLoggerCallback(stats_recorder=env, scope="env0")
 
         callbacks_list = [checkpoint_callback, stats_logger_callback]
         if params["render"]:
@@ -376,16 +401,16 @@ class TrainStableBaselines(Trainer):
         self.saver.save(self.params["total_timesteps"])
 
 
-# TODO: two agents also here
 class TrainQ(Trainer):
     """Agent and training loop for Q learning."""
 
     def __init__(
         self,
-        env: Env,
+        env: Optional[Env],
         params: Dict[str, Any],
         model_path: str,
-        log_path: str,
+        log_path: Optional[str],
+        agent_only: bool = False,
     ):
         """Initialize.
 
@@ -393,30 +418,18 @@ class TrainQ(Trainer):
         :param params: dict of parameters. See `default_parameters`.
         :param model_path: directory where to save models.
         :param log_path: directory where to save training logs.
+        :param agent_only: if True, it defines or loads the agent(s),
+            then stops. The environment is not used. For training,
+            this must be false.
         """
         # Check
         if "resume_file" in params and params["resume_file"]:
-            raise TypeError("Resuming a trainingg is not supported for this algorithm.")
+            raise TypeError("Resuming a training is not supported here")
 
-        # Store
-        self.env = env
-        self.params = params
-        self._log_path = log_path
-
-        # New agent
-        if params["initialize_file"] is None:
-            self.agent = QFunctionModel(q_function=dict())
-            self._reinitialized = False
-
-        # Load agent
-        else:
-            self.agent = QFunctionModel.load(path=params["initialize_file"])
-            self._reinitialized = True
-
-        # Q function used just for action bias
-        self.biased_Q = None
-        if params["action_bias"]:
-            self.biased_Q = QFunctionModel.load(path=params["action_bias"]).q_function
+        # Define agent(s)
+        self.agent = QFunctionModel(q_function=dict())
+        self.passive_agent = QFunctionModel(q_function=dict())
+        self._reinitialized = False
 
         # Saver
         self.saver = SaverCallback(
@@ -426,37 +439,83 @@ class TrainQ(Trainer):
             save_path=model_path,
             name_prefix="model",
             model_ext=self.agent.file_ext,
-            extra=None,
+            extra=self.passive_agent.q_function,
         )
 
+        # Load agent
+        if params["initialize_file"] is not None:
+            self.agent, extra, _ = self.saver.load(params["initialize_file"])
+            self.passive_agent.q_function = extra
+            # Update saver
+            self.saver.saver = self.agent.save
+            self.saver.loader = self.agent.load
+            self.saver.extra_model = extra
+            self._reinitialized = True
+
+        # Q function used just for action bias
+        self.biased_Q = None
+        if params["action_bias"]:
+            self.biased_Q = QFunctionModel.load(path=params["action_bias"]).q_function
+
+        # Maybe stop
+        if agent_only:
+            return
+        assert log_path is not None  # mypy
+
+        # Store
+        self.env = env
+        self.params = params
+        self._log_path = log_path
+
         # Logger
-        self.logger = FnCallback(
+        logger = FnCallback(
             ep_freq=params["log_interval"], ep_fn=lambda _o, _i: self.log()
         )
 
+        # Stats recorder
+        self.stats_env = MyStatsRecorder(self.env, gamma=params["gamma"])
+        self.env = self.stats_env
+        stats_envs = [self.stats_env]
+
+        # If training a passive agent log the second environment too
+        if params["active_passive_agents"]:
+
+            # Find the reward shaping env
+            reward_shaping_env = find_wrapper(self.env, RewardShapingWrapper)
+
+            self.passive_stats_env = MyStatsRecorder(
+                env=UnshapedEnv(reward_shaping_env),
+                gamma=params["gamma"],
+            )
+            stats_envs.append(self.passive_stats_env)
+
+            # Make it move with the original env
+            self.env = UnshapedEnvWrapper(
+                shaped_env=self.env,
+                unshaped_env=self.passive_stats_env,
+            )
+            original_reward_getter: Optional[
+                Callable[[], float]
+            ] = self.env.get_reward  # alias
+        else:
+            original_reward_getter = None
+
         # Wrap callbacks
-        self.callbacks = CustomCallbackList([self.saver, self.logger])
+        self.callbacks = CustomCallbackList([self.saver, logger])
         self.env = CallbackWrapper(env=self.env, callback=self.callbacks)
 
         # Log properties
         self._log_properties = ["episode_lengths", "episode_returns", "episode_td_max"]
-        self._draw_fig, self._draw_axes = plt.subplots(
-            nrows=len(self._log_properties), ncols=1, figsize=(20, 12)
-        )
-        self._draw_lines = [None for i in range(len(self._log_properties))]
-
-        # Create log file
-        self._log_file = os.path.join(log_path, "log_table.txt")
-        header = ", ".join(self._log_properties) + "\n"
-        with open(self._log_file, "w") as f:
-            f.write(header)
-
-        # Stats recorder
-        self.env = MyStatsRecorder(self.env, gamma=params["gamma"])
+        self._agent_plot_vars: Dict[str, Any] = {}
+        self._init_log("agent", self._agent_plot_vars)
+        if params["active_passive_agents"]:
+            self._passive_agent_plot_vars: Dict[str, Any] = {}
+            self._init_log("passive_agent", self._passive_agent_plot_vars)
 
         # Learner
         self.learner = QLearning(
             env=self.env,
+            stats_envs=stats_envs,
             total_timesteps=params["total_timesteps"],
             alpha=params["learning_rate"],
             eps=params["q_eps"],
@@ -467,12 +526,44 @@ class TrainQ(Trainer):
             epsilon_end=params["epsilon_end"],
             action_bias=self.biased_Q,
             action_bias_eps=params["action_bias_eps"],
+            initial_Q=self.agent.q_function if self._reinitialized else None,
+            active_passive_agents=params["active_passive_agents"],
+            passive_reward_getter=original_reward_getter,
+            initial_passive_Q=(
+                self.passive_agent.q_function if self._reinitialized else None
+            ),
         )
-        # Initialized from learner or reinitialized?
-        if not self._reinitialized:
-            self.agent.q_function = self.learner.Q
-        else:
-            self.learner.Q = self.agent.q_function
+
+        # Link trained and saved agents
+        self.agent.q_function = self.learner.Q
+        self.passive_agent.q_function = self.learner.passive_Q
+        self.saver.extra_model = self.passive_agent.q_function
+
+    def _init_log(self, name: str, variables: Dict[str, Any]):
+        """Initialize variables related to logging.
+
+        :param name: this name is appended to the saved files.
+        :param variables: a namespace of variables initialized by this
+            function.
+        """
+        # Create the plot
+        draw_fig, draw_axes = plt.subplots(
+            nrows=len(self._log_properties), ncols=1, figsize=(20, 12)
+        )
+        draw_lines = [None for i in range(len(self._log_properties))]
+
+        # Create log txt file
+        log_file = os.path.join(self._log_path, name + "_log.txt")
+        header = ", ".join(self._log_properties) + "\n"
+        with open(log_file, "w") as f:
+            f.write(header)
+
+        # Store
+        variables["figure"] = draw_fig
+        variables["axes"] = draw_axes
+        variables["lines"] = draw_lines
+        variables["txt_file"] = log_file
+        variables["name"] = name
 
     def train(self):
         """Start training."""
@@ -487,14 +578,32 @@ class TrainQ(Trainer):
 
     def log(self):
         """Save logs to files and plots."""
+        self._log_figure(self._agent_plot_vars, self.stats_env)
+        if self.params["active_passive_agents"]:
+            self._log_figure(
+                variables=self._passive_agent_plot_vars,
+                stats_env=self.passive_stats_env,
+            )
+
+    def _log_figure(
+        self,
+        variables: Dict[str, Any],
+        stats_env: MyStatsRecorder,
+    ):
+        """Save logs for one figure.
+
+        :param variables: a namespace of variables for logging. See _init_log.
+        :param stats_env: a MyStatsRecorder environment wrapper that
+            stores the current statistics.
+        """
         for i in range(len(self._log_properties)):
             name = self._log_properties[i]
-            ax = self._draw_axes[i]
-            line = self._draw_lines[i]
-            data = getattr(self.env, name)
+            ax = variables["axes"][i]
+            line = variables["lines"][i]
+            data = getattr(stats_env, name)
 
             if line is None:
-                (self._draw_lines[i],) = ax.plot(data)
+                (variables["lines"][i],) = ax.plot(data)
                 ax.set_ylabel(name)
                 if name == self._log_properties[-1]:
                     ax.set_xlabel("episodes")
@@ -504,21 +613,19 @@ class TrainQ(Trainer):
                 ax.relim()
                 ax.autoscale(tight=True)
 
-        self._draw_fig.savefig(
-            os.path.join(self._log_path, "logs.pdf"), bbox_inches="tight"
+        variables["figure"].savefig(
+            os.path.join(self._log_path, variables["name"] + "_plots.pdf"),
+            bbox_inches="tight",
         )
 
         # Save to file
         n_samples = len(data)
         by_timestep = [
-            [getattr(self.env, name)[i] for name in self._log_properties]
+            [getattr(stats_env, name)[i] for name in self._log_properties]
             for i in range(n_samples)
         ]
-        lines = [
-            ", ".join([str(x) for x in values]) + "\n"
-            for values in by_timestep
-        ]
-        with open(self._log_file, "a") as f:
+        lines = [", ".join([str(x) for x in values]) + "\n" for values in by_timestep]
+        with open(variables["txt_file"], "a") as f:
             f.writelines(lines)
 
 
@@ -544,6 +651,8 @@ class TrainValueIteration(Trainer):
             raise TypeError("Resuming a trainingg is not supported for this algorithm.")
         if params["action_bias"]:
             raise TypeError("Action bias is not supported here.")
+        if params["active_passive_agents"]:
+            raise TypeError("Not training a passive agent here.")
 
         # Agent
         agent = ValueFunctionModel(
@@ -600,3 +709,38 @@ class TrainValueIteration(Trainer):
         frame = self.env.render(mode="rgb_array")
         img = Image.fromarray(frame)
         img.save(os.path.join(self._log_path, "frame.png"))
+
+
+def _load_grid_shaping_agent(
+    params: Dict[str, Any],
+) -> Optional[QFunctionModel]:
+    """Load a grid-sapientino checkpoint and returns the agent.
+
+    :param params: the parameters of a continuous sapientino.
+        (because we'll use this to load an agent for reward shaping).
+    :return: a grid sapientino agent or None.
+    """
+    if not params["shaping"]:
+        return None
+
+    # Simple config for grid-sapientino
+    grid_params = {}
+    grid_params.update(default_parameters)
+    grid_params["initialize_file"] = params["shaping"]
+
+    # Load agent from trainer
+    trainer = TrainQ(
+        env=None,
+        params=grid_params,
+        model_path=os.path.dirname(params["shaping"]),
+        log_path=None,
+        agent_only=True,
+    )
+
+    # Return the agent
+    if params["shaping_passive"]:
+        print("> Shaping from passive agent: " + params["shaping"])
+        return trainer.passive_agent
+    else:
+        print("> Shaping from agent: " + params["shaping"])
+        return trainer.agent
