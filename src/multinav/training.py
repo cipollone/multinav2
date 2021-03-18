@@ -69,6 +69,7 @@ default_parameters = dict(
     resume_file=None,
     initialize_file=None,
     shaping=None,
+    shaping_passive=False,
     active_passive_agents=False,
     dfa_shaping=False,
     action_bias=None,
@@ -155,40 +156,60 @@ def train(
     # Make
     trainer: Trainer
     if env_name == "ros":
+        # Ros env
+        env = env_ros_controls.make(params=params)
+
+        # Trainer
         trainer = TrainStableBaselines(
             env=env_ros_controls.make(params=params),
             params=params,
             model_path=model_path,
             log_path=log_path,
         )
+        # TODO: define _load_cont_shaping_agent just like _load_grid_shaping_agent
+
     elif env_name == "sapientino-cont":
-        env = env_cont_sapientino.make(params=params, log_dir=log_path)
+        # Continuous env
+        shaping_agent = _load_grid_shaping_agent(params)
+        env = env_cont_sapientino.make(
+            params=params,
+            log_dir=log_path,
+            shaping_agent=shaping_agent,
+        )
         if params["render"]:
             env = Renderer(env)
 
+        # Trainer
         trainer = TrainStableBaselines(
             env=env,
             params=params,
             model_path=model_path,
             log_path=log_path,
         )
+
     elif env_name == "sapientino-grid":
+        # Grid env
         env = env_grid_sapientino.make(params=params, log_dir=log_path)
         if params["render"]:
             env = Renderer(env)
 
+        # Trainer
         trainer = TrainQ(
             env=env,
             params=params,
             model_path=model_path,
             log_path=log_path,
         )
+
     elif env_name == "sapientino-abs":
+        # Abstract env
+        env = env_abstract_sapientino.make(
+            params=params,
+            log_dir=log_path,
+        )
+        # Trainer
         trainer = TrainValueIteration(
-            env=env_abstract_sapientino.make(
-                params=params,
-                log_dir=log_path,
-            ),
+            env=env,
             params=params,
             model_path=model_path,
             log_path=log_path,
@@ -390,6 +411,7 @@ class TrainQ(Trainer):
         params: Dict[str, Any],
         model_path: str,
         log_path: str,
+        agent_only: bool = False,
     ):
         """Initialize.
 
@@ -397,6 +419,9 @@ class TrainQ(Trainer):
         :param params: dict of parameters. See `default_parameters`.
         :param model_path: directory where to save models.
         :param log_path: directory where to save training logs.
+        :param agent_only: if True, it defines or loads the agent(s),
+            then stops. The environment is not used. For training,
+            this must be false.
         """
         # Check
         if "resume_file" in params and params["resume_file"]:
@@ -411,13 +436,6 @@ class TrainQ(Trainer):
         self.agent = QFunctionModel(q_function=dict())
         self.passive_agent = QFunctionModel(q_function=dict())
         self._reinitialized = False
-
-        # Q function used just for action bias
-        self.biased_Q = None
-        if params["action_bias"]:
-            self.biased_Q = QFunctionModel.load(
-                path=params["action_bias"]
-            ).q_function
 
         # Saver
         self.saver = SaverCallback(
@@ -441,6 +459,17 @@ class TrainQ(Trainer):
             self.saver.loader = self.agent.load
             self.saver.extra_model = extra
             self._reinitialized = True
+
+        # Q function used just for action bias
+        self.biased_Q = None
+        if params["action_bias"]:
+            self.biased_Q = QFunctionModel.load(
+                path=params["action_bias"]
+            ).q_function
+
+        # Maybe stop
+        if agent_only:
+            return
 
         # Logger
         logger = FnCallback(
@@ -688,3 +717,38 @@ class TrainValueIteration(Trainer):
         frame = self.env.render(mode="rgb_array")
         img = Image.fromarray(frame)
         img.save(os.path.join(self._log_path, "frame.png"))
+
+
+def _load_grid_shaping_agent(
+    params: Dict[str, Any],
+) -> Optional[QFunctionModel]:
+    """Load a grid-sapientino checkpoint and returns the agent.
+
+    :param params: the parameters of a continuous sapientino.
+        (because we'll use this to load an agent for reward shaping).
+    :return: a grid sapientino agent or None.
+    """
+    if not params["shaping"]:
+        return None
+
+    # Simple config for grid-sapientino
+    grid_params = {}
+    grid_params.update(default_parameters)
+    grid_params["initialize_file"] = params["shaping"]
+
+    # Load agent from trainer
+    trainer = TrainQ(
+        env=None,
+        params=grid_params,
+        model_path=os.path.dirname(params["shaping"]),
+        log_path=None,
+        agent_only=True,
+    )
+
+    # Return the agent
+    if params["shaping_passive"]:
+        print("> Shaping from passive agent: " + params["shaping"])
+        return trainer.passive_agent
+    else:
+        print("> Shaping from agent: " + params["shaping"])
+        return trainer.agent

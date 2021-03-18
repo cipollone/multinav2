@@ -178,7 +178,6 @@ class QLearning:
                 gamma=self.gamma,
                 alpha=self.alpha,
             )
-            state = state2
 
             # Apply also for passive agent
             if self.active_passive_agents:
@@ -191,6 +190,8 @@ class QLearning:
                     gamma=self.gamma,
                     alpha=self.alpha,
                 )
+
+            state = state2
 
             # Decays
             if step % 10 == 0:

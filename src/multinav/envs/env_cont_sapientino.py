@@ -53,21 +53,19 @@ from multinav.wrappers.temprl import MyTemporalGoalWrapper
 from multinav.wrappers.utils import SingleAgentWrapper
 
 
-def grid_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
+def grid_sapientino_shaper(
+    grid_agent: QFunctionModel,
+    gamma: float,
+) -> ValueFunctionRS:
     """Define a reward shaper on the previous environment.
 
-    This loads a saved agent for `sapientino-grid` then
-    it uses it to compute the reward shaping to apply to this environment.
-
-    :param path: path to saved checkpoint for `sapientino-grid` model.
-    :param gamma: RL discount factor.
+    :param grid_agent: A sapientino-grid model. Its greedy-policy value
+        function will be used as potential for reward shaping.
+    :param gamma: current RL discount factor.
     :return: reward shaper to apply.
     """
-    # sapientino-grid's agent is a QFunctionModel
-    agent = QFunctionModel.load(path=path)
-
-    # We don't want to use defaults anymore
-    q_function = dict(agent.q_function)
+    # We transform defaultdict to dict
+    q_function = dict(grid_agent.q_function)
 
     # Define mapping
     def _map(state: StateL) -> StateH:
@@ -101,12 +99,18 @@ def grid_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
     return shaper
 
 
-def make(params: Dict[str, Any], log_dir: Optional[str] = None):
+def make(
+    params: Dict[str, Any],
+    log_dir: Optional[str] = None,
+    shaping_agent: Optional[QFunctionModel] = None,
+):
     """Make the sapientino continuous state environment.
 
     :param params: a dictionary of parameters; see in this function the
         only ones that are used.
     :param log_dir: directory where logs can be saved.
+    :param shaping_agent: an optional grid-sapientino agent used for reward
+        shaping.
     :return: an object that respects the gym.Env interface.
     """
     # Define the robot
@@ -164,9 +168,9 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         env = RewardShapingWrapper(env, reward_shaper=dfa_shaper)
 
     # Reward shaping on previous envs
-    if params["shaping"]:
+    if shaping_agent:
         grid_shaper = grid_sapientino_shaper(
-            path=params["shaping"],
+            grid_agent=shaping_agent,
             gamma=params["gamma"],
         )
         env = RewardShapingWrapper(env, reward_shaper=grid_shaper)
