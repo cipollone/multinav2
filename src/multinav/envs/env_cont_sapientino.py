@@ -41,6 +41,7 @@ from gym_sapientino.core.configurations import (
     SapientinoAgentConfiguration,
     SapientinoConfiguration,
 )
+from stable_baselines.common.running_mean_std import RunningMeanStd
 
 from multinav.algorithms.agents import QFunctionModel
 from multinav.envs import sapientino_defs
@@ -64,8 +65,23 @@ def grid_sapientino_shaper(
     :param gamma: current RL discount factor.
     :return: reward shaper to apply.
     """
-    # We transform defaultdict to dict
+    # Ignore defaults at this point
     q_function = dict(grid_agent.q_function)
+
+    # Collapse to value function
+    value_function = {
+        observation: np.amax(q_values)
+        for observation, q_values in q_function.items()
+    }
+
+    # Standardize values
+    moments = RunningMeanStd(shape=())
+    for value in value_function.values():
+        moments.update(np.array([value]))
+    for state, value in value_function.items():
+        value = value - moments.mean
+        value = value / np.sqrt(moments.var + 1e-8)
+        value_function[state] = float(value)
 
     # Define mapping
     def _map(state: StateL) -> StateH:
@@ -75,14 +91,14 @@ def grid_sapientino_shaper(
         y = state[0]["discrete_y"]
         return (x, y, *state[1])
 
-    q_values: np.ndarray
+    last_value = 0.0
 
     # Define potential function
     def _valuefn(state: StateH):
-        nonlocal q_values
-        if state in q_function:
-            q_values = q_function[state]
-        return np.amax(q_values)
+        nonlocal last_value
+        if state in value_function:
+            last_value = value_function[state]
+        return last_value
 
     # NOTE: using previous q_values is received as noise by the algorithm
     #   because it's non-Markovian on the state. We expect it to be rare
