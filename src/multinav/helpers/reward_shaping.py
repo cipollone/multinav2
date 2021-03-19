@@ -25,6 +25,8 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Callable, Dict
 
+import numpy as np
+from stable_baselines.common.running_mean_std import RunningMeanStd
 from temprl.automata import RewardDFA
 
 from multinav.helpers.gym import State
@@ -71,6 +73,7 @@ class PotentialRewardShaper(RewardShaper):
         potential_function: Callable[[State], float],
         gamma: float,
         zero_terminal_state: bool,
+        normalize_potential: bool = False,
     ):
         """Initialize.
 
@@ -79,28 +82,49 @@ class PotentialRewardShaper(RewardShaper):
         :param gamma: RL discount factor.
         :param zero_terminal_state: if true, the potential of the final states
             is set to zero. See the reference paper.
+        :param normalize_potential: if True, the potential function is
+            standardized to unit variance and zero mean. Note that these
+            moments are estimated while they are produced and the output may
+            slowly shift, then settle.
         """
+        # Super
         RewardShaper.__init__(self)
 
+        # Store
         self.potential_function = potential_function
         self._gamma = gamma
         self._zero_terminal_state = zero_terminal_state
+        self._normalizing = normalize_potential
 
+        # Init
         self._last_potential = 0.0
+        self._normalizer = RunningMeanStd(shape=())
 
     def reset(self, state: State):
         """See super."""
-        self._last_potential = self.potential_function(state)
+        # Compute potential
+        potential = self.potential_function(state)
 
+        # Maybe normalize it
+        if self._normalizing:
+            potential = self._normalize_potential(potential)
+
+        self._last_potential = potential
         logger.debug(f"Initial state: {state}, potential: {self._last_potential}")
 
     def step(self, state: State, reward: float, done: bool) -> float:
         """See super."""
         # Compute potentials
         potential = self.potential_function(state)
+
         if done and self._zero_terminal_state:
             potential = 0
 
+        # Maybe normalize it
+        elif self._normalizing:
+            potential = self._normalize_potential(potential)
+
+        # Shaping rule
         shaping_reward = self._gamma * potential - self._last_potential
 
         logger.debug(
@@ -109,6 +133,20 @@ class PotentialRewardShaper(RewardShaper):
 
         self._last_potential = potential
         return shaping_reward
+
+    def _normalize_potential(self, potential: float) -> float:
+        """Update the moments and normalize the potential.
+
+        Returns a normalized potential according to the current moments.
+        Moments are also updated.
+        """
+        # Update moments
+        self._normalizer.update(np.array([potential]))
+
+        # Normalize
+        potential = potential - self._normalizer.mean
+        potential = potential / np.sqrt(self._normalizer.var + 1e-8)
+        return potential
 
 
 class ValueFunctionRS(PotentialRewardShaper):
@@ -126,7 +164,7 @@ class ValueFunctionRS(PotentialRewardShaper):
         value_function: Callable[[StateH], float],
         mapping_function: Callable[[StateL], StateH],
         gamma: float,
-        zero_terminal_state: bool,
+        **kwargs,
     ):
         """
         Initialize the reward shaping wrapper.
@@ -134,8 +172,7 @@ class ValueFunctionRS(PotentialRewardShaper):
         :param value_function: the value function.
         :param mapping_function: the mapping function.
         :param gamma: MDP discount factor.
-        :param zero_terminal_state: if the terminal state of
-          a trajectory should have potential equal to zero. See super.
+        :param kwargs: additional base class arguments
         """
         self._value_function = value_function
         self._mapping_function = mapping_function
@@ -145,7 +182,7 @@ class ValueFunctionRS(PotentialRewardShaper):
             self,
             potential_function=self._potential_function,
             gamma=gamma,
-            zero_terminal_state=zero_terminal_state,
+            **kwargs,
         )
 
     def _potential_function(self, state: StateL) -> float:

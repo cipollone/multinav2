@@ -53,6 +53,23 @@ def test_zeroterminalstates():
     assert np.isclose(discounted_return, -potential_0)
 
 
+def test_normalized_potential():
+    """Test reward shaping with normalized potential."""
+    shaper = PotentialRewardShaper(
+        potential_function=lambda x: x,
+        gamma=1,
+        zero_terminal_state=True,
+        normalize_potential=True,
+    )
+
+    observations = [10.0 for i in range(100)]
+
+    for obs in observations:
+        shaper.step(obs, 0.0, False)
+
+    assert shaper._last_potential < 0.01
+
+
 def test_reward_shaper():
     """Test ValueFunctionRS."""
     gamma = 0.5

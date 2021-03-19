@@ -94,6 +94,7 @@ def grid_sapientino_shaper(
         mapping_function=_map,
         gamma=gamma,
         zero_terminal_state=False,  # NOTE: this is intentional
+        normalize_potential=True,   # NOTE
     )
 
     return shaper
