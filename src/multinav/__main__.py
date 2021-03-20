@@ -59,6 +59,9 @@ def main():
         action="store_true",
         help="Test with a deterministic policy",
     )
+    parser.add_argument(
+        "--passive", action="store_true", help="Test the passive agent",
+    )
 
     # Parse
     args = parser.parse_args()
@@ -75,6 +78,7 @@ def main():
         cmd_params["shaping"] = args.shaping
     cmd_params["interactive"] = args.interactive
     cmd_params["deterministic"] = args.deterministic
+    cmd_params["test_passive"] = args.passive
 
     # Go
     if args.do == "train":
