@@ -108,8 +108,8 @@ def grid_sapientino_shaper(
     shaper = ValueFunctionRS(
         value_function=_valuefn,
         mapping_function=_map,
-        gamma=gamma,
-        zero_terminal_state=False,  # NOTE: this is intentional
+        gamma=1.0,  # NOTE: note this and the following arg: we don't care..
+        zero_terminal_state=False,  #  ..about policy invariance here
     )
 
     return shaper

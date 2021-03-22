@@ -29,11 +29,11 @@ ENV PATH="$POETRY_HOME/bin:$PATH"
 # Bug with non-bultin typing package
 RUN pip uninstall -y typing
 
-# Install project
+# Install project dependencies only
 RUN mkdir ${PROJECT_TEMP_PATH}
 WORKDIR ${PROJECT_TEMP_PATH}
 COPY . ./
-RUN poetry install 
+RUN poetry install && rm -r src/
 
 # I won't copy the project as I expect a bind mount in home
 
