@@ -249,7 +249,7 @@ class Saver:
         if self.extra_model is not None:
             extra_path = self._extra_format.format(step=step)
             with open(extra_path, "wb") as f:
-                pickle.dump(self.extra_model, f)
+                pickle.dump(self.extra_model, f, protocol=4)
         else:
             extra_path = None
 

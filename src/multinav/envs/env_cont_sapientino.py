@@ -91,18 +91,14 @@ def grid_sapientino_shaper(
         y = state[0]["discrete_y"]
         return (x, y, *state[1])
 
-    last_value = 0.0
+    min_value = min(value_function.values())
 
     # Define potential function
     def _valuefn(state: StateH):
-        nonlocal last_value
         if state in value_function:
-            last_value = value_function[state]
-        return last_value
-
-    # NOTE: using previous q_values is received as noise by the algorithm
-    #   because it's non-Markovian on the state. We expect it to be rare
-    #   and in irrelevant portions of the state space.
+            return value_function[state]
+        else:
+            return min_value
 
     # Shaper
     shaper = ValueFunctionRS(
