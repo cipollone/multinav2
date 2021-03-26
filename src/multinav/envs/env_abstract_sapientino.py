@@ -32,7 +32,7 @@ from PIL import Image
 
 from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
-from multinav.envs.temporal_goals import SapientinoGoal
+from multinav.envs.temporal_goals import SapientinoGoal, SapientinoOfficeGoal
 from multinav.helpers.general import classproperty
 from multinav.helpers.gym import (
     Action,
@@ -320,57 +320,54 @@ class AbstractSapientinoOffice(AbstractSapientinoTemporalGoal):
     def __init__(
         self,
         *,
-        tg_reward: float = 1.0,
+        tg_reward: float,
+        saved_automaton: str,
         save_to: Optional[str] = None,
         **sapientino_kwargs,
     ):
         """Initialize the environment.
 
         :param tg_reward: reward supplied when the temporal goal is reached.
+        :param saved_automaton: path to a saved DFA that represents the
+            temporal goal. Transitions must be interpretations of fluents.
         :param save_to: path where the automaton temporal goal should be saved.
         """
         # Make AbstractSapientino
         self.sapientino_env = AbstractSapientino(**sapientino_kwargs)
 
-        # Each room has two colors (position outside and inside)
+        # Define temporal goal
         nb_rooms = sapientino_kwargs["nb_rooms"]
-        color_sequence = []
-        for i in range(nb_rooms):
-            color_sequence.append(sapientino_defs.int2color[i * 2 + 1])
-            color_sequence.append(sapientino_defs.int2color[i * 2 + 2])
-        print(color_sequence)
-        # TODO: continue from here
+        self.fluents = OfficeFluents(n_rooms=nb_rooms)
+        self.temporal_goal = SapientinoOfficeGoal(
+            n_rooms=nb_rooms,
+            fluents=self.fluents,
+            saved_automaton=saved_automaton,
+            reward=tg_reward,
+            save_to=save_to,
+        )
 
-        # self.fluents = Fluents(nb_colors=nb_colors)
-        # self.temporal_goal = SapientinoGoal(
-        #     colors=color_sequence,
-        #     fluents=self.fluents,
-        #     reward=tg_reward,
-        #     save_to=save_to,
-        # )
+        # Build env with temporal goal
+        self.temporal_env = FlattenAutomataStates(
+            MyTemporalGoalWrapper(self.sapientino_env, [self.temporal_goal])
+        )
 
-        # # Build env with temporal goal
-        # self.temporal_env = FlattenAutomataStates(
-        #     MyTemporalGoalWrapper(self.sapientino_env, [self.temporal_goal])
-        # )
+        # compute model
+        model: Transitions = {}
+        initial_state = self.temporal_env.reset()  # because deterministic
+        self._generate_transitions(model, initial_state)
+        # Complete with unreachable states
+        for state in iter_space(self.temporal_env.observation_space):
+            model.setdefault(state, {})
 
-        # # compute model
-        # model: Transitions = {}
-        # initial_state = self.temporal_env.reset()  # because deterministic
-        # self._generate_transitions(model, initial_state)
-        # # Complete with unreachable states
-        # for state in iter_space(self.temporal_env.observation_space):
-        #     model.setdefault(state, {})
+        # Set discrete env
+        nb_states = self.temporal_env.observation_space.nvec.prod()
+        nb_actions = self.sapientino_env.nb_actions
+        isd = np.zeros(nb_states)
+        isd[0] = 1.0
+        MyDiscreteEnv.__init__(self, nS=nb_states, nA=nb_actions, P=model, isd=isd)
 
-        # # Set discrete env
-        # nb_states = self.temporal_env.observation_space.nvec.prod()
-        # nb_actions = self.sapientino_env.nb_actions
-        # isd = np.zeros(nb_states)
-        # isd[0] = 1.0
-        # MyDiscreteEnv.__init__(self, nS=nb_states, nA=nb_actions, P=model, isd=isd)
-
-        # # Update observation space
-        # self.observation_space = self.temporal_env.observation_space
+        # Update observation space
+        self.observation_space = self.temporal_env.observation_space
 
 
 class Fluents(AbstractFluents):

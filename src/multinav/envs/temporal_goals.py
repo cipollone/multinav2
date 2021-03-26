@@ -26,6 +26,7 @@ Since the same goal can be used for different environments, we define them
 here, so that these are shared.
 """
 
+import pickle
 from typing import Optional, Sequence
 
 from flloat.semantics import PLInterpretation
@@ -36,9 +37,6 @@ from pythomata.utils import powerset
 from temprl.wrapper import TemporalGoal
 
 from multinav.envs.base import AbstractFluents
-
-# TODO: enable the "bip" fluent in sapientino.
-#   Either update _make_sapientino_automaton or use flloat for DFA generation.
 
 
 class SapientinoGoal(TemporalGoal):
@@ -121,6 +119,74 @@ class SapientinoGoal(TemporalGoal):
 
         dfa = DFA(states, alphabet, initial_state, {accepting}, transitions)
         return dfa.trim().complete()
+
+    @property
+    def observation_space(self) -> Discrete:
+        """Return the observation space.
+
+        NOTE: Temprl returns automata states+1, we don't want that
+        if we already have a complete automaton.
+        """
+        return Discrete(len(self._automaton.states))
+
+
+class SapientinoOfficeGoal(TemporalGoal):
+    """Define a temporal goal of a navigation task.
+
+    The goal of the agent is: to reach room A, if the door is open,
+    enter room A; when inside, if a person is detected, call that person with
+    the "visit" action. After this, go to room B and go on.
+    """
+
+    def __init__(
+        self,
+        n_rooms: int,
+        fluents: AbstractFluents,
+        saved_automaton: str,
+        reward: float,
+        save_to: Optional[str] = None,
+    ):
+        """Initialize.
+
+        :param n_rooms: the number of rooms in this environment. From this
+            will follow the fluents and automaton states.
+        :param fluents: this object contains the fluents valuation function.
+            This method will check that the valuated fluents are the expected
+            ones.
+        :param saved_automaton: path to a saved automaton corresponding
+            to a temporal goal. Fluents must match.
+        :param reward: reward suplied when reward is reached.
+        :param save_to: path where the automaton should be exported.
+        """
+        # Define the propositional symbols
+        expected_fluents = {"bip", "person", "closed"}
+        for i in range(n_rooms):
+            at_room, in_room = f"at{i}", f"in{i}"
+            expected_fluents.add(at_room)
+            expected_fluents.add(in_room)
+
+        # Load automaton
+        with open(saved_automaton, "rb") as f:
+            automaton: DFA = pickle.load(f)
+
+        # Check same fluents in valuations
+        if not fluents.fluents == expected_fluents:
+            raise ValueError(
+                f"Symbols do not match: {fluents.fluents} != {expected_fluents}"
+            )
+        # NOTE: not checking also for automaton. Assuming correct
+
+        # Super
+        TemporalGoal.__init__(
+            self,
+            formula=None,  # Provinding automaton directly
+            reward=reward,
+            automaton=automaton,
+            labels=fluents,
+            extract_fluents=fluents.evaluate,
+            reward_shaping=False,
+            zero_terminal_state=False,
+        )
 
     @property
     def observation_space(self) -> Discrete:
