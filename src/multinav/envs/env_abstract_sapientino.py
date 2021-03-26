@@ -314,6 +314,65 @@ class AbstractSapientinoTemporalGoal(MyDiscreteEnv):
         return self.temporal_env.step(action)
 
 
+class AbstractSapientinoOffice(AbstractSapientinoTemporalGoal):
+    """AbstractSapientino with the office scenario temporal goal."""
+
+    def __init__(
+        self,
+        *,
+        tg_reward: float = 1.0,
+        save_to: Optional[str] = None,
+        **sapientino_kwargs,
+    ):
+        """Initialize the environment.
+
+        :param tg_reward: reward supplied when the temporal goal is reached.
+        :param save_to: path where the automaton temporal goal should be saved.
+        """
+        # Make AbstractSapientino
+        self.sapientino_env = AbstractSapientino(**sapientino_kwargs)
+
+        # Each room has two colors (position outside and inside)
+        nb_rooms = sapientino_kwargs["nb_rooms"]
+        color_sequence = []
+        for i in range(nb_rooms):
+            color_sequence.append(sapientino_defs.int2color[i * 2 + 1])
+            color_sequence.append(sapientino_defs.int2color[i * 2 + 2])
+        print(color_sequence)
+        # TODO: continue from here
+
+        # self.fluents = Fluents(nb_colors=nb_colors)
+        # self.temporal_goal = SapientinoGoal(
+        #     colors=color_sequence,
+        #     fluents=self.fluents,
+        #     reward=tg_reward,
+        #     save_to=save_to,
+        # )
+
+        # # Build env with temporal goal
+        # self.temporal_env = FlattenAutomataStates(
+        #     MyTemporalGoalWrapper(self.sapientino_env, [self.temporal_goal])
+        # )
+
+        # # compute model
+        # model: Transitions = {}
+        # initial_state = self.temporal_env.reset()  # because deterministic
+        # self._generate_transitions(model, initial_state)
+        # # Complete with unreachable states
+        # for state in iter_space(self.temporal_env.observation_space):
+        #     model.setdefault(state, {})
+
+        # # Set discrete env
+        # nb_states = self.temporal_env.observation_space.nvec.prod()
+        # nb_actions = self.sapientino_env.nb_actions
+        # isd = np.zeros(nb_states)
+        # isd[0] = 1.0
+        # MyDiscreteEnv.__init__(self, nS=nb_states, nA=nb_actions, P=model, isd=isd)
+
+        # # Update observation space
+        # self.observation_space = self.temporal_env.observation_space
+
+
 class Fluents(AbstractFluents):
     """Define the propositions for `AbstractSapientino`."""
 
@@ -340,6 +399,61 @@ class Fluents(AbstractFluents):
                 fluents = set()
         else:
             fluents = set()
+        return PLInterpretation(fluents)
+
+
+class OfficeFluents(AbstractFluents):
+    """Define propositions for AbstractSapientino with Office goal."""
+
+    _colors_to_room = {
+        "red": "at1",
+        "green": "in1",
+        "blue": "at2",
+        "yellow": "in2",
+        "pink": "at3",
+        "brown": "in3",
+        "gray": "at4",
+        "orange": "in4",
+    }
+
+    def __init__(self, n_rooms: int):
+        """Initialize.
+
+        :param nb_rooms: number of rooms to navigate.
+        """
+        assert n_rooms < 5, "Can't support more than four rooms"
+
+        # Define the propositional symbols
+        self.fluents = {"bip", "person", "closed"}
+        for i in range(n_rooms):
+            at_room, in_room = f"at{i}", f"in{i}"
+            self.fluents.add(at_room)
+            self.fluents.add(in_room)
+
+        self._rng = np.random.default_rng()
+        self._n_rooms = n_rooms
+
+    def evaluate(self, obs: int, action: int) -> PLInterpretation:
+        """Respects.AbstractFluents.evaluate.
+
+        :param obs: assuming that the observation comes from an
+            `AbstractSapientino` environment.
+        :param action: the last action.
+        """
+        fluents = set()
+        if obs not in [0, 1]:
+            color = sapientino_defs.int2color[obs]
+            fluents.add(self._colors_to_room[color])
+        if action == AbstractSapientino.visit_color:
+            fluents.add("bip")
+
+        # Doors and people are not in the observation. Valuate at random
+        samples = self._rng.integers(0, 2, size=2)
+        if samples[0] == 1:
+            fluents.add("closed")
+        if samples[1] == 1:
+            fluents.add("person")
+
         return PLInterpretation(fluents)
 
 

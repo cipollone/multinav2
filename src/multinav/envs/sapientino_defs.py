@@ -40,7 +40,8 @@ sapientino_color_sequence = ["red", "green", "blue"]
 sapientino_map_str = """\
 |        r    |
 |g            |
-|        b    |"""
+|########     |
+|########b    |"""
 
 
 # These mappings are often useful (from colors to ID and vice versa)

@@ -152,6 +152,9 @@ def abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
         #  Maybe it should be loaded too
         agent_state, automata_states = state[0], state[1:]
         color = agent_state["color"]
+        # Wall is not mapped to anything here
+        if color != 0:
+            color -= 1
         return (color,) + tuple(*automata_states)
 
     # Shaper
