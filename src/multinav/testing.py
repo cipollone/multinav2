@@ -37,7 +37,12 @@ from multinav.envs import (
 )
 from multinav.helpers.gym import Action, Done, Reward, State
 from multinav.helpers.misc import prepare_directories
-from multinav.training import TrainQ, TrainStableBaselines, TrainValueIteration
+from multinav.training import (
+    TrainQ,
+    TrainStableBaselines,
+    TrainValueIteration,
+    load_grid_shaping_agent,
+)
 from multinav.wrappers.utils import AbstractSapientinoRenderer
 
 GymStep = Tuple[State, Reward, Done, Dict[str, Any]]
@@ -82,7 +87,7 @@ def test(
             model_path=model_path,
             log_path=log_path,
         )
-        model = trainer.model
+        model = trainer.testing_agent
         env = model.env
         # Freeze normalization weights
         trainer.normalized_env.set_training(False)
@@ -90,12 +95,15 @@ def test(
     elif env_name == "sapientino-cont":
         # Load agent and make env
         trainer = TrainStableBaselines(
-            env=env_cont_sapientino.make(params=params),
+            env=env_cont_sapientino.make(
+                params=params,
+                shaping_agent=load_grid_shaping_agent(params),
+            ),
             params=params,
             model_path=model_path,
             log_path=log_path,
         )
-        model = trainer.model
+        model = trainer.testing_agent
         env = model.env
         # Freeze normalization weights
         trainer.normalized_env.set_training(False)
@@ -103,7 +111,7 @@ def test(
     elif env_name == "sapientino-grid":
         # Don't load yet
         resume_file = params.pop("resume_file")
-        params["initialize_file"] = None
+        params["initialize_file"] = resume_file
         # Make env
         env = env_grid_sapientino.make(params=params)
         # Make agent
@@ -112,9 +120,7 @@ def test(
             params=params,
             model_path=model_path,
             log_path=log_path,
-        ).agent
-        # Load agent
-        model = model.load(resume_file)
+        ).testing_agent
 
     elif env_name == "sapientino-abs":
         resume_file = params.pop("resume_file")
@@ -127,7 +133,7 @@ def test(
             params=params,
             model_path=model_path,
             log_path=log_path,
-        ).agent
+        ).testing_agent
         # Load agent
         model = model.load(resume_file)
     else:

@@ -80,6 +80,7 @@ default_parameters = dict(
     end_on_failure=False,
     log_interval=100,  # In #of episodes
     render=False,
+    test_passive=False,
     # DQN params
     batch_size=32,
     layers=[64, 64],
@@ -166,11 +167,11 @@ def train(
             model_path=model_path,
             log_path=log_path,
         )
-        # TODO: define _load_cont_shaping_agent just like _load_grid_shaping_agent
+        # TODO: define _load_cont_shaping_agent just like load_grid_shaping_agent
 
     elif env_name == "sapientino-cont":
         # Continuous env
-        shaping_agent = _load_grid_shaping_agent(params)
+        shaping_agent = load_grid_shaping_agent(params)
         env = env_cont_sapientino.make(
             params=params,
             log_dir=log_path,
@@ -376,6 +377,7 @@ class TrainStableBaselines(Trainer):
         self.callbacks = all_callbacks
         self.model: DQN = model
         self.normalized_env = normalized_env
+        self.testing_agent = model if not params["test_passive"] else model.passive_agent
 
     def train(self):
         """Do train.
@@ -539,6 +541,8 @@ class TrainQ(Trainer):
         self.passive_agent.q_function = self.learner.passive_Q
         self.saver.extra_model = self.passive_agent.q_function
 
+        self.testing_agent = self.agent if not params["test_passive"] else self.passive_agent
+
     def _init_log(self, name: str, variables: Dict[str, Any]):
         """Initialize variables related to logging.
 
@@ -680,6 +684,7 @@ class TrainValueIteration(Trainer):
         self.params = params
         self.agent = agent
         self._log_path = log_path
+        self.testing_agent = agent
 
     def train(self):
         """Start training."""
@@ -711,7 +716,7 @@ class TrainValueIteration(Trainer):
         img.save(os.path.join(self._log_path, "frame.png"))
 
 
-def _load_grid_shaping_agent(
+def load_grid_shaping_agent(
     params: Dict[str, Any],
 ) -> Optional[QFunctionModel]:
     """Load a grid-sapientino checkpoint and returns the agent.

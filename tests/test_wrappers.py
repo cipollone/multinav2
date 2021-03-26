@@ -87,7 +87,7 @@ def test_normalizer():
 
     # Save and load
     with tempfile.TemporaryFile() as fp:
-        pickle.dump(env2, fp)
+        pickle.dump(env2, fp, protocol=4)
         fp.seek(0)
         env3 = pickle.load(fp)
 

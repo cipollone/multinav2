@@ -83,7 +83,7 @@ class QFunctionModel(AgentModel):
         """Save model to path (appends file_ext)."""
         full_path = path + self.file_ext
         with open(full_path, "wb") as f:
-            pickle.dump(self.q_function, f)
+            pickle.dump(self.q_function, f, protocol=4)
         return full_path
 
     @classmethod
@@ -125,7 +125,7 @@ class ValueFunctionModel(AgentModel):
         )
         full_path = path + self.file_ext
         with open(full_path, "wb") as f:
-            pickle.dump(data, f)
+            pickle.dump(data, f, protocol=4)
         return full_path
 
     @classmethod
