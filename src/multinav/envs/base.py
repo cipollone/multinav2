@@ -29,8 +29,6 @@ defined here.
 from abc import abstractmethod
 from typing import Set, cast
 
-from flloat.semantics import PLInterpretation
-
 from multinav.helpers.general import ABC2, AbstractAttribute
 
 
@@ -45,7 +43,7 @@ class AbstractFluents(ABC2):
     fluents = cast(Set[str], AbstractAttribute())  # the cast is just for mypy
 
     @abstractmethod
-    def evaluate(self, obs, action: int) -> PLInterpretation:
+    def evaluate(self, obs, action: int) -> Set[str]:
         """Compute the current propositional interpretation.
 
         This function also respects the interface defined in

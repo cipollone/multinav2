@@ -65,40 +65,40 @@ class MyTemporalGoalWrapper(TemporalGoalWrapper):
         self.__end_on_success = end_on_success
         self.__end_on_failure = end_on_failure
 
-    def render(self, mode="human", **kwargs):
-        """
-        Render a temporal goal environment.
+    # def render(self, mode="human", **kwargs):
+    #     """
+    #     Render a temporal goal environment.
 
-        It consists in stacking horizontally the
-        environment frames and all the automata frames.
-        """
-        if mode == "human":
-            super().render(mode)
-            return
-        assert mode == "rgb_array", "Only rgb_array mode is supported."
-        env_frame = super().render(mode, **kwargs)
-        automata_frames = [
-            automaton_to_rgb(
-                tg.automaton, states2colors={tg._simulator.cur_state: "lightsalmon"}
-            )
-            for tg in self.temp_goals
-        ]
-        frames = [env_frame] + automata_frames
-        frames = list(_add_channel(frame) for frame in frames)
-        max_height = max(map(lambda arr: arr.shape[0], frames))
-        # pad all frames with 4 channels of zeros
-        for i in range(len(frames)):
-            height, width, nb_channels = frames[i].shape
-            pad_height = max_height - height
-            padding = np.zeros((pad_height, width, nb_channels), dtype=np.uint8)
-            padding.fill(255)
-            frames[i] = np.append(frames[i], padding, axis=0)
+    #     It consists in stacking horizontally the
+    #     environment frames and all the automata frames.
+    #     """
+    #     if mode == "human":
+    #         super().render(mode)
+    #         return
+    #     assert mode == "rgb_array", "Only rgb_array mode is supported."
+    #     env_frame = super().render(mode, **kwargs)
+    #     automata_frames = [
+    #         automaton_to_rgb(
+    #             tg.automaton, states2colors={tg._simulator._cur_state: "lightsalmon"}
+    #         )
+    #         for tg in self.temp_goals
+    #     ]
+    #     frames = [env_frame] + automata_frames
+    #     frames = list(_add_channel(frame) for frame in frames)
+    #     max_height = max(map(lambda arr: arr.shape[0], frames))
+    #     # pad all frames with 4 channels of zeros
+    #     for i in range(len(frames)):
+    #         height, width, nb_channels = frames[i].shape
+    #         pad_height = max_height - height
+    #         padding = np.zeros((pad_height, width, nb_channels), dtype=np.uint8)
+    #         padding.fill(255)
+    #         frames[i] = np.append(frames[i], padding, axis=0)
 
-        result = frames[0]
-        for i in range(1, len(frames)):
-            result = np.append(result, frames[i], axis=1)
+    #     result = frames[0]
+    #     for i in range(1, len(frames)):
+    #         result = np.append(result, frames[i], axis=1)
 
-        return result
+    #     return result
 
     def step(self, action):
         """Do the step."""

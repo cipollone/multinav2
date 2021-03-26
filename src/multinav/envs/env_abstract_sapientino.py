@@ -24,11 +24,11 @@
 
 import io
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
-from flloat.semantics import PLInterpretation
 from PIL import Image
+from pythomata.impl.symbolic import PropositionalInterpretation
 
 from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
@@ -272,7 +272,6 @@ class AbstractSapientinoTemporalGoal(MyDiscreteEnv):
         # Transition function from state
         automaton = self.temporal_goal.automaton
         sapientino_tf = self.sapientino_env.P[state[0]]
-        automaton_tf = automaton.transition_function[state[1]]
 
         # For all actions
         model[state] = {}
@@ -286,7 +285,7 @@ class AbstractSapientinoTemporalGoal(MyDiscreteEnv):
 
                 # Move automaton
                 fluents = self.fluents.evaluate(obs=sap_state, action=action)
-                automaton_state = automaton_tf[fluents]
+                automaton_state = automaton.get_successor(state[1], fluents)
 
                 # Compose state
                 goal_reached = automaton_state in automaton.accepting_states
@@ -383,7 +382,7 @@ class Fluents(AbstractFluents):
             sapientino_defs.int2color[i] for i in range(base_id, base_id + nb_colors)
         }
 
-    def evaluate(self, obs: int, action: int) -> PLInterpretation:
+    def evaluate(self, obs: int, action: int) -> PropositionalInterpretation:
         """Respects AbstractFluents.evaluate.
 
         :param obs: assuming that the observation comes from an
@@ -396,7 +395,7 @@ class Fluents(AbstractFluents):
                 fluents = set()
         else:
             fluents = set()
-        return PLInterpretation(fluents)
+        return {f: f in fluents for f in self.fluents}
 
 
 class OfficeFluents(AbstractFluents):
@@ -430,7 +429,7 @@ class OfficeFluents(AbstractFluents):
         self._rng = np.random.default_rng()
         self._n_rooms = n_rooms
 
-    def evaluate(self, obs: int, action: int) -> PLInterpretation:
+    def evaluate(self, obs: int, action: int) -> Set[str]:
         """Respects.AbstractFluents.evaluate.
 
         :param obs: assuming that the observation comes from an
@@ -451,7 +450,7 @@ class OfficeFluents(AbstractFluents):
         if samples[1] == 1:
             fluents.add("person")
 
-        return PLInterpretation(fluents)
+        return {f: f in fluents for f in self.fluents}
 
 
 def make(params: Dict[str, Any], log_dir: Optional[str] = None):

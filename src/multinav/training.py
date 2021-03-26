@@ -119,6 +119,7 @@ default_parameters = dict(
     reward_duplicate_beep=-0.5,
     # Abs sapientino env
     nb_rooms=2,
+    nb_colors=3,
     sapientino_fail_p=0.2,
 )
 

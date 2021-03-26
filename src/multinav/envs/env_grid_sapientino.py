@@ -25,7 +25,6 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
-from flloat.semantics import PLInterpretation
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core.configurations import (
@@ -116,7 +115,7 @@ class Fluents(AbstractFluents):
         if not self.fluents.issubset(sapientino_defs.color2int):
             raise ValueError(str(colors_set) + " contains invalid colors")
 
-    def evaluate(self, obs: Dict[str, float], action: int) -> PLInterpretation:
+    def evaluate(self, obs: Dict[str, float], action: int) -> Set[str]:
         """Respects AbstractFluents.evaluate."""
         beeps = obs["beep"] > 0
         if not beeps:
@@ -130,7 +129,8 @@ class Fluents(AbstractFluents):
                 if color_name not in self.fluents:
                     raise RuntimeError("Unexpected color: " + color_name)
                 true_fluents = {color_name}
-        return PLInterpretation(true_fluents)
+
+        return {f: f in true_fluents for f in self.fluents}
 
 
 def abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:

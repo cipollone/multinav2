@@ -29,10 +29,8 @@ here, so that these are shared.
 import pickle
 from typing import Optional, Sequence
 
-from flloat.semantics import PLInterpretation
 from gym.spaces import Discrete
-from pythomata.base import TransitionFunction
-from pythomata.dfa import DFA
+from pythomata.impl.simple import SimpleDFA
 from pythomata.utils import powerset
 from temprl.wrapper import TemporalGoal
 
@@ -71,7 +69,9 @@ class SapientinoGoal(TemporalGoal):
             raise ValueError("Some color has no associated fluent to evaluate it")
 
         # Make automaton for this sequence
-        automaton = self._make_sapientino_automaton(colors)
+        #automaton = self._make_sapientino_automaton(colors)
+        with open("a.pickle", "rb") as f:
+            automaton = pickle.load(f)
 
         # Super
         TemporalGoal.__init__(
@@ -87,13 +87,13 @@ class SapientinoGoal(TemporalGoal):
 
         # Maybe save
         if save_to:
-            self.automaton.to_dot(save_to)
+            self.automaton.to_graphviz().render(save_to)
 
     @staticmethod
-    def _make_sapientino_automaton(colors: Sequence[str]) -> DFA:
+    def _make_sapientino_automaton(colors: Sequence[str]) -> SimpleDFA:
         """Make the automaton from a sequence of colors."""
-        alphabet = set(map(PLInterpretation, powerset(set(colors))))
-        false_ = PLInterpretation(set())
+        alphabet = set(map(frozenset, powerset(set(colors))))
+        false_ = set([frozenset()])
 
         nb_states = len(colors) + 2
         initial_state = 0
@@ -101,7 +101,7 @@ class SapientinoGoal(TemporalGoal):
         sink = nb_states - 1
         accepting = nb_states - 2
         states = {initial_state, sink}
-        transitions: TransitionFunction = {}
+        transitions = {}
         for c in colors:
             next_state = current_state + 1
             for symbol in alphabet:
@@ -117,7 +117,7 @@ class SapientinoGoal(TemporalGoal):
             transitions.setdefault(current_state, {})[symbol] = sink
             transitions.setdefault(sink, {})[symbol] = sink
 
-        dfa = DFA(states, alphabet, initial_state, {accepting}, transitions)
+        dfa = SimpleDFA(states, alphabet, initial_state, {accepting}, transitions)
         return dfa.trim().complete()
 
     @property
@@ -167,7 +167,7 @@ class SapientinoOfficeGoal(TemporalGoal):
 
         # Load automaton
         with open(saved_automaton, "rb") as f:
-            automaton: DFA = pickle.load(f)
+            automaton: SimpleDFA = pickle.load(f)
 
         # Check same fluents in valuations
         if not fluents.fluents == expected_fluents:
