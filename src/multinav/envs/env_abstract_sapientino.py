@@ -170,6 +170,17 @@ class AbstractSapientino(MyDiscreteEnv):
                 [new_transition, fail_transition]
             )
 
+            # TODO: experiments in AbstractSapientinoOffice require the
+            # possibility to travel between pairs of colors (out and in of a
+            # room). Adapted graph for this purpose.
+            related_color = color_id + 1 if color_id % 2 == 0 else color_id - 1
+            related_state = self.state_from_color(related_color)
+            new_transition = (1.0 - self.fail_prob, related_state, 0.0, False)
+            fail_transition = (self.fail_prob, color_state, 0.0, False)
+            model.setdefault(color_state, {}).setdefault(
+                self.action_goto_color_from_color(related_color), []
+            ).extend([new_transition, fail_transition])
+
         return model
 
     def _action_to_string(self, action: Action):
