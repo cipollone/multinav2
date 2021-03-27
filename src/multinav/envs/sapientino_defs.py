@@ -38,10 +38,13 @@ sapientino_color_sequence = ["red", "green", "blue"]
 
 # This is the shape and configuration of the sapientino map
 sapientino_map_str = """\
-|        r    |
-|g            |
-|########     |
-|########b    |"""
+|B p#######|
+|## #######|
+|  b       |
+|## ###r###|
+|##y### ###|
+|## ###g###|"""
+sapientino_n_rooms = 3
 
 
 # These mappings are often useful (from colors to ID and vice versa)
