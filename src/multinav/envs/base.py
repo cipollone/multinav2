@@ -27,7 +27,7 @@ defined here.
 """
 
 from abc import abstractmethod
-from typing import Set, cast
+from typing import Sequence, Set, Tuple, cast
 
 from multinav.helpers.general import ABC2, AbstractAttribute
 
@@ -53,3 +53,7 @@ class AbstractFluents(ABC2):
         :return: a propositional interpretation
         """
         pass
+
+    def evaluations_prob(self, obs, action: int) -> Sequence[Tuple[Set[str], float]]:
+        """Return a sequence of fluents valuation, and their probabilities."""
+        return [self.evaluate(obs, action), 1.0]

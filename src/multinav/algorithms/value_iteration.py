@@ -103,7 +103,7 @@ def pretty_print_v(valuefn: dict):
     """Nicely print value function (just for debugging)."""
     print("Value function")
     states = list(valuefn.keys())
-    states.sort()
+    states.sort(key=lambda k: k if isinstance(k, int) else 100)
 
     for state in states:
         print("  ", state, ": ", np.around(valuefn[state], decimals=2), sep="")

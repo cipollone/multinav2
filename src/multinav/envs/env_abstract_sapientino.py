@@ -190,7 +190,7 @@ class AbstractSapientino(MyDiscreteEnv):
         if state == 0:
             return "corridor"
         else:
-            return sapientino_defs.int2color[state]
+            return sapientino_defs.int2color[state + 1]
 
     def render(self, mode="human"):
         """Render the environment (only rgb_array mode)."""
@@ -228,7 +228,9 @@ class AbstractSapientinoTemporalGoal(MyDiscreteEnv):
 
         # Make a temporal goal
         nb_colors = sapientino_kwargs["nb_colors"]
-        color_sequence = [sapientino_defs.int2color[i] for i in range(1, nb_colors + 1)]
+        first_color = 2
+        color_sequence = [
+            sapientino_defs.int2color[i] for i in range(first_color, nb_colors + first_color)]
         self.fluents = Fluents(nb_colors=nb_colors)
         self.temporal_goal = SapientinoGoal(
             colors=color_sequence,
@@ -281,24 +283,27 @@ class AbstractSapientinoTemporalGoal(MyDiscreteEnv):
 
             # For all nondeterministic transitions
             for transition in sapientino_tf[action]:
-                p, sap_state, sap_reward, sap_done = transition
+                p, sap_state, sap_reward, _sap_done = transition
 
-                # Move automaton
-                fluents = self.fluents.evaluate(obs=sap_state, action=action)
-                automaton_state = automaton.get_successor(state[1], fluents)
+                # Possible evaluations
+                fluents_list = self.fluents.evaluations_prob(sap_state, action)
+                for fluents, fluents_p in fluents_list:
 
-                # Compose state
-                goal_reached = automaton_state in automaton.accepting_states
-                new_reward = sap_reward + (
-                    self.temporal_goal.reward if goal_reached else 0.0
-                )
-                new_done = sap_done or goal_reached
-                new_state = (sap_state, automaton_state)
+                    automaton_state = automaton.get_successor(state[1], fluents)
 
-                new_transitions.append((p, new_state, new_reward, new_done))
+                    # Compose state
+                    goal_reached = automaton_state in automaton.accepting_states
+                    new_reward = sap_reward + (
+                        self.temporal_goal.reward if goal_reached else 0.0
+                    )
+                    new_done = goal_reached
+                    new_state = (sap_state, automaton_state)
 
-                # Recurse
-                self._generate_transitions(model, new_state)
+                    new_transitions.append(
+                        (p * fluents_p, new_state, new_reward, new_done))
+
+                    # Recurse
+                    self._generate_transitions(model, new_state)
 
     def render(self, mode="human"):
         """Render with temporal goal; mode is ignored."""
@@ -319,6 +324,7 @@ class AbstractSapientinoOffice(AbstractSapientinoTemporalGoal):
     def __init__(
         self,
         *,
+        nb_rooms: int,
         tg_reward: float,
         saved_automaton: str,
         save_to: Optional[str] = None,
@@ -326,16 +332,13 @@ class AbstractSapientinoOffice(AbstractSapientinoTemporalGoal):
     ):
         """Initialize the environment.
 
+        :param nb_rooms: number of rooms to visit and get inside.
         :param tg_reward: reward supplied when the temporal goal is reached.
         :param saved_automaton: path to a saved DFA that represents the
             temporal goal. Transitions must be interpretations of fluents.
         :param save_to: path where the automaton temporal goal should be saved.
         """
-        # Make AbstractSapientino
-        self.sapientino_env = AbstractSapientino(**sapientino_kwargs)
-
         # Define temporal goal
-        nb_rooms = sapientino_kwargs["nb_rooms"]
         self.fluents = OfficeFluents(n_rooms=nb_rooms)
         self.temporal_goal = SapientinoOfficeGoal(
             n_rooms=nb_rooms,
@@ -344,6 +347,10 @@ class AbstractSapientinoOffice(AbstractSapientinoTemporalGoal):
             reward=tg_reward,
             save_to=save_to,
         )
+
+        # Make AbstractSapientino
+        sapientino_kwargs["nb_colors"] = nb_rooms * 2
+        self.sapientino_env = AbstractSapientino(**sapientino_kwargs)
 
         # Build env with temporal goal
         self.temporal_env = FlattenAutomataStates(
@@ -377,7 +384,7 @@ class Fluents(AbstractFluents):
 
         :param nb_colors: The number of colors/rooms in the environment.
         """
-        base_id = 1  # the first is for corridor
+        base_id = 2  # the firsts are for corridor and wall
         self.fluents = {
             sapientino_defs.int2color[i] for i in range(base_id, base_id + nb_colors)
         }
@@ -421,7 +428,7 @@ class OfficeFluents(AbstractFluents):
 
         # Define the propositional symbols
         self.fluents = {"bip", "person", "closed"}
-        for i in range(n_rooms):
+        for i in range(1, n_rooms + 1):
             at_room, in_room = f"at{i}", f"in{i}"
             self.fluents.add(at_room)
             self.fluents.add(in_room)
@@ -437,8 +444,8 @@ class OfficeFluents(AbstractFluents):
         :param action: the last action.
         """
         fluents = set()
-        if obs not in [0, 1]:
-            color = sapientino_defs.int2color[obs]
+        if obs != 0:
+            color = sapientino_defs.int2color[obs + 1]
             fluents.add(self._colors_to_room[color])
         if action == AbstractSapientino.visit_color:
             fluents.add("bip")
@@ -451,6 +458,18 @@ class OfficeFluents(AbstractFluents):
             fluents.add("person")
 
         return {f: f in fluents for f in self.fluents}
+
+    def evaluations_prob(self, obs, action):
+        fluents = self.evaluate(obs, action)
+        fluents["closed"] = False
+        fluents["person"] = False
+
+        p = 1.0 / 4
+        values = [(dict(fluents), p) for i in range(4)]
+        values[1][0].update({"closed": True}), p
+        values[2][0].update({"person": True}), p
+        values[3][0].update({"closed": True, "person": True}), p
+        return values
 
 
 def make(params: Dict[str, Any], log_dir: Optional[str] = None):
@@ -466,10 +485,11 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         raise ValueError("Can't shape rewards in the most abstract environment.")
 
     # Build
-    env = AbstractSapientinoTemporalGoal(
-        nb_colors=params["nb_colors"],
-        failure_probability=params["sapientino_fail_p"],
+    env = AbstractSapientinoOffice(
+        nb_rooms=params["nb_rooms"],
         tg_reward=params["tg_reward"],
+        saved_automaton=params["tg_automaton"],
         save_to=os.path.join(log_dir, "reward-dfa.dot") if log_dir else None,
+        failure_probability=params["sapientino_fail_p"],
     )
     return env

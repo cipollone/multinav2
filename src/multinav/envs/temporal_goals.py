@@ -69,9 +69,7 @@ class SapientinoGoal(TemporalGoal):
             raise ValueError("Some color has no associated fluent to evaluate it")
 
         # Make automaton for this sequence
-        #automaton = self._make_sapientino_automaton(colors)
-        with open("a.pickle", "rb") as f:
-            automaton = pickle.load(f)
+        automaton = self._make_sapientino_automaton(colors)
 
         # Super
         TemporalGoal.__init__(
@@ -93,7 +91,6 @@ class SapientinoGoal(TemporalGoal):
     def _make_sapientino_automaton(colors: Sequence[str]) -> SimpleDFA:
         """Make the automaton from a sequence of colors."""
         alphabet = set(map(frozenset, powerset(set(colors))))
-        false_ = set([frozenset()])
 
         nb_states = len(colors) + 2
         initial_state = 0
@@ -105,11 +102,10 @@ class SapientinoGoal(TemporalGoal):
         for c in colors:
             next_state = current_state + 1
             for symbol in alphabet:
-                if c in symbol.true_propositions:
+                if c in symbol:
                     transitions.setdefault(current_state, {})[symbol] = next_state
                 else:
                     transitions.setdefault(current_state, {})[symbol] = sink
-                transitions.setdefault(current_state, {})[false_] = current_state
             current_state = next_state
             states.add(current_state)
 
@@ -160,7 +156,7 @@ class SapientinoOfficeGoal(TemporalGoal):
         """
         # Define the propositional symbols
         expected_fluents = {"bip", "person", "closed"}
-        for i in range(n_rooms):
+        for i in range(1, n_rooms + 1):
             at_room, in_room = f"at{i}", f"in{i}"
             expected_fluents.add(at_room)
             expected_fluents.add(in_room)
@@ -187,6 +183,10 @@ class SapientinoOfficeGoal(TemporalGoal):
             reward_shaping=False,
             zero_terminal_state=False,
         )
+
+        # Maybe save
+        if save_to:
+            self.automaton.to_graphviz().render(save_to)
 
     @property
     def observation_space(self) -> Discrete:
