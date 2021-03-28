@@ -289,8 +289,11 @@ class TrainStableBaselines(Trainer):
         # If training a passive agent log this too
         if params["active_passive_agents"]:
 
+            # Find the reward shaping env
+            reward_shaping_env = find_wrapper(env, RewardShapingWrapper)
+
             passive_stats_env = MyStatsRecorder(
-                env=UnshapedEnv(original_env.env),
+                env=UnshapedEnv(reward_shaping_env),
                 gamma=params["gamma"],
             )
 
