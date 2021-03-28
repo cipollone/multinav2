@@ -81,6 +81,7 @@ default_parameters = dict(
     log_interval=100,  # In #of episodes
     render=False,
     test_passive=False,
+    tg_automaton="inputs/automaton.pickle",
     # DQN params
     batch_size=32,
     layers=[64, 64],
@@ -118,6 +119,7 @@ default_parameters = dict(
     reward_outside_grid=0.0,
     reward_duplicate_beep=-0.5,
     # Abs sapientino env
+    nb_rooms=2,
     nb_colors=3,
     sapientino_fail_p=0.2,
 )

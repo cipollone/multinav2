@@ -392,7 +392,7 @@ test = ["pytest (>=4.0.2,<6)", "toml"]
 
 [[package]]
 name = "flloat"
-version = "0.2.3"
+version = "0.3.0"
 description = "A Python implementation of the FLLOAT library."
 category = "main"
 optional = false
@@ -400,7 +400,8 @@ python-versions = "*"
 
 [package.dependencies]
 lark-parser = "*"
-pythomata = "0.2.0"
+pythomata = ">=0.3.2"
+sympy = "*"
 
 [[package]]
 name = "future"
@@ -420,14 +421,14 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "gitdb"
-version = "4.0.6"
+version = "4.0.7"
 description = "Git Object Database"
 category = "dev"
 optional = false
 python-versions = ">=3.4"
 
 [package.dependencies]
-smmap = ">=3.0.1,<4"
+smmap = ">=3.0.1,<5"
 
 [[package]]
 name = "gitpython"
@@ -1519,14 +1520,15 @@ pytest = "*"
 
 [[package]]
 name = "pythomata"
-version = "0.2.0"
-description = "A Python package implementing automata."
+version = "0.3.2"
+description = "A Python package for automata theory."
 category = "main"
 optional = false
 python-versions = "*"
 
 [package.dependencies]
 graphviz = "*"
+sympy = "*"
 
 [[package]]
 name = "python-dateutil"
@@ -1707,11 +1709,11 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "smmap"
-version = "3.0.5"
+version = "4.0.0"
 description = "A pure Python implementation of a sliding window memory map manager"
 category = "dev"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+python-versions = ">=3.5"
 
 [[package]]
 name = "snowballstemmer"
@@ -1786,16 +1788,16 @@ python-versions = "^3.7"
 develop = false
 
 [package.dependencies]
-flloat = "==0.2.3"
+flloat = "^0.3.0"
 gym = "^0.17.2"
 numpy = "^1.19.0"
-pythomata = "==0.2.0"
+pythomata = "^0.3.0"
 
 [package.source]
 type = "git"
 url = "https://github.com/whitemech/temprl.git"
 reference = "multinav"
-resolved_reference = "3106612120fcdb4bc9f05e14d30e55cfdef17da0"
+resolved_reference = "20a98b7fb48c17d12d3778a406a666b8d68e7c92"
 
 [[package]]
 name = "tensorboard"
@@ -2082,7 +2084,7 @@ tf = ["tensorflow"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "9106d150473d769671dfec0480dc846d291d7d0748c18026c9dd8ffe1904abc6"
+content-hash = "4d840f39ae8e2a68c191a58f2377a98a98fdd5fb0f77969463025586b99bcc77"
 
 [metadata.files]
 absl-py = [
@@ -2337,7 +2339,8 @@ flake8-isort = [
     {file = "flake8_isort-4.0.0-py2.py3-none-any.whl", hash = "sha256:729cd6ef9ba3659512dee337687c05d79c78e1215fdf921ed67e5fe46cce2f3c"},
 ]
 flloat = [
-    {file = "flloat-0.2.3.tar.gz", hash = "sha256:6e57cb4b6d817259c66098e5b56abda7821f45ba1a4d006be3bb5ef9ba8c09a8"},
+    {file = "flloat-0.3.0-py2.py3-none-any.whl", hash = "sha256:4423ee6fe4df59669493101e1bcbfc1089ea4809fc48d1029923d363527c418c"},
+    {file = "flloat-0.3.0.tar.gz", hash = "sha256:1705f1f0a4c270bbcdc47bdaf8977a9f51cd2c8974162309359f043daa12f93d"},
 ]
 future = [
     {file = "future-0.18.2.tar.gz", hash = "sha256:b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"},
@@ -2346,8 +2349,8 @@ gast = [
     {file = "gast-0.2.2.tar.gz", hash = "sha256:fe939df4583692f0512161ec1c880e0a10e71e6a232da045ab8edd3756fbadf0"},
 ]
 gitdb = [
-    {file = "gitdb-4.0.6-py3-none-any.whl", hash = "sha256:27dea6c52fbcf768530e1af47f2e34afd24a52e53fa310c8279a5589bd7c85bd"},
-    {file = "gitdb-4.0.6.tar.gz", hash = "sha256:42535bb16b5db8983e2c4f6a714d29a8feba7165a12addc63e08fc672dfeccb9"},
+    {file = "gitdb-4.0.7-py3-none-any.whl", hash = "sha256:6c4cc71933456991da20917998acbe6cf4fb41eeaab7d6d67fbc05ecd4c865b0"},
+    {file = "gitdb-4.0.7.tar.gz", hash = "sha256:96bf5c08b157a666fec41129e6d327235284cca4c81e92109260f353ba138005"},
 ]
 gitpython = [
     {file = "GitPython-3.1.14-py3-none-any.whl", hash = "sha256:3283ae2fba31c913d857e12e5ba5f9a7772bbc064ae2bb09efafa71b0dd4939b"},
@@ -2991,7 +2994,8 @@ pytest-randomly = [
     {file = "pytest_randomly-3.5.0-py3-none-any.whl", hash = "sha256:9db10d160237f3f8ee60cef72e4cb9ea88d2893c9dd5c8aa334b060cdeb67c3a"},
 ]
 pythomata = [
-    {file = "pythomata-0.2.0.tar.gz", hash = "sha256:e2db686d76c986b1ecef9c9c45a9c87092c13589537df3c55d692493b3f9be54"},
+    {file = "pythomata-0.3.2-py2.py3-none-any.whl", hash = "sha256:b6e1a4bb2ba9bff2f7f0e9b3f357d512b4a633bfd9ba8f63a59d89556396f784"},
+    {file = "pythomata-0.3.2.tar.gz", hash = "sha256:10a31e6fffed84f1eacdf8820b9f3af5a7dbaf329d936bf7c4618f464b22fed5"},
 ]
 python-dateutil = [
     {file = "python-dateutil-2.8.1.tar.gz", hash = "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c"},
@@ -3186,8 +3190,8 @@ six = [
     {file = "six-1.15.0.tar.gz", hash = "sha256:30639c035cdb23534cd4aa2dd52c3bf48f06e5f4a941509c8bafd8ce11080259"},
 ]
 smmap = [
-    {file = "smmap-3.0.5-py2.py3-none-any.whl", hash = "sha256:7bfcf367828031dc893530a29cb35eb8c8f2d7c8f2d0989354d75d24c8573714"},
-    {file = "smmap-3.0.5.tar.gz", hash = "sha256:84c2751ef3072d4f6b2785ec7ee40244c6f45eb934d9e543e2c51f1bd3d54c50"},
+    {file = "smmap-4.0.0-py2.py3-none-any.whl", hash = "sha256:a9a7479e4c572e2e775c404dcd3080c8dc49f39918c2cf74913d30c4c478e3c2"},
+    {file = "smmap-4.0.0.tar.gz", hash = "sha256:7e65386bd122d45405ddf795637b7f7d2b532e7e401d46bbe3fb49b9986d5182"},
 ]
 snowballstemmer = [
     {file = "snowballstemmer-2.1.0-py2.py3-none-any.whl", hash = "sha256:b51b447bea85f9968c13b650126a888aabd4cb4463fca868ec596826325dedc2"},

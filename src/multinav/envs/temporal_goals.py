@@ -26,19 +26,15 @@ Since the same goal can be used for different environments, we define them
 here, so that these are shared.
 """
 
+import pickle
 from typing import Optional, Sequence
 
-from flloat.semantics import PLInterpretation
 from gym.spaces import Discrete
-from pythomata.base import TransitionFunction
-from pythomata.dfa import DFA
+from pythomata.impl.simple import SimpleDFA
 from pythomata.utils import powerset
 from temprl.wrapper import TemporalGoal
 
 from multinav.envs.base import AbstractFluents
-
-# TODO: enable the "bip" fluent in sapientino.
-#   Either update _make_sapientino_automaton or use flloat for DFA generation.
 
 
 class SapientinoGoal(TemporalGoal):
@@ -89,13 +85,12 @@ class SapientinoGoal(TemporalGoal):
 
         # Maybe save
         if save_to:
-            self.automaton.to_dot(save_to)
+            self.automaton.to_graphviz().render(save_to)
 
     @staticmethod
-    def _make_sapientino_automaton(colors: Sequence[str]) -> DFA:
+    def _make_sapientino_automaton(colors: Sequence[str]) -> SimpleDFA:
         """Make the automaton from a sequence of colors."""
-        alphabet = set(map(PLInterpretation, powerset(set(colors))))
-        false_ = PLInterpretation(set())
+        alphabet = set(map(frozenset, powerset(set(colors))))
 
         nb_states = len(colors) + 2
         initial_state = 0
@@ -103,15 +98,14 @@ class SapientinoGoal(TemporalGoal):
         sink = nb_states - 1
         accepting = nb_states - 2
         states = {initial_state, sink}
-        transitions: TransitionFunction = {}
+        transitions = {}
         for c in colors:
             next_state = current_state + 1
             for symbol in alphabet:
-                if c in symbol.true_propositions:
+                if c in symbol:
                     transitions.setdefault(current_state, {})[symbol] = next_state
                 else:
                     transitions.setdefault(current_state, {})[symbol] = sink
-                transitions.setdefault(current_state, {})[false_] = current_state
             current_state = next_state
             states.add(current_state)
 
@@ -119,8 +113,80 @@ class SapientinoGoal(TemporalGoal):
             transitions.setdefault(current_state, {})[symbol] = sink
             transitions.setdefault(sink, {})[symbol] = sink
 
-        dfa = DFA(states, alphabet, initial_state, {accepting}, transitions)
+        dfa = SimpleDFA(states, alphabet, initial_state, {accepting}, transitions)
         return dfa.trim().complete()
+
+    @property
+    def observation_space(self) -> Discrete:
+        """Return the observation space.
+
+        NOTE: Temprl returns automata states+1, we don't want that
+        if we already have a complete automaton.
+        """
+        return Discrete(len(self._automaton.states))
+
+
+class SapientinoOfficeGoal(TemporalGoal):
+    """Define a temporal goal of a navigation task.
+
+    The goal of the agent is: to reach room A, if the door is open,
+    enter room A; when inside, if a person is detected, call that person with
+    the "visit" action. After this, go to room B and go on.
+    """
+
+    def __init__(
+        self,
+        n_rooms: int,
+        fluents: AbstractFluents,
+        saved_automaton: str,
+        reward: float,
+        save_to: Optional[str] = None,
+    ):
+        """Initialize.
+
+        :param n_rooms: the number of rooms in this environment. From this
+            will follow the fluents and automaton states.
+        :param fluents: this object contains the fluents valuation function.
+            This method will check that the valuated fluents are the expected
+            ones.
+        :param saved_automaton: path to a saved automaton corresponding
+            to a temporal goal. Fluents must match.
+        :param reward: reward suplied when reward is reached.
+        :param save_to: path where the automaton should be exported.
+        """
+        # Define the propositional symbols
+        expected_fluents = {"bip", "person", "closed"}
+        for i in range(1, n_rooms + 1):
+            at_room, in_room = f"at{i}", f"in{i}"
+            expected_fluents.add(at_room)
+            expected_fluents.add(in_room)
+
+        # Load automaton
+        with open(saved_automaton, "rb") as f:
+            automaton: SimpleDFA = pickle.load(f)
+
+        # Check same fluents in valuations
+        if not fluents.fluents == expected_fluents:
+            raise ValueError(
+                f"Symbols do not match: {fluents.fluents} != {expected_fluents}"
+            )
+        # NOTE: not checking also for automaton. Assuming correct
+
+        # Super
+        TemporalGoal.__init__(
+            self,
+            formula=None,  # Provinding automaton directly
+            reward=reward,
+            automaton=automaton,
+            labels=fluents,
+            extract_fluents=fluents.evaluate,
+            reward_shaping=False,
+            zero_terminal_state=False,
+        )
+
+        # Maybe save
+        if save_to:
+            self.automaton.to_graphviz().render(save_to)
 
     @property
     def observation_space(self) -> Discrete:
