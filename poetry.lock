@@ -1753,7 +1753,7 @@ tf-gpu = ["tensorflow-gpu (>=1.8.0,<2.0.0)"]
 type = "git"
 url = "https://github.com/cipollone/stable-baselines"
 reference = "parallel-agents"
-resolved_reference = "abd7dd30f9fd2b4c6a50e377b804418c1e366dac"
+resolved_reference = "883bc371064f78eccb65e90c4db481e4435468a6"
 
 [[package]]
 name = "stevedore"
