@@ -563,9 +563,9 @@ class TrainQ(Trainer):
 
         # Create log txt file
         log_file = os.path.join(self._log_path, name + "_log.txt")
-        header = ", ".join(self._log_properties) + "\n"
+        self._log_header = ", ".join(self._log_properties) + "\n"
         with open(log_file, "w") as f:
-            f.write(header)
+            f.write(self._log_header)
 
         # Store
         variables["figure"] = draw_fig
@@ -634,7 +634,8 @@ class TrainQ(Trainer):
             for i in range(n_samples)
         ]
         lines = [", ".join([str(x) for x in values]) + "\n" for values in by_timestep]
-        with open(variables["txt_file"], "a") as f:
+        with open(variables["txt_file"], "w") as f:
+            f.write(self._log_header)
             f.writelines(lines)
 
 
