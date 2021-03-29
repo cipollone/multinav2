@@ -104,9 +104,12 @@ class MyTemporalGoalWrapper(TemporalGoalWrapper):
         """Do the step."""
         # Step
         state, reward, done, info = super().step(action)
+
+        # Reward
         for tg in self.temp_goals:
-            if tg.is_true():
-                reward += tg.reward
+            if not tg.is_true():
+                reward += -1
+                # NOTE: cost function here. Tg.reward ignored
 
         # Termination
         failure_done = self.__end_on_failure and all(

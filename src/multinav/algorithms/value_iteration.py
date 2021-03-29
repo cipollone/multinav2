@@ -74,7 +74,7 @@ class _ValueIteration:
 
     def _get_next_values(self, state):
         """Get the next value, given state and action."""
-        return [
+        next_values = [
             sum(
                 [
                     p * (r + self.discount * self.v[sp])
@@ -82,9 +82,10 @@ class _ValueIteration:
                 ]
             )
             if action in self.env.available_actions(state)
-            else 0.0
+            else float("-inf")
             for action in iter_space(self.env.action_space)
         ]
+        return next_values
 
     def _compute_optimal_policy(self):
         """Compute optimal policy from value function."""

@@ -305,7 +305,7 @@ class AbstractSapientinoTemporalGoal(MyDiscreteEnv):
                     # Compose state
                     goal_reached = automaton_state in automaton.accepting_states
                     new_reward = sap_reward + (
-                        self.temporal_goal.reward if goal_reached else 0.0
+                        0.0 if goal_reached else -1.0
                     )
                     new_done = goal_reached
                     new_state = (sap_state, automaton_state)
