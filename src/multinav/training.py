@@ -82,6 +82,7 @@ default_parameters = dict(
     render=False,
     test_passive=False,
     tg_automaton="inputs/automaton.pickle",
+    run_id=None,
     # DQN params
     batch_size=32,
     layers=[64, 64],
@@ -154,6 +155,7 @@ def train(
         env_name=env_name,
         resuming=resuming,
         args=params,
+        run_id=params["run_id"],
     )
 
     # Make

@@ -290,7 +290,7 @@ class Saver:
 
 
 def prepare_directories(  # noqa: C901
-    env_name, resuming=False, args=None, no_create=False
+    env_name, resuming=False, args=None, no_create=False, run_id=None
 ):
     """Prepare the directories where weights and logs are saved.
 
@@ -303,6 +303,7 @@ def prepare_directories(  # noqa: C901
          to 'params.json' file inside the log directory.
     :param no_create: do not touch the files; just return the current paths
         (implies resuming).
+    :param run_id: force an integer run number. Usually not needed.
     :return: two paths, respectively for models and logs.
     """
     if no_create:
@@ -313,39 +314,44 @@ def prepare_directories(  # noqa: C901
     logs_path = os.path.join(output_base, env_name, "logs")
     dirs = (models_path, logs_path)
 
-    # Delete old ones
-    if not resuming:
-        if any(os.path.exists(d) for d in dirs):
-            print("Old logs and models will be deleted. Continue (Y/n)? ", end="")
-            c = input()
-            if c not in ("y", "Y", ""):
-                quit()
+    if run_id is None:
+        # Delete old ones
+        if not resuming:
+            if any(os.path.exists(d) for d in dirs):
+                print("Old logs and models will be deleted. Continue (Y/n)? ", end="")
+                c = input()
+                if c not in ("y", "Y", ""):
+                    quit()
 
-        # New
-        for d in dirs:
-            if os.path.exists(d):
-                shutil.rmtree(d)
-            os.makedirs(d)
+            # New
+            for d in dirs:
+                if os.path.exists(d):
+                    shutil.rmtree(d)
+                os.makedirs(d)
 
-    # Logs and models for the same run are saved in
-    #   directories with increasing numbers
-    i = 0
-    while os.path.exists(os.path.join(logs_path, str(i))) or os.path.exists(
-        os.path.join(models_path, str(i))
-    ):
-        i += 1
-
-    # Should i return the current?
-    if no_create:
-        last_model_path = os.path.join(models_path, str(i - 1))
-        last_log_path = os.path.join(logs_path, str(i - 1))
-        if (
-            i == 0
-            or not os.path.exists(last_log_path)
-            or not os.path.exists(last_model_path)
+        # Logs and models for the same run are saved in
+        #   directories with increasing numbers
+        i = 0
+        while os.path.exists(os.path.join(logs_path, str(i))) or os.path.exists(
+            os.path.join(models_path, str(i))
         ):
-            raise RuntimeError("Dirs should be created first")
-        return (last_model_path, last_log_path)
+            i += 1
+
+        # Should i return the current?
+        if no_create:
+            last_model_path = os.path.join(models_path, str(i - 1))
+            last_log_path = os.path.join(logs_path, str(i - 1))
+            if (
+                i == 0
+                or not os.path.exists(last_log_path)
+                or not os.path.exists(last_model_path)
+            ):
+                raise RuntimeError("Dirs should be created first")
+            return (last_model_path, last_log_path)
+
+    # Else use what arg says
+    else:
+        i = run_id
 
     # New dirs
     model_path = os.path.join(models_path, str(i))
