@@ -15,25 +15,23 @@ if __name__ == '__main__':
 
     # States numbers
     to_explore = [automaton.initial_state]
-    next_id = 0
-    new_ids = {}
+    new2old = []
     while len(to_explore) > 0:
         state = to_explore.pop(0)
-        new_ids[state] = next_id
-        next_id += 1
+        new2old.append(state)
         for successor in automaton._transition_function[state].keys():
-            if successor not in new_ids:
+            if successor not in new2old:
                 to_explore.append(successor)
+    old2new = {old: new for new, old in enumerate(new2old)}
 
     # New automaton and states
     new_automaton = SymbolicDFA()
-    for old_state in new_ids:
+    for new_state, old_state in enumerate(new2old):
         if automaton.initial_state == old_state:
-            new_state = new_ids[old_state]
-            assert new_ids[old_state] == 0
+            assert old_state == 0
         else:
-            new_state = new_automaton.create_state()
-            assert new_state == new_ids[old_state]
+            new_assigned_state = new_automaton.create_state()
+            assert new_assigned_state == new_state
 
         new_automaton.set_accepting_state(
             new_state, automaton.is_accepting(old_state))
@@ -42,7 +40,7 @@ if __name__ == '__main__':
     for old_state in automaton.states:
         for old_next, guard in automaton._transition_function[old_state].items():
             new_automaton.add_transition((
-                new_ids[old_state], guard, new_ids[old_next]
+                old2new[old_state], guard, old2new[old_next]
             ))
 
     # Save

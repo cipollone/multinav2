@@ -60,10 +60,10 @@ class _ValueIteration:
         while not delta < self.eps and iteration < self.max_iterations:
             delta = 0
             next_v = self._new_value_function()
-            for s in iter_space(self.env.observation_space):
+            for s in self.env.P:
                 vs = self.v[s]
                 next_values = self._get_next_values(s)
-                new_vs = max(next_values) if len(next_values) > 0 else 0.0
+                new_vs = max(next_values)
                 next_v[s] = new_vs
                 delta = max(delta, abs(vs - new_vs))
             self.v = next_v
@@ -81,15 +81,14 @@ class _ValueIteration:
                     for (p, sp, r, _done) in self.env.P[state][action]
                 ]
             )
-            if action in self.env.available_actions(state)
-            else float("-inf")
             for action in iter_space(self.env.action_space)
+            if action in self.env.available_actions(state)
         ]
         return next_values
 
     def _compute_optimal_policy(self):
         """Compute optimal policy from value function."""
-        for s in iter_space(self.env.observation_space):
+        for s in self.env.P:
             action_values = self._get_next_values(s)
             new_action = np.argmax(action_values) if len(action_values) > 0 else None
             self.policy[s] = new_action

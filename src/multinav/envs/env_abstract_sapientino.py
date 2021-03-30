@@ -259,9 +259,6 @@ class AbstractSapientinoTemporalGoal(MyDiscreteEnv):
         model: Transitions = {}
         initial_state = self.temporal_env.reset()  # because deterministic
         self._generate_transitions(model, initial_state)
-        # Complete with unreachable states
-        for state in iter_space(self.temporal_env.observation_space):
-            model.setdefault(state, {})
 
         # Set discrete env
         nb_states = self.temporal_env.observation_space.nvec.prod()
@@ -372,12 +369,9 @@ class AbstractSapientinoOffice(AbstractSapientinoTemporalGoal):
         model: Transitions = {}
         initial_state = self.temporal_env.reset()  # because deterministic
         self._generate_transitions(model, initial_state)
-        # Complete with unreachable states
-        for state in iter_space(self.temporal_env.observation_space):
-            model.setdefault(state, {})
 
         # Set discrete env
-        nb_states = self.temporal_env.observation_space.nvec.prod()
+        nb_states = len(model)
         nb_actions = self.sapientino_env.nb_actions
         isd = np.zeros(nb_states)
         isd[0] = 1.0
