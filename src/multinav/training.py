@@ -461,6 +461,9 @@ class TrainQ(Trainer):
             self.saver.extra_model = extra
             self._reinitialized = True
 
+            # Save an agent that may be used for testing
+            self.testing_agent = self.agent if not params["test_passive"] else self.passive_agent
+
         # Q function used just for action bias
         self.biased_Q = None
         if params["action_bias"]:
@@ -547,8 +550,6 @@ class TrainQ(Trainer):
         self.agent.q_function = self.learner.Q
         self.passive_agent.q_function = self.learner.passive_Q
         self.saver.extra_model = self.passive_agent.q_function
-
-        self.testing_agent = self.agent if not params["test_passive"] else self.passive_agent
 
     def _init_log(self, name: str, variables: Dict[str, Any]):
         """Initialize variables related to logging.

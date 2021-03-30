@@ -120,6 +120,7 @@ def test(
             params=params,
             model_path=model_path,
             log_path=log_path,
+            agent_only=True,
         ).testing_agent
 
     elif env_name == "sapientino-abs":
