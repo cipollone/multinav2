@@ -544,6 +544,7 @@ class TrainQ(Trainer):
             initial_passive_Q=(
                 self.passive_agent.q_function if self._reinitialized else None
             ),
+            seed=params["seed"],
         )
 
         # Link trained and saved agents

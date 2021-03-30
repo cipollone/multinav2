@@ -10,9 +10,6 @@ from gym.spaces import Tuple as GymTuple
 from stable_baselines.deepq import DQN
 from stable_baselines.deepq.policies import DQNPolicy
 
-# Module random number generator
-_rng = np.random.default_rng()
-
 
 def split_agent_and_automata(ob_space: Box) -> Tuple[gym.Space, Discrete]:
     """

@@ -245,7 +245,7 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
 
     # Define the fluent extractor
     n_rooms = sapientino_defs.sapientino_n_rooms
-    fluents = OfficeFluents(n_rooms=n_rooms)
+    fluents = OfficeFluents(n_rooms=n_rooms, seed=params["seed"])
 
     # Update fluents
     env = CallbackWrapper(env, OfficeFluents.ResetCallback(fluents))
