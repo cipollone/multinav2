@@ -19,8 +19,8 @@ if __name__ == '__main__':
     while len(to_explore) > 0:
         state = to_explore.pop(0)
         new2old.append(state)
-        for successor in automaton._transition_function[state].keys():
-            if successor not in new2old:
+        for successor in sorted(automaton._transition_function[state].keys()):
+            if successor not in new2old and successor not in to_explore:
                 to_explore.append(successor)
     old2new = {old: new for new, old in enumerate(new2old)}
 

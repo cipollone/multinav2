@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     automaton: SymbolicDFA
 
-    failure_state = 4
+    failure_state = 11
     initial_state = 0
     transition_function = deepcopy(automaton._transition_function)
 
