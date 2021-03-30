@@ -7,7 +7,7 @@
 	"action_bias": null,
 	"action_bias_eps": 0.0,
 	"episode_time_limit": 100,
-	"learning_rate": 0.1,
+	"learning_rate": 0.2,
 	"gamma": 1.0,
 	"end_on_faiure": false,
 	"total_timesteps": 300000,
