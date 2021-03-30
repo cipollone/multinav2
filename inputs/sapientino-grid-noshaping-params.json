@@ -1,9 +1,9 @@
 {
 	"resume_file": null,
 	"initialize_file": null,
-	"shaping": "outputs/sapientino-abs/models/0/model_0.pickle",
+	"shaping": null,
 	"dfa_shaping": false,
-	"active_passive_agents": true,
+	"active_passive_agents": false,
 	"action_bias": null,
 	"action_bias_eps": 0.0,
 	"episode_time_limit": 100,
@@ -20,5 +20,5 @@
 	"reward_per_step": 0.0,
 	"reward_outside_grid": 0.0,
 	"reward_duplicate_beep": 0.0,
-	"run_id": null
+	"run_id": 1
 }

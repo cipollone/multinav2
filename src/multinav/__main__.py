@@ -62,6 +62,9 @@ def main():
     parser.add_argument(
         "--passive", action="store_true", help="Test the passive agent",
     )
+    parser.add_argument(
+        "--id", type=int, help="run id: use this for multiple runs"
+    )
 
     # Parse
     args = parser.parse_args()
@@ -79,6 +82,7 @@ def main():
     cmd_params["interactive"] = args.interactive
     cmd_params["deterministic"] = args.deterministic
     cmd_params["test_passive"] = args.passive
+    cmd_params["run_id"] = args.id
 
     # Go
     if args.do == "train":

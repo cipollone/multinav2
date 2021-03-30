@@ -1,8 +1,6 @@
 ### Project dirs
 # Saved models, weights, temporary parameters
 /outputs/
-/inputs/*
-!/inputs/automaton.pickle
 # Generated from notebooks
 /notebooks/logs
 /notebooks/*.py
