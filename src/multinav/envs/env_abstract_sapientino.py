@@ -339,6 +339,7 @@ class AbstractSapientinoOffice(AbstractSapientinoTemporalGoal):
         tg_reward: float,
         saved_automaton: str,
         save_to: Optional[str] = None,
+        seed: int,
         **sapientino_kwargs,
     ):
         """Initialize the environment.
@@ -350,7 +351,7 @@ class AbstractSapientinoOffice(AbstractSapientinoTemporalGoal):
         :param save_to: path where the automaton temporal goal should be saved.
         """
         # Define temporal goal
-        self.fluents = OfficeFluents(n_rooms=nb_rooms)
+        self.fluents = OfficeFluents(n_rooms=nb_rooms, seed=seed)
         self.temporal_goal = SapientinoOfficeGoal(
             n_rooms=nb_rooms,
             fluents=self.fluents,
@@ -430,7 +431,7 @@ class OfficeFluents(AbstractFluents):
         "orange": "in4",
     }
 
-    def __init__(self, n_rooms: int):
+    def __init__(self, n_rooms: int, seed: int):
         """Initialize.
 
         :param nb_rooms: number of rooms to navigate.
@@ -444,7 +445,7 @@ class OfficeFluents(AbstractFluents):
             self.fluents.add(at_room)
             self.fluents.add(in_room)
 
-        self._rng = np.random.default_rng()
+        self._rng = np.random.default_rng(seed)
         self._n_rooms = n_rooms
 
     def evaluate(self, obs: int, action: int) -> Set[str]:
@@ -502,5 +503,6 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         saved_automaton=params["tg_automaton"],
         save_to=os.path.join(log_dir, "reward-dfa.dot") if log_dir else None,
         failure_probability=params["sapientino_fail_p"],
+        seed=params["seed"],
     )
     return env

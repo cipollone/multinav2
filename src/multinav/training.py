@@ -82,6 +82,7 @@ default_parameters = dict(
     render=False,
     test_passive=False,
     tg_automaton="inputs/automaton.pickle",
+    run_id=None,
     # DQN params
     batch_size=32,
     layers=[64, 64],
@@ -154,6 +155,7 @@ def train(
         env_name=env_name,
         resuming=resuming,
         args=params,
+        run_id=params["run_id"],
     )
 
     # Make
@@ -539,6 +541,7 @@ class TrainQ(Trainer):
             initial_passive_Q=(
                 self.passive_agent.q_function if self._reinitialized else None
             ),
+            seed=params["seed"],
         )
 
         # Link trained and saved agents

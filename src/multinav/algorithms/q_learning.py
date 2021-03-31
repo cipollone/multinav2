@@ -44,6 +44,7 @@ class QLearning:
         self,
         env: gym.Env,
         stats_envs: Sequence[MyStatsRecorder],
+        seed: int,
         total_timesteps: int = 2000000,
         alpha: float = 0.1,
         eps: float = 0.1,
@@ -121,7 +122,7 @@ class QLearning:
         self.passive_reward_getter = passive_reward_getter
 
         # Initialize
-        self.__rng = np.random.default_rng()
+        self.__rng = np.random.default_rng(seed)
         self.nb_actions = env.action_space.n
 
         initialization_fn = partial(

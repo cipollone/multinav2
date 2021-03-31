@@ -5,6 +5,11 @@
 import argparse
 import logging
 
+import time
+import random
+import numpy as np
+import tensorflow as tf
+
 
 def main():
     """Is the main function."""
@@ -62,6 +67,12 @@ def main():
     parser.add_argument(
         "--passive", action="store_true", help="Test the passive agent",
     )
+    parser.add_argument(
+        "--id", type=int, help="run id: use this for multiple runs"
+    )
+    parser.add_argument(
+        "--seed", type=int, help="Manually set a random seed."
+    )
 
     # Parse
     args = parser.parse_args()
@@ -69,6 +80,8 @@ def main():
     # logging
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
+
+    seed = init_seed(args.seed)
 
     # Other params
     cmd_params = dict()
@@ -79,6 +92,8 @@ def main():
     cmd_params["interactive"] = args.interactive
     cmd_params["deterministic"] = args.deterministic
     cmd_params["test_passive"] = args.passive
+    cmd_params["run_id"] = args.id
+    cmd_params["seed"] = seed
 
     # Go
     if args.do == "train":
@@ -98,6 +113,19 @@ def main():
             json_params=args.params,
             cmd_params=cmd_params,
         )
+
+
+def init_seed(seed=None):
+    """Sample a seed or use the one given."""
+
+    if seed is None:
+        seed = int(time.time())
+
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.set_random_seed(seed)  # NOTE: tf random ops have their own seed.
+
+    return seed
 
 
 if __name__ == "__main__":
