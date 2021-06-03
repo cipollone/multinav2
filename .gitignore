@@ -1,7 +1,6 @@
 ### Project dirs
 # Saved models, weights, temporary parameters
 /outputs/
-/inputs/
 # Generated from notebooks
 /notebooks/logs
 /notebooks/*.py

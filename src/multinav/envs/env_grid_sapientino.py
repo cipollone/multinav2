@@ -25,7 +25,6 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
-from flloat.semantics import PLInterpretation
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core.configurations import (
@@ -37,12 +36,14 @@ from gym_sapientino.core.types import Colors, color2id
 from multinav.algorithms.agents import ValueFunctionModel
 from multinav.envs import sapientino_defs
 from multinav.envs.base import AbstractFluents
-from multinav.envs.temporal_goals import SapientinoGoal
+from multinav.envs.env_abstract_sapientino import OfficeFluents as AbstractOfficeFluents
+from multinav.envs.temporal_goals import SapientinoOfficeGoal
+from multinav.helpers.callbacks import Callback
 from multinav.helpers.reward_shaping import AutomatonRS, StateH, StateL, ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper
 from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.temprl import MyTemporalGoalWrapper
-from multinav.wrappers.utils import SingleAgentWrapper
+from multinav.wrappers.utils import CallbackWrapper, SingleAgentWrapper
 
 
 class GridSapientinoRewardShaper(ValueFunctionRS):
@@ -116,7 +117,7 @@ class Fluents(AbstractFluents):
         if not self.fluents.issubset(sapientino_defs.color2int):
             raise ValueError(str(colors_set) + " contains invalid colors")
 
-    def evaluate(self, obs: Dict[str, float], action: int) -> PLInterpretation:
+    def evaluate(self, obs: Dict[str, float], action: int) -> Set[str]:
         """Respects AbstractFluents.evaluate."""
         beeps = obs["beep"] > 0
         if not beeps:
@@ -130,7 +131,52 @@ class Fluents(AbstractFluents):
                 if color_name not in self.fluents:
                     raise RuntimeError("Unexpected color: " + color_name)
                 true_fluents = {color_name}
-        return PLInterpretation(true_fluents)
+
+        return {f: f in true_fluents for f in self.fluents}
+
+
+class OfficeFluents(AbstractOfficeFluents):
+    """Same as OfficeFluents in abstract office sapientino, but for grid."""
+
+    def _new_episode(self):
+        """Updates for a new episode."""
+        # Sample once per episode
+        self._samples = self._rng.integers(0, 2, size=(self._n_rooms, 2))
+
+    def evaluate(self, obs: int, action: int) -> Set[str]:
+        """Respects.AbstractFluents.evaluate."""
+        color_id = obs["color"]
+        color_name = sapientino_defs.int2color[color_id]
+        beep = obs["beep"] > 0
+
+        fluents = set()
+        if color_name != "blank":
+            fluents.add(self._colors_to_room[color_name])
+        if beep:
+            fluents.add("bip")
+
+        # Doors and people are not in the observation. Valuate at random
+        if color_id != 0:
+            room_id = int(color_id / 2) - 1
+            assert 0 <= room_id < self._n_rooms
+            if self._samples[room_id, 0] == 1:
+                fluents.add("closed")
+            if self._samples[room_id, 1] == 1:
+                fluents.add("person")
+
+        return {f: f in fluents for f in self.fluents}
+    
+    class ResetCallback(Callback):
+
+        def __init__(self, fluents: "OfficeFluents"):
+            self._fluents = fluents
+
+        def _on_reset(self, obs) -> None:
+            self._fluents._new_episode()
+
+        def _on_step(self, action, obs, reward, done, info) -> None:
+            pass
+
 
 
 def abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
@@ -152,14 +198,17 @@ def abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
         #  Maybe it should be loaded too
         agent_state, automata_states = state[0], state[1:]
         color = agent_state["color"]
+        # Wall (color == 1) is not mapped to anything here
+        if color != 0:
+            color -= 1
         return (color,) + tuple(*automata_states)
 
     # Shaper
     shaper = ValueFunctionRS(
         value_function=lambda s: agent.value_function[s],
         mapping_function=_map,
-        gamma=gamma,
-        zero_terminal_state=False,  # NOTE
+        gamma=1.0,   # NOTE: this is intentional
+        zero_terminal_state=False,  # NOTE ^
     )
 
     return shaper
@@ -195,12 +244,17 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 
     # Define the fluent extractor
-    fluents = Fluents(colors_set=set(sapientino_defs.sapientino_color_sequence))
+    n_rooms = sapientino_defs.sapientino_n_rooms
+    fluents = OfficeFluents(n_rooms=n_rooms, seed=params["seed"])
+
+    # Update fluents
+    env = CallbackWrapper(env, OfficeFluents.ResetCallback(fluents))
 
     # Define the temporal goal
-    tg = SapientinoGoal(
-        colors=sapientino_defs.sapientino_color_sequence,
+    tg = SapientinoOfficeGoal(
+        n_rooms=n_rooms,
         fluents=fluents,
+        saved_automaton=params["tg_automaton"],
         reward=params["tg_reward"],
         save_to=os.path.join(log_dir, "reward-dfa.dot") if log_dir else None,
     )

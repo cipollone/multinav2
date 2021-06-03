@@ -25,12 +25,12 @@ from typing import Any, Dict, Optional, Tuple
 import graphviz
 import sympy
 from graphviz import Digraph
-from pythomata.dfa import DFA
+from pythomata.impl.simple import SimpleDFA
 from sympy.logic.boolalg import Boolean, BooleanFalse
 
 
 def to_graphviz_sym(  # noqa
-    dfa: DFA,
+    dfa: SimpleDFA,
     title: Optional[str] = None,
     states2colors: Optional[Dict[Any, str]] = None,
 ) -> Digraph:
@@ -78,8 +78,8 @@ def to_graphviz_sym(  # noqa
     return g
 
 
-def to_graphviz(dfa: DFA, title: Optional[str] = None) -> Digraph:
-    """Transform a pythomata.DFA into a graphviz.Digraph."""
+def to_graphviz(dfa: SimpleDFA, title: Optional[str] = None) -> Digraph:
+    """Transform a pythomata.SimpleDFA into a graphviz.Digraph."""
     g = graphviz.Digraph(format="svg")
     g.node("fake", style="invisible")
     for state in dfa.states:

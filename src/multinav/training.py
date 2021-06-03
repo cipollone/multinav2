@@ -81,6 +81,8 @@ default_parameters = dict(
     log_interval=100,  # In #of episodes
     render=False,
     test_passive=False,
+    tg_automaton="inputs/automaton.pickle",
+    run_id=None,
     # DQN params
     batch_size=32,
     layers=[64, 64],
@@ -118,6 +120,7 @@ default_parameters = dict(
     reward_outside_grid=0.0,
     reward_duplicate_beep=-0.5,
     # Abs sapientino env
+    nb_rooms=2,
     nb_colors=3,
     sapientino_fail_p=0.2,
 )
@@ -152,6 +155,7 @@ def train(
         env_name=env_name,
         resuming=resuming,
         args=params,
+        run_id=params["run_id"],
     )
 
     # Make
@@ -287,8 +291,11 @@ class TrainStableBaselines(Trainer):
         # If training a passive agent log this too
         if params["active_passive_agents"]:
 
+            # Find the reward shaping env
+            reward_shaping_env = find_wrapper(env, RewardShapingWrapper)
+
             passive_stats_env = MyStatsRecorder(
-                env=UnshapedEnv(original_env.env),
+                env=UnshapedEnv(reward_shaping_env),
                 gamma=params["gamma"],
             )
 
@@ -454,6 +461,9 @@ class TrainQ(Trainer):
             self.saver.extra_model = extra
             self._reinitialized = True
 
+            # Save an agent that may be used for testing
+            self.testing_agent = self.agent if not params["test_passive"] else self.passive_agent
+
         # Q function used just for action bias
         self.biased_Q = None
         if params["action_bias"]:
@@ -534,14 +544,13 @@ class TrainQ(Trainer):
             initial_passive_Q=(
                 self.passive_agent.q_function if self._reinitialized else None
             ),
+            seed=params["seed"],
         )
 
         # Link trained and saved agents
         self.agent.q_function = self.learner.Q
         self.passive_agent.q_function = self.learner.passive_Q
         self.saver.extra_model = self.passive_agent.q_function
-
-        self.testing_agent = self.agent if not params["test_passive"] else self.passive_agent
 
     def _init_log(self, name: str, variables: Dict[str, Any]):
         """Initialize variables related to logging.
@@ -558,9 +567,9 @@ class TrainQ(Trainer):
 
         # Create log txt file
         log_file = os.path.join(self._log_path, name + "_log.txt")
-        header = ", ".join(self._log_properties) + "\n"
+        self._log_header = ", ".join(self._log_properties) + "\n"
         with open(log_file, "w") as f:
-            f.write(header)
+            f.write(self._log_header)
 
         # Store
         variables["figure"] = draw_fig
@@ -629,7 +638,8 @@ class TrainQ(Trainer):
             for i in range(n_samples)
         ]
         lines = [", ".join([str(x) for x in values]) + "\n" for values in by_timestep]
-        with open(variables["txt_file"], "a") as f:
+        with open(variables["txt_file"], "w") as f:
+            f.write(self._log_header)
             f.writelines(lines)
 
 

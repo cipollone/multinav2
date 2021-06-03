@@ -27,9 +27,7 @@ defined here.
 """
 
 from abc import abstractmethod
-from typing import Set, cast
-
-from flloat.semantics import PLInterpretation
+from typing import Sequence, Set, Tuple, cast
 
 from multinav.helpers.general import ABC2, AbstractAttribute
 
@@ -45,7 +43,7 @@ class AbstractFluents(ABC2):
     fluents = cast(Set[str], AbstractAttribute())  # the cast is just for mypy
 
     @abstractmethod
-    def evaluate(self, obs, action: int) -> PLInterpretation:
+    def evaluate(self, obs, action: int) -> Set[str]:
         """Compute the current propositional interpretation.
 
         This function also respects the interface defined in
@@ -55,3 +53,7 @@ class AbstractFluents(ABC2):
         :return: a propositional interpretation
         """
         pass
+
+    def evaluations_prob(self, obs, action: int) -> Sequence[Tuple[Set[str], float]]:
+        """Return a sequence of fluents valuation, and their probabilities."""
+        return [self.evaluate(obs, action), 1.0]

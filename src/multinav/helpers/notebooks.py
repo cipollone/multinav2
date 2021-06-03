@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import PIL
 from IPython.core.display import Image, display
-from pythomata.dfa import DFA
+from pythomata.impl.simple import SimpleDFA
 
 from multinav.helpers.pythomata import to_graphviz_sym
 
@@ -53,7 +53,7 @@ def plot_env(env: gym.Env, *_args, **_kwargs):
     plt.show()
 
 
-def automaton_to_rgb(dfa: DFA, **kwargs):
+def automaton_to_rgb(dfa: SimpleDFA, **kwargs):
     """Automaton to RGB array."""
     graph = to_graphviz_sym(dfa, **kwargs)
     image_file = io.BytesIO(graph.pipe(format="png"))
@@ -61,7 +61,7 @@ def automaton_to_rgb(dfa: DFA, **kwargs):
     return array
 
 
-def print_automaton(dfa: DFA):
+def print_automaton(dfa: SimpleDFA):
     """Print the automaton in Jupyter."""
     array = automaton_to_rgb(dfa)
     display_img_array(array)
