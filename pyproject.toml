@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "multinav"
-version = "0.1.2"
+version = "0.2.0"
 description = "RL on multiple related navigation environments"
 authors = [
 	"Roberto Cipollone <cipollone.rt@gmail.com>",
