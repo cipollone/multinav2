@@ -33,7 +33,7 @@ RUN pip uninstall -y typing
 RUN mkdir ${PROJECT_TEMP_PATH}
 WORKDIR ${PROJECT_TEMP_PATH}
 COPY . ./
-RUN poetry install && rm -r src/
+RUN poetry install && rm -r multinav/
 
 # I won't copy the project as I expect a bind mount in home
 
