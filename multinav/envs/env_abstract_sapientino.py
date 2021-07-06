@@ -42,7 +42,6 @@ from multinav.helpers.gym import (
     Transition,
     Transitions,
     from_discrete_env_to_graphviz,
-    iter_space,
 )
 from multinav.wrappers.temprl import FlattenAutomataStates, MyTemporalGoalWrapper
 

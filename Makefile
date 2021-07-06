@@ -60,39 +60,39 @@ clean-test: ## remove test and coverage artifacts
 lint-all: black isort lint static bandit safety vulture pylint ## run all linters
 
 lint: ## check style with flake8
-	flake8 src/multinav tests scripts
+	flake8 multinav tests scripts
 
 static: ## static type checking with mypy
-	mypy src/multinav tests scripts
+	mypy multinav tests scripts
 
 isort: ## sort import statements with isort
-	isort src/multinav tests scripts
+	isort multinav tests scripts
 
 isort-check: ## check import statements order with isort
-	isort --check-only src/multinav tests scripts
+	isort --check-only multinav tests scripts
 
 black: ## apply black formatting
-	black src/multinav tests scripts
+	black multinav tests scripts
 
 black-check: ## check black formatting
-	black --check --verbose src/multinav tests scripts
+	black --check --verbose multinav tests scripts
 
 bandit: ## run bandit
-	bandit src/multinav tests scripts
+	bandit multinav tests scripts
 
 safety: ## run safety
 	safety
 
 pylint: ## run pylint
-	pylint src/multinav tests scripts
+	pylint multinav tests scripts
 
 vulture: ## run vulture
-	vulture src/multinav scripts/whitelist.py
+	vulture multinav scripts/whitelist.py
 
 test: ## run tests quickly with the default Python
 	pytest tests --doctest-modules \
-        src/multinav tests/ \
-        --cov=src/multinav \
+        multinav tests/ \
+        --cov=multinav \
         --cov-report=xml \
         --cov-report=html \
         --cov-report=term
@@ -101,7 +101,7 @@ test-all: ## run tests on every Python version with tox
 	tox
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source src/multinav -m pytest
+	coverage run --source multinav -m pytest
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html

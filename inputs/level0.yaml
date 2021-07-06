@@ -1,0 +1,39 @@
+name: level0
+algorithm:
+  name: multinav2
+  commit: null
+  diff: null
+  params:
+    learning_rate: 0.05
+    gamma: 1.0
+    max_iterations: 5000
+    resume_file: null
+    interactive: false
+    deterministic: false
+    passive: false
+    action_bias: null
+    active_passive_agents: false
+  repository: https://github.com/cipollone/multinav2/
+  version: version
+comment: comment
+environment:
+  commit: hash
+  diff: ''
+  name: gym-sapientino
+  params:
+    env: level0
+    episode_time_limit: 20
+    render: false
+    nb_rooms: 3
+    sapientino_fail_p: 0
+    shaping: null
+    tg_reward: 1.0
+    tg_automaton: inputs/automaton.pickle
+  repository: repository
+  version: version
+evaluation:
+  episodes: 0
+  frequency: 0
+n-runs: 1
+output-base: outputs
+run-command: "poetry run python -m multinav train"

@@ -197,7 +197,7 @@ def combine_boxes(*spaces: Box) -> Box:
     return Box(lows, highs)
 
 
-def find_wrapper(env: gym.Env, wrapper_type: type):
+def find_wrapper(env: gym.Wrapper, wrapper_type: type) -> Optional[gym.Env]:
     """Extract the requested class from the hierarchy of wrappers.
 
     This utility function recursively searches the requested class along the
