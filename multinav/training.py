@@ -23,7 +23,7 @@
 
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, cast
 
 import numpy as np
 from gym import Env
@@ -52,10 +52,12 @@ def train(params: Dict[str, Any]):
         in files under inputs/
     """
     # Get options
+    alg_params = params["algorithm"]["params"]
     env_params = params["environment"]["params"]
     env_params["seed"] = params["seed"]
+    alg_params["seed"] = params["seed"]
+    env_params["gamma"] = alg_params["gamma"]
     env_name = env_params.pop("env")
-    alg_params = params["algorithm"]["params"]
 
     # Make
     trainer: Trainer
@@ -72,13 +74,13 @@ def train(params: Dict[str, Any]):
             model_path=params["model-dir"],
             log_path=params["logs-dir"],
         )
-    elif env_name == "sapientino-grid":
+    elif env_name == "level1":
         # Grid env
         env = env_grid_sapientino.make(
             params=env_params,
             log_dir=params["logs-dir"],
         )
-        if params["render"]:
+        if env_params["render"]:
             env = Renderer(env)
 
         # Trainer
@@ -109,7 +111,7 @@ class TrainQ(Trainer):
 
     def __init__(
         self,
-        env: Optional[Env],
+        env: Env,
         params: Dict[str, Any],
         model_path: str,
         log_path: Optional[str],
@@ -188,6 +190,8 @@ class TrainQ(Trainer):
 
             # Find the reward shaping env
             reward_shaping_env = find_wrapper(self.env, RewardShapingWrapper)
+            assert isinstance(reward_shaping_env, RewardShapingWrapper), (
+                "Expecting a reward shaped Env")
 
             self.passive_stats_env = MyStatsRecorder(
                 env=UnshapedEnv(reward_shaping_env),
@@ -197,8 +201,8 @@ class TrainQ(Trainer):
 
             # Make it move with the original env
             self.env = UnshapedEnvWrapper(
-                shaped_env=self.env,
-                unshaped_env=self.passive_stats_env,
+                shaped_env=cast(RewardShapingWrapper, self.env),
+                unshaped_env=cast(UnshapedEnv, self.passive_stats_env),
             )
             original_reward_getter: Optional[
                 Callable[[], float]
@@ -303,6 +307,7 @@ class TrainQ(Trainer):
         :param stats_env: a MyStatsRecorder environment wrapper that
             stores the current statistics.
         """
+        data = []
         for i in range(len(self._log_properties)):
             name = self._log_properties[i]
             ax = variables["axes"][i]

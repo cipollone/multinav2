@@ -1,0 +1,46 @@
+name: level1
+algorithm:
+  name: multinav2
+  commit: null
+  diff: null
+  params:
+    resume_file: null
+    initialize_file: null
+    active_passive_agents: true
+    action_bias: null
+    action_bias_eps: 0.0
+    learning_rate: 0.1
+    learning_rate_end: 0.01
+    gamma: 1.0
+    total_timesteps: 700000
+    q_eps: 0.95
+    epsilon_end: 0.0
+    log_interval: 500
+  repository: https://github.com/cipollone/multinav2/
+  version: version
+comment: comment
+environment:
+  commit: hash
+  diff: ''
+  name: gym-sapientino
+  params:
+    env: level1
+    initial_position: [2, 2]
+    shaping: outputs/level0/0/models/model_0.pickle
+    episode_time_limit: 70
+    end_on_failure: false
+    render: false
+    reward_per_step: 0.0
+    reward_outside_grid: 0.0
+    reward_duplicate_beep: 0.0
+    tg_reward: 1.0
+    tg_automaton: inputs/automaton.pickle
+    dfa_shaping: false
+  repository: repository
+  version: version
+evaluation:
+  episodes: 0
+  frequency: 0
+n-runs: 1
+output-base: outputs
+run-command: "poetry run python -m multinav train"
