@@ -21,70 +21,9 @@
 #
 """Helpers related to TempRL wrappers."""
 
-from typing import List
-
 import numpy as np
 from gym import Env, ObservationWrapper
-from gym.spaces import Box, Discrete, MultiDiscrete
-from temprl.wrapper import TemporalGoal, TemporalGoalWrapper
-
-from multinav.helpers.gym import combine_boxes
-
-
-class MyTemporalGoalWrapper(TemporalGoalWrapper):
-    """
-    Custom version of TemporalGoalWrapper.
-
-    In particular:
-    - it changes the rendering, by concatenating the frame of the environment
-      and the frame of the automata.
-    - if the agent goes to an automaton accepting state, the training finishes.
-    """
-
-    def __init__(
-        self,
-        env: Env,
-        temp_goals: List[TemporalGoal],
-        end_on_success: bool = True,
-        end_on_failure: bool = False,
-    ):
-        """Initialize.
-
-        :param env: gym environment to wrap.
-        :param temp_goals: list of temporal goals.
-        :param end_on_success: if true, episode terminates when the agent
-            reaches the reward.
-        :param end_on_failure: if true, episode terminates when the agent
-            reaches a failure state.
-        """
-        # Super
-        TemporalGoalWrapper.__init__(self, env=env, temp_goals=temp_goals)
-
-        # Store
-        self.__end_on_success = end_on_success
-        self.__end_on_failure = end_on_failure
-
-    def step(self, action):
-        """Do the step."""
-        # Step
-        state, reward, done, info = super().step(action)
-
-        # Reward
-        for tg in self.temp_goals:
-            if not tg.is_true():
-                reward += -1
-                # NOTE: cost function here. Tg.reward ignored
-
-        # Termination
-        failure_done = self.__end_on_failure and all(
-            tg.is_failed() for tg in self.temp_goals
-        )
-        success_done = self.__end_on_success and all(
-            tg.is_true() for tg in self.temp_goals
-        )
-        done = done or failure_done or success_done
-
-        return state, reward, done, info
+from gym.spaces import Discrete, MultiDiscrete, Tuple as GymTuple
 
 
 class FlattenAutomataStates(ObservationWrapper):
@@ -102,6 +41,7 @@ class FlattenAutomataStates(ObservationWrapper):
         ObservationWrapper.__init__(self, env)
 
         space = env.observation_space
+        assert isinstance(space, GymTuple), "Unexpectd gym space"
         assert len(space) == 2, "Expected: environment state, automata states"
         assert type(space[0]) == Discrete, "Env state must be discrete"
         assert type(space[1]) == MultiDiscrete, "Automata states are discrete"
@@ -115,48 +55,3 @@ class FlattenAutomataStates(ObservationWrapper):
         env_state = observation[0]
         automata_states = tuple(observation[1])
         return (env_state,) + automata_states
-
-
-class BoxAutomataStates(ObservationWrapper):
-    """Flatten the observation space to one array.
-
-    A state (x, [q1, q2]) becomes (x, q1, q2).
-    Continuous features x.
-    """
-
-    def __init__(self, env: Env):
-        """Initialize.
-
-        :param env: gym environment to wrap.
-        """
-        ObservationWrapper.__init__(self, env)
-
-        space = env.observation_space
-        assert len(space) == 2, "Expected: environment state, automata states"
-        assert type(space[0]) == Box, "Env state must be a box"
-        assert type(space[1]) == MultiDiscrete, "Automata states are discrete"
-
-        automata_highs = space[1].nvec.astype(np.float32)
-        automata_lows = np.zeros_like(automata_highs)
-        automata_box = Box(automata_lows, automata_highs)
-
-        self.observation_space = combine_boxes(space[0], automata_box)
-
-    def observation(self, observation):
-        """Flatten."""
-        env_state, automata_states = observation
-        obs = np.concatenate((env_state, automata_states))
-        return obs
-
-
-def _add_channel(frame: np.ndarray):
-    """
-    Add channel to a frame.
-
-    It might be needed because of different behaviours of the rendering systems.
-    """
-    if frame.shape[2] != 3:
-        return frame
-    layer = np.zeros(frame.shape[:-1] + (1,), dtype=np.uint8)
-    layer.fill(255)
-    return np.append(frame, layer, axis=2)
