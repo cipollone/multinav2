@@ -21,7 +21,6 @@
 #
 """This module implements the general logic of the training loop."""
 
-import json
 import os
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Optional
@@ -30,194 +29,64 @@ import numpy as np
 from gym import Env
 from matplotlib import pyplot as plt
 from PIL import Image
-from stable_baselines import DQN
-from stable_baselines.common.callbacks import CallbackList
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
-from multinav.algorithms.modular_dqn import ModularPolicy
 from multinav.algorithms.q_learning import QLearning
 from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
-from multinav.envs import (
-    env_abstract_sapientino,
-    env_cont_sapientino,
-    env_grid_sapientino,
-    env_ros_controls,
-)
+from multinav.envs import env_abstract_sapientino, env_grid_sapientino
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
-from multinav.helpers.general import QuitWithResources
 from multinav.helpers.gym import find_wrapper
-from multinav.helpers.misc import prepare_directories
-from multinav.helpers.stable_baselines import (
-    CustomCheckpointCallback,
-    RendererCallback,
-    StatsLoggerCallback,
-)
 from multinav.wrappers.reward_shaping import (
     RewardShapingWrapper,
     UnshapedEnv,
     UnshapedEnvWrapper,
 )
-from multinav.wrappers.temprl import BoxAutomataStates
-from multinav.wrappers.training import NormalizeEnvWrapper
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
 
-# Default environments and algorithms parameters
-#   Always prefer to specify them with a json; do not rely on defaults.
-default_parameters = dict(
-    # Common
-    resume_file=None,
-    initialize_file=None,
-    shaping=None,
-    shaping_passive=False,
-    active_passive_agents=False,
-    dfa_shaping=False,
-    action_bias=None,
-    action_bias_eps=0.0,
-    episode_time_limit=100,
-    learning_rate=5e-4,
-    gamma=0.99,
-    end_on_failure=False,
-    log_interval=100,  # In #of episodes
-    render=False,
-    test_passive=False,
-    tg_automaton="inputs/automaton.pickle",
-    run_id=None,
-    # DQN params
-    batch_size=32,
-    layers=[64, 64],
-    shared_layers=1,
-    dueling=False,
-    layer_norm=True,
-    learning_starts=5000,
-    train_freq=2,
-    target_network_update_freq=10000,
-    exploration_fraction=0.8,
-    exploration_initial_eps=1.0,
-    exploration_final_eps=0.02,
-    save_freq=100000,
-    total_timesteps=2000000,
-    buffer_size=50000,
-    # Q params
-    #   total_timesteps
-    nb_episodes=1000,
-    q_eps=0.5,
-    learning_rate_end=0.0,
-    epsilon_end=0.05,
-    # ValueIteration params
-    max_iterations=2000,
-    # Ros agent env
-    notmoving_limit=12,
-    # Sapientino env
-    acceleration=0.02,
-    angular_acceleration=20.0,
-    max_velocity=0.20,
-    min_velocity=0.0,
-    max_angular_vel=40,
-    initial_position=[1, 1],
-    tg_reward=1.0,
-    reward_per_step=-0.01,
-    reward_outside_grid=0.0,
-    reward_duplicate_beep=-0.5,
-    # Abs sapientino env
-    nb_rooms=2,
-    nb_colors=3,
-    sapientino_fail_p=0.2,
-)
 
+def train(params: Dict[str, Any]):
+    """Train an agent.
 
-def train(
-    env_name: str,
-    json_params: Optional[str] = None,
-    cmd_params: Optional[Dict[str, Any]] = None,
-):
-    """Train an agent on the ROS environment.
-
-    :param env_name: the environment id (see ``multinav --help``)
-    :param json_params: the path (str) of json file of parameters.
-    :param cmd_params: optional command line parameters. These are meant to
-        override json_params.
+    :param params: for examples on these parameters see the project repository
+        in files under inputs/
     """
-    # Settings
-    params = dict(default_parameters)
-    if json_params:
-        with open(json_params) as f:
-            loaded_params = json.load(f)
-        params.update(loaded_params)
-    if cmd_params:
-        params.update(cmd_params)
-
-    # Init output directories and save params
-    resuming = any(
-        [params["resume_file"], params["initialize_file"], params["action_bias"]]
-    )
-    model_path, log_path = prepare_directories(
-        env_name=env_name,
-        resuming=resuming,
-        args=params,
-        run_id=params["run_id"],
-    )
+    # Get options
+    env_params = params["environment"]["params"]
+    env_params["seed"] = params["seed"]
+    env_name = env_params.pop("env")
+    alg_params = params["algorithm"]["params"]
 
     # Make
     trainer: Trainer
-    if env_name == "ros":
-        # Ros env
-        env = env_ros_controls.make(params=params)
-
-        # Trainer
-        trainer = TrainStableBaselines(
-            env=env_ros_controls.make(params=params),
-            params=params,
-            model_path=model_path,
-            log_path=log_path,
+    if env_name == "level0":
+        # Abstract env
+        env = env_abstract_sapientino.make(
+            params=env_params,
+            log_dir=params["logs-dir"],
         )
-        # TODO: define _load_cont_shaping_agent just like load_grid_shaping_agent
-
-    elif env_name == "sapientino-cont":
-        # Continuous env
-        shaping_agent = load_grid_shaping_agent(params)
-        env = env_cont_sapientino.make(
-            params=params,
-            log_dir=log_path,
-            shaping_agent=shaping_agent,
-        )
-        if params["render"]:
-            env = Renderer(env)
-
         # Trainer
-        trainer = TrainStableBaselines(
+        trainer = TrainValueIteration(
             env=env,
-            params=params,
-            model_path=model_path,
-            log_path=log_path,
+            params=alg_params,
+            model_path=params["model-dir"],
+            log_path=params["logs-dir"],
         )
-
     elif env_name == "sapientino-grid":
         # Grid env
-        env = env_grid_sapientino.make(params=params, log_dir=log_path)
+        env = env_grid_sapientino.make(
+            params=env_params,
+            log_dir=params["logs-dir"],
+        )
         if params["render"]:
             env = Renderer(env)
 
         # Trainer
         trainer = TrainQ(
             env=env,
-            params=params,
-            model_path=model_path,
-            log_path=log_path,
-        )
-
-    elif env_name == "sapientino-abs":
-        # Abstract env
-        env = env_abstract_sapientino.make(
-            params=params,
-            log_dir=log_path,
-        )
-        # Trainer
-        trainer = TrainValueIteration(
-            env=env,
-            params=params,
-            model_path=model_path,
-            log_path=log_path,
+            params=alg_params,
+            model_path=params["model-dir"],
+            log_path=params["logs-dir"],
         )
     else:
         raise RuntimeError("Environment not supported")
@@ -233,181 +102,6 @@ class Trainer(ABC):
     def train(self) -> None:
         """Trainig loop."""
         pass
-
-
-class TrainStableBaselines(Trainer):
-    """Define the agnent and training loop for stable_baselines."""
-
-    def __init__(self, env: Env, params: dict, model_path: str, log_path: str):
-        """Initialize.
-
-        :param env: gym environment. Assuming observation space is a tuple,
-            where first component is from original env, and the second is
-            temporal goal state.
-        :param params: dict of parameters, like `default_parameters`.
-        :param model_path: directory where to save models.
-        :param log_path: directory where to save tensorboard logs.
-        """
-        # Check
-        if params["initialize_file"]:
-            raise ValueError("Initialization not supported; use resuming option")
-        if params["action_bias"]:
-            raise ValueError("Action bias is not maintained here")
-
-        # Alias
-        original_env = env
-
-        # Load a saved agent for the action bias
-        self.biased_agent: Optional[DQN] = None
-        if params["action_bias"]:
-            loading_params = dict(params)
-            loading_params["resume_file"] = params["action_bias"]
-            loading_params["action_bias"] = None
-
-            self.biased_agent = TrainStableBaselines(
-                env=env,
-                params=loading_params,
-                model_path=model_path,
-                log_path=log_path,
-            ).model
-
-        # Collect statistics
-        #    (assuming future wrappers do not modify episodes)
-        env = MyStatsRecorder(env=env, gamma=params["gamma"])
-
-        # Callbacks
-        checkpoint_callback = CustomCheckpointCallback(
-            save_path=model_path,
-            save_freq=params["save_freq"],
-            extra=None,
-        )
-        stats_logger_callback = StatsLoggerCallback(stats_recorder=env, scope="env0")
-
-        callbacks_list = [checkpoint_callback, stats_logger_callback]
-        if params["render"]:
-            renderer_callback = RendererCallback()
-            callbacks_list.append(renderer_callback)
-
-        # If training a passive agent log this too
-        if params["active_passive_agents"]:
-
-            # Find the reward shaping env
-            reward_shaping_env = find_wrapper(env, RewardShapingWrapper)
-
-            passive_stats_env = MyStatsRecorder(
-                env=UnshapedEnv(reward_shaping_env),
-                gamma=params["gamma"],
-            )
-
-            passive_stats_callback = StatsLoggerCallback(
-                stats_recorder=passive_stats_env,
-                scope="env1",
-            )
-            callbacks_list.append(passive_stats_callback)
-
-            # Make it move with the original env
-            env = UnshapedEnvWrapper(
-                shaped_env=env,
-                unshaped_env=passive_stats_env,
-            )
-            original_reward_getter = env.get_reward  # alias
-        else:
-            original_reward_getter = None
-
-        # Combine callbacks
-        all_callbacks = CallbackList(callbacks_list)
-
-        # Define or load
-        resuming = bool(params["resume_file"])
-        if not resuming:
-            # Normalizer
-            normalized_env = NormalizeEnvWrapper(
-                env=env,
-                training=True,
-                entry=0,  # Only env features, not temporal goal state
-            )
-            flat_env = BoxAutomataStates(normalized_env)
-            # Saving normalizer too
-            checkpoint_callback.saver.extra_model = normalized_env
-
-            # Agent
-            model = DQN(
-                env=flat_env,
-                policy=ModularPolicy,
-                policy_kwargs={
-                    "layer_norm": params["layer_norm"],
-                    "layers": params["layers"],
-                    "shared_layers": params["shared_layers"],
-                    "dueling": params["dueling"],
-                },
-                gamma=params["gamma"],
-                learning_rate=params["learning_rate"],
-                train_freq=params["train_freq"],
-                double_q=True,
-                batch_size=params["batch_size"],
-                buffer_size=params["buffer_size"],
-                learning_starts=params["learning_starts"],
-                prioritized_replay=True,
-                target_network_update_freq=params["target_network_update_freq"],
-                exploration_fraction=params["exploration_fraction"],
-                exploration_final_eps=params["exploration_final_eps"],
-                exploration_initial_eps=params["exploration_initial_eps"],
-                active_passive_agents=params["active_passive_agents"],
-                passive_reward_getter=original_reward_getter,
-                tensorboard_log=log_path,
-                full_tensorboard_log=False,
-                verbose=1,
-            )
-        else:
-            # Reload model
-            model, extra_model, counters = checkpoint_callback.load(
-                path=params["resume_file"],
-            )
-
-            # Restore normalizer and env
-            normalized_env = extra_model
-            normalized_env.set_env(env)
-            flat_env = BoxAutomataStates(normalized_env)
-
-            # Restore properties
-            model.tensorboard_log = log_path
-            model.num_timesteps = counters["step"]
-            model.learning_starts = params["learning_starts"] + counters["step"]
-            model.set_env(flat_env)
-            model.passive_reward_getter = original_reward_getter
-
-        # Store
-        self.params = params
-        self.resuming = resuming
-        self.saver = checkpoint_callback
-        self.logger = stats_logger_callback
-        self.callbacks = all_callbacks
-        self.model: DQN = model
-        self.normalized_env = normalized_env
-        self.testing_agent = model if not params["test_passive"] else model.passive_agent
-
-    def train(self):
-        """Do train.
-
-        Interrupt at any type with Ctrl-C.
-        """
-        # Behaviour on quit
-        QuitWithResources.add(
-            "last_save",
-            lambda: self.saver.save(step=self.saver.num_timesteps),
-        )
-        QuitWithResources.add("last_log", self.logger.log)
-
-        # Start
-        self.model.learn(
-            total_timesteps=self.params["total_timesteps"],
-            log_interval=self.params["log_interval"],
-            callback=self.callbacks,
-            reset_num_timesteps=not self.resuming,
-        )
-
-        # Final save
-        self.saver.save(self.params["total_timesteps"])
 
 
 class TrainQ(Trainer):
@@ -724,38 +418,3 @@ class TrainValueIteration(Trainer):
         frame = self.env.render(mode="rgb_array")
         img = Image.fromarray(frame)
         img.save(os.path.join(self._log_path, "frame.png"))
-
-
-def load_grid_shaping_agent(
-    params: Dict[str, Any],
-) -> Optional[QFunctionModel]:
-    """Load a grid-sapientino checkpoint and returns the agent.
-
-    :param params: the parameters of a continuous sapientino.
-        (because we'll use this to load an agent for reward shaping).
-    :return: a grid sapientino agent or None.
-    """
-    if not params["shaping"]:
-        return None
-
-    # Simple config for grid-sapientino
-    grid_params = {}
-    grid_params.update(default_parameters)
-    grid_params["initialize_file"] = params["shaping"]
-
-    # Load agent from trainer
-    trainer = TrainQ(
-        env=None,
-        params=grid_params,
-        model_path=os.path.dirname(params["shaping"]),
-        log_path=None,
-        agent_only=True,
-    )
-
-    # Return the agent
-    if params["shaping_passive"]:
-        print("> Shaping from passive agent: " + params["shaping"])
-        return trainer.passive_agent
-    else:
-        print("> Shaping from agent: " + params["shaping"])
-        return trainer.agent
