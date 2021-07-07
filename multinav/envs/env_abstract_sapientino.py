@@ -38,6 +38,7 @@ from multinav.helpers.gym import (
     Transitions,
     from_discrete_env_to_graphviz,
 )
+from multinav.wrappers.temprl import FlattenAutomataStates
 
 
 class AbstractSapientino(MyDiscreteEnv):
@@ -226,6 +227,7 @@ class Fluents:
         :param obs: assuming that the observation comes from an
             `AbstractSapientino` environment.
         :param action: the last action.
+        :return: current propositional interpretation of fluents
         """
         if action == AbstractSapientino.visit_color:
             fluents = {sapientino_defs.int2color[obs]}
@@ -273,6 +275,7 @@ class OfficeFluents:
         :param obs: assuming that the observation comes from an
             `AbstractSapientino` environment.
         :param action: the last action.
+        :return: current propositional interpretation of fluents
         """
         fluents = set()
         if obs != 0:
@@ -336,5 +339,6 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         fluents=cast(FluentExtractor, fluent_extractor),
         log_dir=log_dir,
     )
+    env = FlattenAutomataStates(env)
 
     return env

@@ -23,7 +23,8 @@
 
 import numpy as np
 from gym import Env, ObservationWrapper
-from gym.spaces import Discrete, MultiDiscrete, Tuple as GymTuple
+from gym.spaces import Discrete, MultiDiscrete
+from gym.spaces import Tuple as GymTuple
 
 
 class FlattenAutomataStates(ObservationWrapper):

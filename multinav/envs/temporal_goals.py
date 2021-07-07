@@ -10,14 +10,13 @@ from pylogics.parsers import parse_ldl, parse_ltl
 from temprl.types import FluentExtractor
 from temprl.wrapper import TemporalGoal, TemporalGoalWrapper
 
-from multinav.wrappers.temprl import FlattenAutomataStates
-
 
 def with_nonmarkov_rewards(
     env: Env,
     rewards: List[Dict[str, Any]],
     fluents: FluentExtractor,
     log_dir: Optional[str],
+    must_load: bool = False
 ):
     """Wrap an environment with the specified temporal goals.
 
@@ -27,11 +26,16 @@ def with_nonmarkov_rewards(
     :param fluents: a fluent extractor. Make sure that this is consistent with
         the propositions that appear in the temporal goals.
     :param log_dir: directory where to save reward machines.
+    :param must_load: if True, we don't allow to compute new automata;
+        it must be loaded with pickle.
     :return: a wrapped environment with observation space (obs, q0, .., qN)
         for N temporal goals.
     """
     # Compute or load automata
     for reward_spec in rewards:
+        if must_load:
+            assert "ldlf" not in reward_spec and "ltlf" not in reward_spec, (
+                "Specify an automaton directly, not a formula")
         if "ldlf" in reward_spec:
             reward_spec["dfa"] = ldl2dfa(parse_ldl(reward_spec["ldl"]))
         elif "ltlf" in reward_spec:
@@ -59,13 +63,16 @@ def with_nonmarkov_rewards(
     # Save dfa
     if log_dir is not None:
         for i, reward_spec in enumerate(rewards):
-            graph = reward_spec["dfa"].to_graphviz()
-            filename = f"dfa-{i}-reward-{reward_spec['reward']}.pdf"
+            filename = f"dfa-{i}"
             filepath = Path(log_dir) / filename
-            with open(filepath, "wb") as f:
-                f.write(graph.pipe(format="pdf", quiet=True))
 
-    # Simplify observation space
-    env = FlattenAutomataStates(env)
+            # Save object
+            with open(filepath.with_suffix(".pickle"), "wb") as f:
+                pickle.dump(reward_spec["dfa"], f)
+
+            # Save graph
+            graph = reward_spec["dfa"].to_graphviz()
+            with open(filepath.with_suffix(".pdf"), "wb") as f:
+                f.write(graph.pipe(format="pdf", quiet=True))
 
     return env

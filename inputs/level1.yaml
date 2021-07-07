@@ -28,14 +28,13 @@ environment:
     initial_position: [2, 2]
     shaping: outputs/level0/0/models/model_0.pickle
     episode_time_limit: 70
-    end_on_failure: false
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
     reward_duplicate_beep: 0.0
-    tg_reward: 1.0
-    tg_automaton: inputs/automaton.pickle
-    dfa_shaping: false
+    rewards:
+      - dfa: ./outputs/level0/0/logs/dfa-0.pickle
+        reward: 1.0
   repository: repository
   version: version
 evaluation:
