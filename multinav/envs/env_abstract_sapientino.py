@@ -23,18 +23,13 @@
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
 
 import io
-import pickle
-from pathlib import Path
 from typing import Any, Dict, Optional, cast
 
 import numpy as np
-from logaut import ldl2dfa, ltl2dfa
 from PIL import Image
-from pylogics.parsers import parse_ldl, parse_ltl
 from temprl.types import Action, FluentExtractor, Interpretation
-from temprl.wrapper import TemporalGoal, TemporalGoalWrapper
 
-from multinav.envs import sapientino_defs
+from multinav.envs import sapientino_defs, temporal_goals
 from multinav.helpers.general import classproperty
 from multinav.helpers.gym import (
     MyDiscreteEnv,
@@ -43,7 +38,6 @@ from multinav.helpers.gym import (
     Transitions,
     from_discrete_env_to_graphviz,
 )
-from multinav.wrappers.temprl import FlattenAutomataStates
 
 
 class AbstractSapientino(MyDiscreteEnv):
@@ -329,46 +323,18 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         failure_probability=params["sapientino_fail_p"],
     )
 
-    # Compute or load automata
-    rewards = params["rewards"]
-    for reward_spec in rewards:
-        if "ldlf" in reward_spec:
-            reward_spec["dfa"] = ldl2dfa(parse_ldl(reward_spec["ldl"]))
-        elif "ltlf" in reward_spec:
-            reward_spec["dfa"] = ltl2dfa(parse_ltl(reward_spec["ltlf"]))
-        else:
-            assert "dfa" in reward_spec, (
-                "You must specify ldlf, ldlf, or dfa to pickled automaton")
-            with open(reward_spec["dfa"], "rb") as f:
-                reward_spec["dfa"] = pickle.load(f)
-
-    temporal_goals = [
-        TemporalGoal(
-            automaton=reward_spec["dfa"],
-            reward=reward_spec["reward"],
-        ) for reward_spec in rewards
-    ]
-
-    # Move with env
-    env = TemporalGoalWrapper(
-        env=env,
-        temp_goals=temporal_goals,
-        fluent_extractor=cast(FluentExtractor, OfficeFluents(
-            n_rooms=params["nb_rooms"],
-            seed=params["seed"],
-        )),
+    # Fluents for this environment
+    fluent_extractor = OfficeFluents(
+        n_rooms=params["nb_rooms"],
+        seed=params["seed"],
     )
 
-    # Save dfa
-    if log_dir is not None:
-        for i, reward_spec in enumerate(rewards):
-            graph = reward_spec["dfa"].to_graphviz()
-            filename = f"dfa-{i}-reward-{reward_spec['reward']}.pdf"
-            filepath = Path(log_dir) / filename
-            with open(filepath, "wb") as f:
-                f.write(graph.pipe(format="pdf", quiet=True))
-
-    # Simplify observation space
-    env = FlattenAutomataStates(env)
+    # Apply temporal goals to this env
+    env = temporal_goals.with_nonmarkov_rewards(
+        env=env,
+        rewards=params["rewards"],
+        fluents=cast(FluentExtractor, fluent_extractor),
+        log_dir=log_dir,
+    )
 
     return env

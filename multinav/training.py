@@ -68,7 +68,7 @@ def train(params: Dict[str, Any]):
             log_dir=params["logs-dir"],
         )
         # Trainer
-        trainer = TrainValueIteration(
+        trainer = TrainValueIteration(  # TODO: not good anymore: implicit model
             env=env,
             params=alg_params,
             model_path=params["model-dir"],
