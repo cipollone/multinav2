@@ -212,8 +212,6 @@ def abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
 
     # Define mapping
     def _map(state: StateL) -> StateH:
-        # NOTE: this assumes that the automaton and ids remain the same!
-        #  Maybe it should be loaded too
         agent_state, automata_states = state[0], state[1:]
         color = agent_state["color"]
         # Wall (color == 1) is not mapped to anything here

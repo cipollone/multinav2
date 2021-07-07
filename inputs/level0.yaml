@@ -31,7 +31,7 @@ environment:
     sapientino_fail_p: 0
     shaping: null
     rewards:
-      - ltlf: "F(red)"
+      - ltlf: "F(red) & !green"
         reward: 1.0
   repository: repository
   version: version
