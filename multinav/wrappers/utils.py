@@ -33,6 +33,7 @@ from gym.spaces import Tuple as GymTuple
 from PIL import Image
 
 from multinav.helpers.callbacks import Callback
+from multinav.helpers.gym import MyDiscreteEnv
 
 logger = logging.getLogger(__name__)
 
@@ -266,6 +267,21 @@ class AbstractSapientinoRenderer(Wrapper):
             self.__img.set_data(img_array)
         plt.pause(0.01)
         plt.draw()
+
+
+class CompleteActions(Wrapper):
+    """All actions are available in this wrapper (self loops added)."""
+
+    def __init__(self, env: MyDiscreteEnv):
+        """Initialize."""
+        assert isinstance(env, MyDiscreteEnv)
+        super().__init__(env)
+
+    def step(self, action):
+        """Gym step."""
+        if action not in self.env.available_actions(self.env.s):
+            return self.env.s, 0.0, False, {"self_loop"}
+        return self.env.step(action)
 
 
 class Renderer(Wrapper):

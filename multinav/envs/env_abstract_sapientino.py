@@ -39,6 +39,7 @@ from multinav.helpers.gym import (
     from_discrete_env_to_graphviz,
 )
 from multinav.wrappers.temprl import FlattenAutomataStates
+from multinav.wrappers.utils import CompleteActions
 
 
 class AbstractSapientino(MyDiscreteEnv):
@@ -325,6 +326,9 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         nb_colors=params["nb_rooms"] * 2,
         failure_probability=params["sapientino_fail_p"],
     )
+
+    # Admit all actions
+    env = CompleteActions(env)
 
     # Fluents for this environment
     fluent_extractor = OfficeFluents(
