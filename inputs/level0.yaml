@@ -28,8 +28,8 @@ environment:
     sapientino_fail_p: 0
     shaping: null
     rewards:
-      - formula
-        1.0
+      - ltlf: "F(red)"
+        reward: 1.0
   repository: repository
   version: version
 evaluation:

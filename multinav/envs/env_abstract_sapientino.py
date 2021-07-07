@@ -23,15 +23,17 @@
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
 
 import io
-import os
+import pickle
+from pathlib import Path
 from typing import Any, Dict, Optional, cast
 
-from PIL import Image
 import numpy as np
-from temprl.types import Action, Interpretation, FluentExtractor
-from temprl.wrapper import TemporalGoalWrapper, TemporalGoal
+from logaut import ldl2dfa, ltl2dfa
+from PIL import Image
+from pylogics.parsers import parse_ldl, parse_ltl
+from temprl.types import Action, FluentExtractor, Interpretation
+from temprl.wrapper import TemporalGoal, TemporalGoalWrapper
 
-from logaut import ldl2dfa
 from multinav.envs import sapientino_defs
 from multinav.helpers.general import classproperty
 from multinav.helpers.gym import (
@@ -295,8 +297,8 @@ class OfficeFluents:
         return {f for f in self.fluents if f in fluents}
 
     def evaluations_prob(self, obs, action):
-        """Evaluations with associated probabilities."""
-        fluents =  self(obs, action)
+        """Evaluate and return associated probabilities."""
+        fluents = self(obs, action)
         fluents_dict = {f: f in fluents for f in self.fluents}
         fluents_dict["closed"] = False
         fluents_dict["person"] = False
@@ -327,12 +329,27 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         failure_probability=params["sapientino_fail_p"],
     )
 
-    # Rewards
-    dfas = [(ldl2dfa(formula), rew) for formula, rew in params["rewards"]]
+    # Compute or load automata
+    rewards = params["rewards"]
+    for reward_spec in rewards:
+        if "ldlf" in reward_spec:
+            reward_spec["dfa"] = ldl2dfa(parse_ldl(reward_spec["ldl"]))
+        elif "ltlf" in reward_spec:
+            reward_spec["dfa"] = ltl2dfa(parse_ltl(reward_spec["ltlf"]))
+        else:
+            assert "dfa" in reward_spec, (
+                "You must specify ldlf, ldlf, or dfa to pickled automaton")
+            with open(reward_spec["dfa"], "rb") as f:
+                reward_spec["dfa"] = pickle.load(f)
+
     temporal_goals = [
-        TemporalGoal(automaton=dfa, reward=rew) for dfa, rew in dfas
+        TemporalGoal(
+            automaton=reward_spec["dfa"],
+            reward=reward_spec["reward"],
+        ) for reward_spec in rewards
     ]
 
+    # Move with env
     env = TemporalGoalWrapper(
         env=env,
         temp_goals=temporal_goals,
@@ -344,8 +361,14 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
 
     # Save dfa
     if log_dir is not None:
-        for i, (dfa, rew) in enumerate(dfas):
-            # TODO: continue here
-            dfa.to_graphviz(os.path.join(log_dir, f"dfa-{i}-reward-{rew}.dot"))
+        for i, reward_spec in enumerate(rewards):
+            graph = reward_spec["dfa"].to_graphviz()
+            filename = f"dfa-{i}-reward-{reward_spec['reward']}.pdf"
+            filepath = Path(log_dir) / filename
+            with open(filepath, "wb") as f:
+                f.write(graph.pipe(format="pdf", quiet=True))
+
+    # Simplify observation space
+    env = FlattenAutomataStates(env)
 
     return env
