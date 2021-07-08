@@ -573,7 +573,7 @@ test = ["pytest (>=3.6.0)", "pytest-cov", "mock"]
 
 [[package]]
 name = "isort"
-version = "5.9.1"
+version = "5.9.2"
 description = "A Python utility / library to sort Python imports."
 category = "dev"
 optional = false
@@ -764,7 +764,7 @@ pythomata = "^0.3.2"
 type = "git"
 url = "https://github.com/whitemech/logaut.git"
 reference = "main"
-resolved_reference = "d61cff86268f0bdd3e7cdf7d10be83d640f7de89"
+resolved_reference = "696065dd31001f166e1fecce7430e8791ca64667"
 
 [[package]]
 name = "markdown"
@@ -1634,15 +1634,15 @@ python-versions = "^3.7"
 develop = false
 
 [package.dependencies]
-gym = ">=0.17.2"
+gym = ">=0.17.2,<0.19"
 numpy = "^1.19.0"
 pythomata = "0.3.2"
 
 [package.source]
 type = "git"
 url = "https://github.com/whitemech/temprl.git"
-reference = "relax-gym"
-resolved_reference = "8f532ebbb5ed2ad1b998256dfeee308e2cc9bad5"
+reference = "develop"
+resolved_reference = "409ac09215f1afec690fd07a34113ddc0720c103"
 
 [[package]]
 name = "terminado"
@@ -1857,7 +1857,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "4be90241f44688e654555d93c001697bce3cfc7189f9bbaf50bbf85607d2dc63"
+content-hash = "baf16bb67fce917835d69b25e88a3937936bce8ee23428749d94559cfa10483b"
 
 [metadata.files]
 appdirs = [
@@ -2210,8 +2210,8 @@ ipywidgets = [
     {file = "ipywidgets-7.6.3.tar.gz", hash = "sha256:9f1a43e620530f9e570e4a493677d25f08310118d315b00e25a18f12913c41f0"},
 ]
 isort = [
-    {file = "isort-5.9.1-py3-none-any.whl", hash = "sha256:8e2c107091cfec7286bc0f68a547d0ba4c094d460b732075b6fba674f1035c0c"},
-    {file = "isort-5.9.1.tar.gz", hash = "sha256:83510593e07e433b77bd5bff0f6f607dbafa06d1a89022616f02d8b699cfcd56"},
+    {file = "isort-5.9.2-py3-none-any.whl", hash = "sha256:eed17b53c3e7912425579853d078a0832820f023191561fcee9d7cae424e0813"},
+    {file = "isort-5.9.2.tar.gz", hash = "sha256:f65ce5bd4cbc6abdfbe29afc2f0245538ab358c14590912df638033f157d555e"},
 ]
 jedi = [
     {file = "jedi-0.17.2-py2.py3-none-any.whl", hash = "sha256:98cc583fa0f2f8304968199b01b6b4b94f469a1f4a74c1560506ca2a211378b5"},

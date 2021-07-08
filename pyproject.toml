@@ -11,7 +11,7 @@ license = "GPL-3.0-or-later"
 [tool.poetry.dependencies]
 python = "^3.7"
 gym-sapientino = {git = "https://github.com/whitemech/gym-sapientino.git", branch = "multinav-experiments"}
-temprl = {git = "https://github.com/whitemech/temprl.git", branch = "relax-gym"}
+temprl = {git = "https://github.com/whitemech/temprl.git", branch = "develop"}
 logaut = {git = "https://github.com/whitemech/logaut.git", branch = "main"}
 
 [tool.poetry.dev-dependencies]
