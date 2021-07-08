@@ -26,6 +26,7 @@ import io
 from typing import Any, Dict, Optional, cast
 
 import numpy as np
+from gym.wrappers import TimeLimit
 from PIL import Image
 from temprl.types import Action, FluentExtractor, Interpretation
 
@@ -344,5 +345,8 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         log_dir=log_dir,
     )
     env = FlattenAutomataStates(env)
+
+    # Time limit
+    env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
 
     return env

@@ -37,7 +37,7 @@ def with_nonmarkov_rewards(
             assert "ldlf" not in reward_spec and "ltlf" not in reward_spec, (
                 "Specify an automaton directly, not a formula")
         if "ldlf" in reward_spec:
-            reward_spec["dfa"] = ldl2dfa(parse_ldl(reward_spec["ldl"]))
+            reward_spec["dfa"] = ldl2dfa(parse_ldl(reward_spec["ldlf"]))
         elif "ltlf" in reward_spec:
             reward_spec["dfa"] = ltl2dfa(parse_ltl(reward_spec["ltlf"]))
         else:

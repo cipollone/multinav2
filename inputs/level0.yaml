@@ -31,7 +31,7 @@ environment:
     sapientino_fail_p: 0
     shaping: null
     rewards:
-      - ltlf: "F(red) & !green"
+      - ldlf: "<!at1*; (at1 & closed + (at1 & !closed; !in1*; ((in1 & !person; !bip) + (in1 & person; bip))))>end"
         reward: 1.0
   repository: repository
   version: version

@@ -280,7 +280,7 @@ class CompleteActions(Wrapper):
     def step(self, action):
         """Gym step."""
         if action not in self.env.available_actions(self.env.s):
-            return self.env.s, 0.0, False, {"self_loop"}
+            return self.env.s, 0.0, False, {"self_loop": True}
         return self.env.step(action)
 
 
