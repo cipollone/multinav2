@@ -67,8 +67,9 @@ def train(params: Dict[str, Any]):
             params=env_params,
             log_dir=params["logs-dir"],
         )
+
         # Trainer
-        trainer = TrainValueIteration(
+        trainer = TrainQ(
             env=env,
             params=alg_params,
             model_path=params["model-dir"],

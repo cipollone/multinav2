@@ -24,7 +24,9 @@ from abc import abstractmethod
 
 import gym
 import numpy as np
-from gym.spaces import Box, Discrete, MultiDiscrete
+from gym.spaces import Box
+from gym.spaces import Dict as GymDict
+from gym.spaces import Discrete, MultiDiscrete
 from gym.spaces import Tuple as GymTuple
 
 from multinav.helpers.gym import combine_boxes
@@ -51,7 +53,7 @@ class AbstractRobotFeatures(gym.Wrapper):
         assert len(spaces) == 2
         self.robot_space, self.automata_space = spaces
         assert isinstance(self.automata_space, MultiDiscrete)
-        assert isinstance(self.robot_space, gym.spaces.dict.Dict)
+        assert isinstance(self.robot_space, GymDict)
 
         self.observation_space = self.compute_observation_space()
 

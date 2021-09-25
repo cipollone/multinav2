@@ -4,15 +4,18 @@ algorithm:
   commit: null
   diff: null
   params:
-    learning_rate: 0.05
-    gamma: 1.0
-    max_iterations: 5000
     resume_file: null
-    interactive: false
-    deterministic: false
-    passive: false
-    action_bias: null
+    initialize_file: null
     active_passive_agents: false
+    action_bias: null
+    action_bias_eps: 0.0
+    learning_rate: 0.1
+    learning_rate_end: 0.01
+    total_timesteps: 100000
+    q_eps: 0.95
+    epsilon_end: 0.0
+    log_interval: 500
+    gamma: 1.0
   repository: https://github.com/cipollone/multinav2/
   version: version
 comment: comment
@@ -27,8 +30,9 @@ environment:
     nb_rooms: 3
     sapientino_fail_p: 0
     shaping: null
-    tg_reward: 1.0
-    tg_automaton: inputs/automaton.pickle
+    rewards:
+      - ldlf: "<!at1*; (at1 & closed + (at1 & !closed; !in1*; ((in1 & !person; !bip) + (in1 & person; bip))))>end"
+        reward: 1.0
   repository: repository
   version: version
 evaluation:
