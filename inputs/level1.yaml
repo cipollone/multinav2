@@ -33,8 +33,18 @@ environment:
     reward_outside_grid: 0.0
     reward_duplicate_beep: 0.0
     rewards:
-      - dfa: ./outputs/level0/0/logs/dfa-0.pickle
+      - dfa: ./outputs/level2/0/logs/dfa-0.pickle
         reward: 1.0
+    map: |-
+      |B p##############|
+      |## ##############|
+      |## ##############|
+      |                 |
+      |                 |
+      |  b              |
+      |## ##########r###|
+      |##y########## ###|
+      |## ##########g###|
   repository: repository
   version: version
 evaluation:

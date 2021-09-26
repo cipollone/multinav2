@@ -38,7 +38,6 @@ from multinav.helpers.gym import (
     from_discrete_env_to_graphviz,
 )
 from multinav.wrappers.temprl import FlattenAutomataStates
-from multinav.wrappers.utils import Debugger
 
 
 class AbstractSapientino(MyDiscreteEnv):

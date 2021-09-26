@@ -22,15 +22,11 @@
 """Reward shaping wrapper."""
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, Optional, Set, cast
+from typing import Any, Optional, cast
 
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
-from gym_sapientino.core.configurations import (
-    SapientinoAgentConfiguration,
-    SapientinoConfiguration,
-)
-from gym_sapientino.core.types import Colors, color2id
+from gym_sapientino.core import actions, configurations
 from temprl.types import FluentExtractor, Interpretation
 
 from multinav.algorithms.agents import ValueFunctionModel
@@ -43,6 +39,7 @@ from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.utils import CallbackWrapper, SingleAgentWrapper
 
 
+# TODO
 class GridSapientinoRewardShaper(ValueFunctionRS):
     """Reward shaper for grid Sapientino."""
 
@@ -66,78 +63,7 @@ class GridSapientinoRewardShaper(ValueFunctionRS):
         )
 
 
-def generate_grid(
-    nb_colors: int, output_file: Path, nb_rows: int = 5, space_between_colors: int = 2
-):
-    """
-    Generate a grid.
-
-    :param nb_colors: the number of colors.
-    :param output_file: path where to write
-    :param nb_rows: number of rows.
-    :param space_between_colors: spaces between colors.
-    :return: None
-    """
-    # nb colors + spaces between colors + first and last column.
-    nb_columns = nb_colors + space_between_colors * (nb_colors - 1) + 2
-    cells = []
-
-    row = " " * nb_columns
-    cells += [row] * (nb_rows // 2)
-    cells += [
-        " "
-        + (" " * space_between_colors).join(
-            map(lambda x: color2id[x], list(Colors)[1 : nb_colors + 1])  # noqa: ignore
-        )
-        + " "
-    ]
-    cells += [row] * (nb_rows // 2)
-
-    content = "\n".join(cells)
-    output_file.write_text(content)
-
-
-class Fluents:
-    """Define the propositions in the sapientino environment.
-
-    This fluents evaluator works for any environment built on
-    gym_sapientino repository.
-    """
-
-    def __init__(self, colors_set: Set[str]):
-        """Initialize.
-
-        :param colors_set: a set of colors among the ones used by sapientino;
-            this will be the set of fluents to evaluate.
-        """
-        self.fluents = colors_set
-        if not self.fluents.issubset(sapientino_defs.color2int):
-            raise ValueError(str(colors_set) + " contains invalid colors")
-
-    def __call__(self, obs: Dict[str, Any], _: int) -> Interpretation:
-        """Respects temprl.types.FluentExtractor interface.
-
-        :param obs: assuming that the observation comes from an
-            `AbstractSapientino` environment.
-        :param action: the last action.
-        :return: current propositional interpretation of fluents
-        """
-        beeps = obs["beep"] > 0
-        if not beeps:
-            true_fluents = set()  # type: Set[str]
-        else:
-            color_id = obs["color"]
-            color_name = sapientino_defs.int2color[color_id]
-            if color_name == "blank":
-                true_fluents = set()
-            else:
-                if color_name not in self.fluents:
-                    raise RuntimeError("Unexpected color: " + color_name)
-                true_fluents = {color_name}
-
-        return {f for f in self.fluents if f in true_fluents}
-
-
+# TODO
 class OfficeFluents:
     """Same as OfficeFluents in abstract office sapientino, but for grid.
 
@@ -197,6 +123,7 @@ class OfficeFluents:
             pass
 
 
+# TODO
 def abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
     """Define a reward shaper on the previous environment.
 
@@ -230,6 +157,7 @@ def abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
     return shaper
 
 
+# TODO
 def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     """Make the sapientino grid state environment.
 
@@ -239,11 +167,11 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     :return: a gym Environemnt.
     """
     # Define the robot
-    agent_configuration = SapientinoAgentConfiguration(
-        continuous=False,
-        differential=False,
+    agent_configuration = configurations.SapientinoAgentConfiguration(
         initial_position=params["initial_position"],
+        commands=actions.GridCommand,
     )
+    # TODO: from here
 
     # Define the map
     map_file = Path(tempfile.mktemp(suffix=".txt"))

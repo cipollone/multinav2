@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "multinav"
-version = "0.2.0"
+version = "0.2.1"
 description = "RL on multiple related navigation environments"
 authors = [
 	"Roberto Cipollone <cipollone.rt@gmail.com>",
@@ -11,7 +11,7 @@ license = "GPL-3.0-or-later"
 [tool.poetry.dependencies]
 python = "^3.9"
 setuptools = "^58.1.0"
-gym-sapientino = {git = "https://github.com/whitemech/gym-sapientino.git", branch = "multinav-experiments"}
+gym-sapientino = {git = "https://github.com/whitemech/gym-sapientino.git", branch = "develop"}
 temprl = {git = "https://github.com/whitemech/temprl.git", branch = "develop"}
 logaut = "^0.1.1"
 
@@ -22,7 +22,7 @@ pytest-randomly = "^3.4.1"
 tox = "^3.19.0"
 codecov = "^2.1.9"
 black = "==20.8b1"
-mypy = "^0.782"
+mypy = ">=0.782"
 isort = "^5.4.2"
 flake8 = "^3.8.3"
 flake8-docstrings = "^1.5.0"
