@@ -298,3 +298,21 @@ class Renderer(Wrapper):
         ret = self.env.step(action)
         self.env.render()
         return ret
+
+
+class Debugger(Wrapper):
+    """Inspect execution."""
+
+    import pdb
+
+    def reset(self, **kwargs):
+        """Reset the env."""
+        obs = self.env.reset(**kwargs)
+        self.pdb.set_trace()
+        return obs
+
+    def step(self, action):
+        """Gym interfact for step."""
+        ret = self.env.step(action)
+        self.pdb.set_trace()
+        return ret

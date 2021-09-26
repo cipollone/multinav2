@@ -1,14 +1,33 @@
 """Definition of temporal goals."""
 
 import pickle
+from abc import ABC, abstractmethod, abstractproperty
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, cast
 
 from gym import Env
 from logaut import ldl2dfa, ltl2dfa
 from pylogics.parsers import parse_ldl, parse_ltl
-from temprl.types import FluentExtractor
+from pythomata.impl.symbolic import BooleanFunction, SymbolicDFA
+from temprl.types import Action, Interpretation, Observation
 from temprl.wrapper import TemporalGoal, TemporalGoalWrapper
+
+
+class FluentExtractor(ABC):
+    """Base class for a fluents extractor.
+
+    This also respects temprl.types.FluentExtractor interface.
+    """
+
+    @abstractproperty
+    def all(self) -> Set[str]:
+        """Return all fluents/propositions."""
+        return set()
+
+    @abstractmethod
+    def __call__(self, obs: Observation, action: Action) -> Interpretation:
+        """Compute a propositional interpretation."""
+        return set()
 
 
 def with_nonmarkov_rewards(
@@ -46,6 +65,10 @@ def with_nonmarkov_rewards(
             with open(reward_spec["dfa"], "rb") as f:
                 reward_spec["dfa"] = pickle.load(f)
 
+        # Check
+        assert isinstance(reward_spec["dfa"], SymbolicDFA)
+        assert_fluents(reward_spec["dfa"], fluents)
+
     temporal_goals = [
         TemporalGoal(
             automaton=reward_spec["dfa"],
@@ -76,3 +99,16 @@ def with_nonmarkov_rewards(
                 f.write(graph.pipe(format="pdf", quiet=True))
 
     return env
+
+
+def assert_fluents(automa: SymbolicDFA, fluents: FluentExtractor) -> None:
+    """Assert that all symbols of the DFA are valuated in fluents."""
+    # Collect all symbols
+    atoms = set()
+    transitions = automa.get_transitions()
+    for _, guard, _ in transitions:
+        atoms |= cast(BooleanFunction, guard).free_symbols
+    atoms = {str(a) for a in atoms}
+
+    # Check
+    assert atoms <= fluents.all, f"Not all {fluents.all} are in {atoms}"

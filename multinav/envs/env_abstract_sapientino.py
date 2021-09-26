@@ -23,15 +23,14 @@
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
 
 import io
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional
 
 import numpy as np
-from gym import spaces
 from gym.wrappers import TimeLimit
 from PIL import Image
-from temprl.types import Action, FluentExtractor, Interpretation
+from temprl.types import Action, Interpretation
 
-from multinav.envs import sapientino_defs, temporal_goals
+from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.gym import (
     MyDiscreteEnv,
     State,
@@ -39,7 +38,7 @@ from multinav.helpers.gym import (
     from_discrete_env_to_graphviz,
 )
 from multinav.wrappers.temprl import FlattenAutomataStates
-from multinav.wrappers.utils import CompleteActions
+from multinav.wrappers.utils import Debugger
 
 
 class AbstractSapientino(MyDiscreteEnv):
@@ -148,9 +147,9 @@ class OfficeAbstractSapientino(AbstractSapientino):
 
     This assigns a role to each location: either the corridor, or a location
     close to a door, or the inside of a room. It simulates the presence of
-    doors and people. The observation becomes a pair, where the first element
-    is the orignal one, and the second stores a dictionarly with this
-    additional infos.
+    doors and people. The observation is the same as in AbstractSapientino,
+    the additional features, computed after each reset or step, are stored in
+    self.obs_features.
     """
 
     def __init__(self, n_rooms: int, p_failure: float, seed: int):
@@ -161,7 +160,7 @@ class OfficeAbstractSapientino(AbstractSapientino):
         :param p_failure: probability of failing a go-to action.
         """
         # Instantiate
-        self._n_rooms = n_rooms
+        self.n_rooms = n_rooms
         n_locations = n_rooms * 2 + 1
         super().__init__(
             n_locations=n_locations,
@@ -179,113 +178,77 @@ class OfficeAbstractSapientino(AbstractSapientino):
             + [i for i in range(n_rooms)] + [-1]
         )
 
-        # Observation NOTE: the space for the second element is wrong
-        assert isinstance(self.observation_space, spaces.Discrete)
-        self.observation_space = spaces.Tuple((
-            self.observation_space, spaces.Dict(dict(
-                unspecified_dict=spaces.Discrete(2)
-            ))))
-
         self.__rng = np.random.default_rng(seed)
 
-    def _get_features(self, observation) -> Dict[str, Any]:
+    def _update_features(self, observation) -> None:
         """Compute a dictionary of features."""
         name = self.location2name[observation]
         room = self.location2room[observation]
-        return dict(
+        self.obs_features = dict(
             location=name,
-            person=(self._person_in[room] == 1 and name != "corridor"),
-            closed=(self._door_closed[room] == 1 and name != "corridor"),
+            person=(name != "corridor" and self._person_in[room] == 1),
+            closed=(name != "corridor" and self._door_closed[room] == 1),
         )
 
     def step(self, action: int):
         """Gym step."""
         observation, reward, done, info = super().step(action)
-        obs2 = self._get_features(observation)
-        return (observation, obs2), reward, done, info
+        self._update_features(observation)
+        return observation, reward, done, info
 
     def reset(self):
         """Gym reset."""
         obs = super().reset()
 
         # Choose doors and persons
-        self._door_closed = self.__rng.integers(0, 2, size=self._n_rooms)
-        self._person_in = self.__rng.integers(0, 2, size=self._n_rooms)
+        self._door_closed = self.__rng.integers(0, 2, size=self.n_rooms)
+        self._person_in = self.__rng.integers(0, 2, size=self.n_rooms)
 
-        return obs, self._get_features(obs)
+        self._update_features(obs)
+
+        return obs
 
 
-# TODO: until here
+class OfficeFluents(FluentExtractor):
+    """Define propositions for OfficeAbstractSapientino."""
 
-
-class OfficeFluents:
-    """Define propositions for AbstractSapientino with Office goal."""
-
-    _colors_to_room = {
-        "red": "at1",
-        "green": "in1",
-        "blue": "at2",
-        "yellow": "in2",
-        "pink": "at3",
-        "brown": "in3",
-        "gray": "at4",
-        "orange": "in4",
-    }
-
-    def __init__(self, n_rooms: int, seed: int):
+    def __init__(self, env: OfficeAbstractSapientino):
         """Initialize.
 
-        :param nb_rooms: number of rooms to navigate.
+        :param env: instance of OfficeAbstractSapientino.
         """
-        assert n_rooms < 5, "Can't support more than four rooms"
+        self._env = env
 
         # Define the propositional symbols
-        self.fluents = {"bip", "person", "closed"}
-        for i in range(1, n_rooms + 1):
-            at_room, in_room = f"at{i}", f"in{i}"
-            self.fluents.add(at_room)
-            self.fluents.add(in_room)
+        self.fluents = {"interact", "person", "closed"}
+        for i in range(self._env.n_rooms):
+            self.fluents.add(f"out{i}")
+            self.fluents.add(f"in{i}")
 
-        self._rng = np.random.default_rng(seed)
-        self._n_rooms = n_rooms
+    @property
+    def all(self):
+        """All fluents."""
+        return self.fluents
 
-    def __call__(self, obs: int, action: int) -> Interpretation:
-        """Respects temprl.types.FluentExtractor interface.
+    def __call__(self, _obs: int, action: int) -> Interpretation:
+        """Respect temprl.types.FluentExtractor interface.
 
         :param obs: assuming that the observation comes from an
-            `AbstractSapientino` environment.
+            `OfficeAbstractSapientino` environment.
         :param action: the last action.
         :return: current propositional interpretation of fluents
         """
         fluents = set()
-        if obs != 0:
-            color = sapientino_defs.int2color[obs + 1]
-            fluents.add(self._colors_to_room[color])
-        if action == AbstractSapientino.visit_color:
-            fluents.add("bip")
-
-        # Doors and people are not in the observation. Valuate at random
-        samples = self._rng.integers(0, 2, size=2)
-        if samples[0] == 1:
-            fluents.add("closed")
-        if samples[1] == 1:
+        if self._env.obs_features["person"]:
             fluents.add("person")
-
-        return {f for f in self.fluents if f in fluents}
-
-    def evaluations_prob(self, obs, action):
-        """Evaluate and return associated probabilities."""
-        fluents = self(obs, action)
-        fluents_dict = {f: f in fluents for f in self.fluents}
-        fluents_dict["closed"] = False
-        fluents_dict["person"] = False
-
-        p = 1.0 / 4
-        values = [(dict(fluents_dict), p) for _ in range(4)]
-        values[1][0].update({"closed": True}), p
-        values[2][0].update({"person": True}), p
-        values[3][0].update({"closed": True, "person": True}), p
-        return values
+        if self._env.obs_features["closed"]:
+            fluents.add("closed")
+        if self._env.obs_features["location"] != "corridor":
+            fluents.add(self._env.obs_features["location"])
+        if action == self._env.action_interact:
+            fluents.add("interact")
+        assert fluents <= self.all
+        return fluents
 
 
 def make(params: Dict[str, Any], log_dir: Optional[str] = None):
@@ -301,25 +264,20 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         raise ValueError("Can't shape rewards in the most abstract environment.")
 
     # Base env
-    env = AbstractSapientino(
-        nb_colors=params["nb_rooms"] * 2,
-        failure_probability=params["sapientino_fail_p"],
-    )
-
-    # Admit all actions
-    env = CompleteActions(env)
-
-    # Fluents for this environment
-    fluent_extractor = OfficeFluents(
+    env = OfficeAbstractSapientino(
         n_rooms=params["nb_rooms"],
+        p_failure=params["sapientino_fail_p"],
         seed=params["seed"],
     )
 
+    # Fluents for this environment
+    fluent_extractor = OfficeFluents(env)
+
     # Apply temporal goals to this env
-    env = temporal_goals.with_nonmarkov_rewards(
+    env = with_nonmarkov_rewards(
         env=env,
         rewards=params["rewards"],
-        fluents=cast(FluentExtractor, fluent_extractor),
+        fluents=fluent_extractor,
         log_dir=log_dir,
     )
     env = FlattenAutomataStates(env)
