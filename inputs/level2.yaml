@@ -1,6 +1,10 @@
-name: level0
+name: level2
+comment: comment
+
 algorithm:
   name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: version
   commit: null
   diff: null
   params:
@@ -16,25 +20,23 @@ algorithm:
     epsilon_end: 0.0
     log_interval: 500
     gamma: 1.0
-  repository: https://github.com/cipollone/multinav2/
-  version: version
-comment: comment
+
 environment:
-  commit: hash
-  diff: ''
   name: gym-sapientino
+  repository: https://github.com/whitemech/gym-sapientino.git
+  version: multinav-experiments
+  commit: f2d44472d3d3d9ec2431f7cd3e4a949b165a1446
+  diff: ''
   params:
-    env: level0
-    episode_time_limit: 20
+    env: level2
+    episode_time_limit: 30
     render: false
-    nb_rooms: 3
-    sapientino_fail_p: 0
+    nb_rooms: 1
+    sapientino_fail_p: 0.05
     shaping: null
     rewards:
-      - ldlf: "<!at1*; (at1 & closed + (at1 & !closed; !in1*; ((in1 & !person; !bip) + (in1 & person; bip))))>end"
+      - ldlf: "<(!out0)*>(<out0>tt & (<closed>end | (<!closed>tt & <true; (!in0)*>(<in0>tt & (<person; interact>end | <!person; !interact>end)))))"
         reward: 1.0
-  repository: repository
-  version: version
 evaluation:
   episodes: 0
   frequency: 0

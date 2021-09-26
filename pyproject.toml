@@ -9,11 +9,11 @@ authors = [
 license = "GPL-3.0-or-later"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.9"
+setuptools = "^58.1.0"
 gym-sapientino = {git = "https://github.com/whitemech/gym-sapientino.git", branch = "multinav-experiments"}
 temprl = {git = "https://github.com/whitemech/temprl.git", branch = "develop"}
-logaut = {git = "https://github.com/whitemech/logaut.git", branch = "main"}
-setuptools = "^58.1.0"
+logaut = "^0.1.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0.1"

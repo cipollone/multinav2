@@ -61,7 +61,7 @@ def train(params: Dict[str, Any]):
 
     # Make
     trainer: Trainer
-    if env_name == "level0":
+    if env_name == "level2":
         # Abstract env
         env = env_abstract_sapientino.make(
             params=env_params,

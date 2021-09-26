@@ -23,181 +23,113 @@
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
 
 import io
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional
 
 import numpy as np
 from gym.wrappers import TimeLimit
 from PIL import Image
-from temprl.types import Action, FluentExtractor, Interpretation
+from temprl.types import Action, Interpretation
 
-from multinav.envs import sapientino_defs, temporal_goals
-from multinav.helpers.general import classproperty
+from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.gym import (
     MyDiscreteEnv,
-    Probability,
     State,
     Transitions,
     from_discrete_env_to_graphviz,
 )
 from multinav.wrappers.temprl import FlattenAutomataStates
-from multinav.wrappers.utils import CompleteActions
+from multinav.wrappers.utils import Debugger
 
 
 class AbstractSapientino(MyDiscreteEnv):
     """Abstract Sapientino environment."""
 
-    def __init__(self, nb_colors: int, failure_probability: float = 0.1):
-        """
-        Initialize the environment.
+    def __init__(
+        self,
+        n_locations: int,
+        p_failure: float = 0.0,
+        initial_location: int = 0,
+    ):
+        """Initialize the environment.
 
-        :param nb_colors: the number of color to consider.
+        :param n_locations: the number of locations/states.
+        :param p_failure: probability of failing a trainsition and remaining on
+            the same state.
+        :param initial_location: the initial state
         """
-        self._nb_colors = nb_colors
-        self._failure_probability = failure_probability
+        self.n_locations = n_locations
+        self.p_failure = p_failure
         model = self._make_transitions()
-        isd = np.zeros(self.nb_states)
+        isd = np.zeros(self.n_locations)
+        self.initial_state = initial_location
         isd[self.initial_state] = 1.0
         super().__init__(self.nb_states, self.nb_actions, model, isd)
 
     @property
-    def nb_colors(self) -> int:
-        """Get the number of colors."""
-        return self._nb_colors
-
-    @property
-    def fail_prob(self) -> Probability:
-        """Get the failure probability."""
-        return self._failure_probability
-
-    @property
-    def initial_state(self) -> int:
-        """Get the initial state."""
-        return 0
-
-    @property
     def nb_states(self) -> int:
-        """
-        Get the number of states.
-
-        That is:
-        - one state for the corridor
-        - one state for each color
-        NOTE: Some parts of this module assume that the corridor, or "blank"
-        state is number 0. This is also the same convention of gym-sapientino.
-
-        :return: the number of states.
-        """
-        return self.nb_colors + 1
+        """Get the number of states."""
+        return self.n_locations
 
     @property
     def nb_actions(self) -> int:
+        """Get the number of actions.
+
+        One go_to action for each state + one interact action
+        (aliases: visit, bip)
         """
-        Get the number of actions.
+        return self.n_locations + 1
 
-        It includes:
-        - go to to each color (+nb_colors)
-        - go back to the corridor (+1)
-        - visit color (+1)
+    @property
+    def action_interact(self) -> int:
+        """Return the special "interact" action."""
+        return self.nb_actions - 1
 
-        :return: the number of actions.
-        """
-        return self.nb_colors + 1 + 1
+    def action_goto_state(self, state: int) -> int:
+        """Return the Go-To action associated to a location."""
+        assert self._is_state(state)
+        return state
 
-    def _is_legal_color(self, color_id: int):
-        """Check that it is a legal color."""
-        assert 0 <= color_id < self.nb_colors, f"{color_id} is not a legal color."
+    def _is_state(self, state: int):
+        """Check that it is a legal state."""
+        return 0 <= state < self.nb_states
 
-    def state_from_color(self, color_id: int):
-        """
-        Get the state from the color.
-
-        Sum +1 because 0 is the initial state.
-        """
-        self._is_legal_color(color_id)
-        return color_id + 1
-
-    def action_goto_color_from_color(self, color_id: int) -> Action:
-        """Get the action "goto color" from the color id."""
-        assert 0 <= color_id < self.nb_colors, f"{color_id} is not a legal color."
-        return color_id + 2
-
-    @classproperty
-    def goto_corridor(cls) -> Action:  # pylint: disable=no-self-argument
-        """Get the action "goto corridor"."""
-        return 0
-
-    @classproperty
-    def visit_color(cls) -> Action:  # pylint: disable=no-self-argument
-        """Get the action "visit_color"."""
-        return 1
+    def _is_action(self, action: int):
+        """Check if tat is a legal action."""
+        return 0 <= action < self.nb_actions
 
     def _make_transitions(self) -> Transitions:
-        """
-        Make the model.
-
-        :return: the transitions.
-        """
+        """Make the trainsition model."""
         model: Transitions = {}
 
-        for color_id in range(self.nb_colors):
-            color_state = self.state_from_color(color_id)
+        for from_location in range(self.n_locations):
 
-            # from the corridor, you can go to any color
-            goto_color_action = self.action_goto_color_from_color(color_id)
-            new_transition = (1.0 - self.fail_prob, color_state, 0.0, False)
-            fail_transition = (self.fail_prob, self.initial_state, 0.0, False)
-            model.setdefault(self.initial_state, {}).setdefault(
-                goto_color_action, []
-            ).extend([new_transition, fail_transition])
+            # You can go to any other location
+            for to_location in range(self.n_locations):
+                goto_action = self.action_goto_state(to_location)
+                ok_transition = (1.0 - self.p_failure, to_location, 0.0, False)
+                fail_transition = (self.p_failure, from_location, 0.0, False)
+                model.setdefault(from_location, {}).setdefault(
+                    goto_action, []).extend([ok_transition, fail_transition])
 
-            # if you visit a color, you remain in the same state.
-            # NOTE: these two transitions are equivalent to a single transition
-            #   it may be useful later, though.
-            new_transition = (1.0 - self.fail_prob, color_state, 0.0, False)
-            fail_transition = (self.fail_prob, color_state, 0.0, False)
-            model.setdefault(color_state, {}).setdefault(self.visit_color, []).extend(
-                [new_transition, fail_transition]
-            )
-
-            # from any color, you can go back to the corridor.
-            new_transition = (1.0 - self.fail_prob, self.initial_state, 0.0, False)
-            fail_transition = (self.fail_prob, color_state, 0.0, False)
-            model.setdefault(color_state, {}).setdefault(self.goto_corridor, []).extend(
-                [new_transition, fail_transition]
-            )
-
-            # TODO: experiments in AbstractSapientinoOffice require the
-            # possibility to travel between pairs of colors (out and in of a
-            # room). Adapted graph for this purpose.
-            related_color = color_id + 1 if color_id % 2 == 0 else color_id - 1
-            related_state = self.state_from_color(related_color)
-            new_transition = (1.0 - self.fail_prob, related_state, 0.0, False)
-            fail_transition = (self.fail_prob, color_state, 0.0, False)
-            model.setdefault(color_state, {}).setdefault(
-                self.action_goto_color_from_color(related_color), []
-            ).extend([new_transition, fail_transition])
+            # You can start the interaction
+            ok_transition = (1.0, from_location, 0.0, False)
+            model.setdefault(from_location, {}).setdefault(
+                self.action_interact, []).extend([ok_transition])
 
         return model
 
     def _action_to_string(self, action: Action):
         """From action to string."""
-        self._is_legal_action(action)
-        if action == self.goto_corridor:
-            return "goto_corridor"
-        if action == self.visit_color:
-            return "visit"
-        return f"goto_{action}"
+        assert self._is_action(action)
+        if action == self.action_interact:
+            return "interact"
+        else:
+            return f"goto_{action}"
 
     def _state_to_string(self, state: State):
-        """From state to string.
-
-        All sapientino environments interpret IDs as the same color.
-        """
-        self._is_legal_state(state)
-        if state == 0:
-            return "corridor"
-        else:
-            return sapientino_defs.int2color[state + 1]
+        """From state to string."""
+        assert self._is_action(state)
+        return f"location_{state}"
 
     def render(self, mode="human"):
         """Render the environment (only rgb_array mode)."""
@@ -210,104 +142,113 @@ class AbstractSapientino(MyDiscreteEnv):
         return array
 
 
-class Fluents:
-    """A fluent extractor for abstract sapientino."""
+class OfficeAbstractSapientino(AbstractSapientino):
+    """AbstractSapientino with office environment.
 
-    def __init__(self, nb_colors: int):
+    This assigns a role to each location: either the corridor, or a location
+    close to a door, or the inside of a room. It simulates the presence of
+    doors and people. The observation is the same as in AbstractSapientino,
+    the additional features, computed after each reset or step, are stored in
+    self.obs_features.
+    """
+
+    def __init__(self, n_rooms: int, p_failure: float, seed: int):
         """Initialize.
 
-        :param nb_colors: The number of colors/rooms in the environment.
+        :param n_rooms: number of rooms. Each room has two associated
+            locations. Also there's one that is not related to any room.
+        :param p_failure: probability of failing a go-to action.
         """
-        base_id = 2  # the firsts are for corridor and wall
-        self.fluents = {
-            sapientino_defs.int2color[i] for i in range(base_id, base_id + nb_colors)
-        }
+        # Instantiate
+        self.n_rooms = n_rooms
+        n_locations = n_rooms * 2 + 1
+        super().__init__(
+            n_locations=n_locations,
+            p_failure=p_failure,
+            initial_location=n_locations - 1,
+        )
 
-    def __call__(self, obs: int, action: int) -> Interpretation:
-        """Respects temprl.types.FluentExtractor interface.
+        # Translation
+        self.location2name = (
+            [f"out{i}" for i in range(n_rooms)]
+            + [f"in{i}" for i in range(n_rooms)] + ["corridor"]
+        )
+        self.location2room = (
+            [i for i in range(n_rooms)]
+            + [i for i in range(n_rooms)] + [-1]
+        )
 
-        :param obs: assuming that the observation comes from an
-            `AbstractSapientino` environment.
-        :param action: the last action.
-        :return: current propositional interpretation of fluents
-        """
-        if action == AbstractSapientino.visit_color:
-            fluents = {sapientino_defs.int2color[obs]}
-            if obs == 0:  # blank/corridor
-                fluents = set()
-        else:
-            fluents = set()
-        return {f for f in self.fluents if f in fluents}
+        self.__rng = np.random.default_rng(seed)
+
+    def _update_features(self, observation) -> None:
+        """Compute a dictionary of features."""
+        name = self.location2name[observation]
+        room = self.location2room[observation]
+        self.obs_features = dict(
+            location=name,
+            person=(name != "corridor" and self._person_in[room] == 1),
+            closed=(name != "corridor" and self._door_closed[room] == 1),
+        )
+
+    def step(self, action: int):
+        """Gym step."""
+        observation, reward, done, info = super().step(action)
+        self._update_features(observation)
+        return observation, reward, done, info
+
+    def reset(self):
+        """Gym reset."""
+        obs = super().reset()
+
+        # Choose doors and persons
+        self._door_closed = self.__rng.integers(0, 2, size=self.n_rooms)
+        self._person_in = self.__rng.integers(0, 2, size=self.n_rooms)
+
+        self._update_features(obs)
+
+        return obs
 
 
-class OfficeFluents:
-    """Define propositions for AbstractSapientino with Office goal."""
+class OfficeFluents(FluentExtractor):
+    """Define propositions for OfficeAbstractSapientino."""
 
-    _colors_to_room = {
-        "red": "at1",
-        "green": "in1",
-        "blue": "at2",
-        "yellow": "in2",
-        "pink": "at3",
-        "brown": "in3",
-        "gray": "at4",
-        "orange": "in4",
-    }
-
-    def __init__(self, n_rooms: int, seed: int):
+    def __init__(self, env: OfficeAbstractSapientino):
         """Initialize.
 
-        :param nb_rooms: number of rooms to navigate.
+        :param env: instance of OfficeAbstractSapientino.
         """
-        assert n_rooms < 5, "Can't support more than four rooms"
+        self._env = env
 
         # Define the propositional symbols
-        self.fluents = {"bip", "person", "closed"}
-        for i in range(1, n_rooms + 1):
-            at_room, in_room = f"at{i}", f"in{i}"
-            self.fluents.add(at_room)
-            self.fluents.add(in_room)
+        self.fluents = {"interact", "person", "closed"}
+        for i in range(self._env.n_rooms):
+            self.fluents.add(f"out{i}")
+            self.fluents.add(f"in{i}")
 
-        self._rng = np.random.default_rng(seed)
-        self._n_rooms = n_rooms
+    @property
+    def all(self):
+        """All fluents."""
+        return self.fluents
 
-    def __call__(self, obs: int, action: int) -> Interpretation:
-        """Respects temprl.types.FluentExtractor interface.
+    def __call__(self, _obs: int, action: int) -> Interpretation:
+        """Respect temprl.types.FluentExtractor interface.
 
         :param obs: assuming that the observation comes from an
-            `AbstractSapientino` environment.
+            `OfficeAbstractSapientino` environment.
         :param action: the last action.
         :return: current propositional interpretation of fluents
         """
         fluents = set()
-        if obs != 0:
-            color = sapientino_defs.int2color[obs + 1]
-            fluents.add(self._colors_to_room[color])
-        if action == AbstractSapientino.visit_color:
-            fluents.add("bip")
-
-        # Doors and people are not in the observation. Valuate at random
-        samples = self._rng.integers(0, 2, size=2)
-        if samples[0] == 1:
-            fluents.add("closed")
-        if samples[1] == 1:
+        if self._env.obs_features["person"]:
             fluents.add("person")
-
-        return {f for f in self.fluents if f in fluents}
-
-    def evaluations_prob(self, obs, action):
-        """Evaluate and return associated probabilities."""
-        fluents = self(obs, action)
-        fluents_dict = {f: f in fluents for f in self.fluents}
-        fluents_dict["closed"] = False
-        fluents_dict["person"] = False
-
-        p = 1.0 / 4
-        values = [(dict(fluents_dict), p) for _ in range(4)]
-        values[1][0].update({"closed": True}), p
-        values[2][0].update({"person": True}), p
-        values[3][0].update({"closed": True, "person": True}), p
-        return values
+        if self._env.obs_features["closed"]:
+            fluents.add("closed")
+        if self._env.obs_features["location"] != "corridor":
+            fluents.add(self._env.obs_features["location"])
+        if action == self._env.action_interact:
+            fluents.add("interact")
+        assert fluents <= self.all
+        return fluents
 
 
 def make(params: Dict[str, Any], log_dir: Optional[str] = None):
@@ -323,25 +264,20 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         raise ValueError("Can't shape rewards in the most abstract environment.")
 
     # Base env
-    env = AbstractSapientino(
-        nb_colors=params["nb_rooms"] * 2,
-        failure_probability=params["sapientino_fail_p"],
-    )
-
-    # Admit all actions
-    env = CompleteActions(env)
-
-    # Fluents for this environment
-    fluent_extractor = OfficeFluents(
+    env = OfficeAbstractSapientino(
         n_rooms=params["nb_rooms"],
+        p_failure=params["sapientino_fail_p"],
         seed=params["seed"],
     )
 
+    # Fluents for this environment
+    fluent_extractor = OfficeFluents(env)
+
     # Apply temporal goals to this env
-    env = temporal_goals.with_nonmarkov_rewards(
+    env = with_nonmarkov_rewards(
         env=env,
         rewards=params["rewards"],
-        fluents=cast(FluentExtractor, fluent_extractor),
+        fluents=fluent_extractor,
         log_dir=log_dir,
     )
     env = FlattenAutomataStates(env)
