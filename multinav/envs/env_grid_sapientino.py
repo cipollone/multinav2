@@ -20,23 +20,25 @@
 # along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Reward shaping wrapper."""
-import tempfile
-from pathlib import Path
-from typing import Any, Optional, cast
+from typing import Any, Mapping, Optional
 
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core import actions, configurations
-from temprl.types import FluentExtractor, Interpretation
+from gym_sapientino.core.types import Colors
+from temprl.types import Interpretation
 
 from multinav.algorithms.agents import ValueFunctionModel
-from multinav.envs import sapientino_defs, temporal_goals
-from multinav.envs.env_abstract_sapientino import OfficeFluents as AbstractOfficeFluents
+from multinav.envs import env_abstract_sapientino, temporal_goals
 from multinav.helpers.callbacks import Callback
 from multinav.helpers.reward_shaping import StateH, StateL, ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper
 from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.utils import CallbackWrapper, SingleAgentWrapper
+
+# Global def
+color2int = {str(c): i for i, c in enumerate(list(Colors))}
+int2color = {i: c for c, i in color2int.items()}
 
 
 # TODO
@@ -63,64 +65,85 @@ class GridSapientinoRewardShaper(ValueFunctionRS):
         )
 
 
-# TODO
-class OfficeFluents:
-    """Same as OfficeFluents in abstract office sapientino, but for grid.
+class Mapping2abs:
+    """Callable that transforms a state to an OfficeAbstractSapientino state."""
 
-    It requires the ResetCallback to be called in order to work properly.
+    def __init__(self, env: env_abstract_sapientino.OfficeAbstractSapientino):
+        """Initialize."""
+        self._env = env
+
+    def __call__(self, state: Mapping[str, Any]) -> StateH:
+        """Map function from this env to abstract env."""
+        color_str = int2color[state["color"]]
+        if color_str in ("blank", "wall"):
+            return self._env.name2location["corridor"]
+        else:
+            assert 0 <= state["color"] - 2 <= self._env.n_locations - 1, (
+                f"0 <= {state['color'] - 2} <= {self._env.n_locations - 1}")
+            return state["color"] - 2
+
+
+class OfficeFluents(temporal_goals.FluentExtractor):
+    """Propositions evaluation for the fluents in the grid environment.
+
+    This only works if combined with the Callback saved in self.callback
     """
 
     def __init__(self, n_rooms: int, seed: int):
         """Initialize."""
-        self._inner = AbstractOfficeFluents(n_rooms=n_rooms, seed=seed)
+        self.abstract_env = env_abstract_sapientino.OfficeAbstractSapientino(
+            n_rooms=n_rooms, p_failure=0.0, seed=seed)
+        self.abstract_fluents = env_abstract_sapientino.OfficeFluents(
+            self.abstract_env)
 
-    def _new_episode(self):
-        """Update for a new episode."""
-        # Sample once per episode
-        self._samples = self._inner._rng.integers(
-            0, 2, size=(self._inner._n_rooms, 2))
+        # Colors to positions
+        self._map = Mapping2abs(self.abstract_env)
 
-    def __call__(self, obs: Dict[str, Any], _: int) -> Interpretation:
-        """Respects temprl.types.FluentExtractor interface.
+        # Simulate abstract sapientino at the same time
+        self.callback = self.FluentsCallback(self)
 
-        :param obs: assuming that the observation comes from an
-            `AbstractSapientino` environment.
+    @property
+    def all(self):
+        """All fluents."""
+        return self.abstract_fluents.all
+
+    def __call__(self, obs: Mapping[str, Any], action: int) -> Interpretation:
+        """Compute an interpretation for the propositios.
+
+        :param obs: dict space observation of a single sapientino robot.
         :param action: the last action.
         :return: current propositional interpretation of fluents
         """
-        color_id = obs["color"]
-        color_name = sapientino_defs.int2color[color_id]
-        beep = obs["beep"] > 0
+        # Get location in abstract
+        location = self._map(obs)
 
-        fluents = set()
-        if color_name != "blank":
-            fluents.add(self._inner._colors_to_room[color_name])
-        if beep:
-            fluents.add("bip")
+        # Compute features with abstract
+        print("features: ", self.abstract_fluents(location, action))
+        return self.abstract_fluents(location, action)
 
-        # Doors and people are not in the observation. Valuate at random
-        if color_id != 0:
-            room_id = int(color_id / 2) - 1
-            assert 0 <= room_id < self._inner._n_rooms
-            if self._samples[room_id, 0] == 1:
-                fluents.add("closed")
-            if self._samples[room_id, 1] == 1:
-                fluents.add("person")
+    class FluentsCallback(Callback):
+        """Simulate with abstract sapientino in parallel."""
 
-        return {f for f in self._inner.fluents if f in fluents}
-
-    class ResetCallback(Callback):
-        """Use this callback together with this fluents evaluator."""
-
-        def __init__(self, fluents: "OfficeFluents"):
+        def __init__(self, features_extractor: "OfficeFluents"):
             """Initialize."""
-            self._fluents = fluents
+            self._extractor = features_extractor
 
-        def _on_reset(self, obs) -> None:
-            self._fluents._new_episode()
+        def _on_reset(self, _obs: StateL) -> None:
+            """Reset."""
+            self._extractor.abstract_env.reset()
 
-        def _on_step(self, action, obs, reward, done, info) -> None:
-            pass
+        def _on_step(self, action, obs, _reward, _done, _info) -> None:
+            """Step."""
+            abs_env = self._extractor.abstract_env
+            if actions.GridCommand(action) == actions.GridCommand.NOP:
+                return
+            if actions.GridCommand(action) == actions.GridCommand.BEEP:
+                abs_action = abs_env.action_interact
+            else:
+                location = self._extractor._map(obs)
+                abs_action = self._extractor.abstract_env.action_goto_state(location)
+            abs_env.step(abs_action)
+            # TODO: debug
 
 
 # TODO
@@ -157,8 +180,7 @@ def abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
     return shaper
 
 
-# TODO
-def make(params: Dict[str, Any], log_dir: Optional[str] = None):
+def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     """Make the sapientino grid state environment.
 
     :param params: a dictionary of parameters; see in this function the
@@ -171,34 +193,29 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         initial_position=params["initial_position"],
         commands=actions.GridCommand,
     )
-    # TODO: from here
-
-    # Define the map
-    map_file = Path(tempfile.mktemp(suffix=".txt"))
-    map_file.write_text(sapientino_defs.sapientino_map_str)
 
     # Define the environment
-    configuration = SapientinoConfiguration(
+    configuration = configurations.SapientinoConfiguration(
         (agent_configuration,),
-        path_to_map=map_file,
-        reward_per_step=params["reward_per_step"],
-        reward_outside_grid=params["reward_outside_grid"],
-        reward_duplicate_beep=params["reward_duplicate_beep"],
+        grid_map=params["map"],
+        reward_outside_grid=0.0,
+        reward_duplicate_beep=0.0,
+        reward_per_step=0.0,
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 
     # Define the fluent extractor
-    n_rooms = sapientino_defs.sapientino_n_rooms
-    fluent_extractor = OfficeFluents(n_rooms=n_rooms, seed=params["seed"])
+    fluent_extractor = OfficeFluents(
+        n_rooms=params["nb_rooms"], seed=params["seed"])
 
     # Update fluents
-    env = CallbackWrapper(env, OfficeFluents.ResetCallback(fluent_extractor))
+    env = CallbackWrapper(env, fluent_extractor.callback)
 
     # Apply temporal goals to this env
     env = temporal_goals.with_nonmarkov_rewards(
         env=env,
         rewards=params["rewards"],
-        fluents=cast(FluentExtractor, fluent_extractor),
+        fluents=fluent_extractor,
         log_dir=log_dir,
         must_load=True,
     )
