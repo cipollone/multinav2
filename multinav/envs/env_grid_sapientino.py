@@ -118,7 +118,6 @@ class OfficeFluents(temporal_goals.FluentExtractor):
         location = self._map(obs)
 
         # Compute features with abstract
-        print("features: ", self.abstract_fluents(location, action))
         return self.abstract_fluents(location, action)
 
     class FluentsCallback(Callback):
@@ -143,7 +142,6 @@ class OfficeFluents(temporal_goals.FluentExtractor):
                 location = self._extractor._map(obs)
                 abs_action = self._extractor.abstract_env.action_goto_state(location)
             abs_env.step(abs_action)
-            # TODO: debug
 
 
 # TODO

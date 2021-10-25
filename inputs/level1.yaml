@@ -32,7 +32,7 @@ environment:
     initial_position: [2, 3]
     shaping: null  # TODO: shaping off
     episode_time_limit: 70
-    render: true
+    render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
     reward_duplicate_beep: 0.0
@@ -44,12 +44,12 @@ environment:
       |   ##############|
       |## ##############|
       |## ##############|
-      |   rg            |
       |                 |
       |                 |
-      |## ##########r###|
-      |## ########## ###|
+      |        r        |
       |## ##########g###|
+      |## ########## ###|
+      |## ########## ###|
   repository: repository
   version: version
 evaluation:
