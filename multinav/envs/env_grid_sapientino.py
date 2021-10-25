@@ -20,7 +20,7 @@
 # along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Reward shaping wrapper."""
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Tuple
 
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
@@ -29,7 +29,9 @@ from gym_sapientino.core.types import Colors
 from temprl.types import Interpretation
 
 from multinav.algorithms.agents import ValueFunctionModel
-from multinav.envs import env_abstract_sapientino, temporal_goals
+from multinav.envs.env_abstract_sapientino import OfficeAbstractSapientino
+from multinav.envs.env_abstract_sapientino import OfficeFluents as AbstractOfficeFluents
+from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.callbacks import Callback
 from multinav.helpers.reward_shaping import StateH, StateL, ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper
@@ -68,7 +70,7 @@ class GridSapientinoRewardShaper(ValueFunctionRS):
 class Mapping2abs:
     """Callable that transforms a state to an OfficeAbstractSapientino state."""
 
-    def __init__(self, env: env_abstract_sapientino.OfficeAbstractSapientino):
+    def __init__(self, env: OfficeAbstractSapientino):
         """Initialize."""
         self._env = env
 
@@ -79,11 +81,12 @@ class Mapping2abs:
             return self._env.name2location["corridor"]
         else:
             assert 0 <= state["color"] - 2 <= self._env.n_locations - 1, (
+                f"error on color '{color_str}': "
                 f"0 <= {state['color'] - 2} <= {self._env.n_locations - 1}")
             return state["color"] - 2
 
 
-class OfficeFluents(temporal_goals.FluentExtractor):
+class OfficeFluents(FluentExtractor):
     """Propositions evaluation for the fluents in the grid environment.
 
     This only works if combined with the Callback saved in self.callback
@@ -91,10 +94,9 @@ class OfficeFluents(temporal_goals.FluentExtractor):
 
     def __init__(self, n_rooms: int, seed: int):
         """Initialize."""
-        self.abstract_env = env_abstract_sapientino.OfficeAbstractSapientino(
+        self.abstract_env = OfficeAbstractSapientino(
             n_rooms=n_rooms, p_failure=0.0, seed=seed)
-        self.abstract_fluents = env_abstract_sapientino.OfficeFluents(
-            self.abstract_env)
+        self.abstract_fluents = AbstractOfficeFluents(self.abstract_env)
 
         # Colors to positions
         self._map = Mapping2abs(self.abstract_env)
@@ -102,23 +104,49 @@ class OfficeFluents(temporal_goals.FluentExtractor):
         # Simulate abstract sapientino at the same time
         self.callback = self.FluentsCallback(self)
 
+        # Last valuation (support NOP)
+        self._last: Interpretation = set()
+
     @property
     def all(self):
         """All fluents."""
         return self.abstract_fluents.all
 
-    def __call__(self, obs: Mapping[str, Any], action: int) -> Interpretation:
+    def __call__(self, obs: Mapping[str, Any], action: Optional[int]) -> Interpretation:
         """Compute an interpretation for the propositios.
 
         :param obs: dict space observation of a single sapientino robot.
         :param action: the last action.
         :return: current propositional interpretation of fluents
         """
-        # Get location in abstract
-        location = self._map(obs)
+        # Map to abstract
+        location, abs_action = self._state_action_to_abs(obs, action)
 
         # Compute features with abstract
-        return self.abstract_fluents(location, action)
+        if abs_action is not None:
+            self._last = self.abstract_fluents(location, abs_action)
+        return self._last
+
+    def _state_action_to_abs(self, obs, action: Optional[int]) -> Tuple[int, Optional[int]]:
+        """Map state and action to abstract environment.
+
+        Only used as a way to compute the fluents; we could simulate fluents in
+        this env, instead.
+
+        :param obs: destination state in grid sapientino
+        :param action: last action of grid sapientino
+        :return tuple of action and location in abstract sapientino (in this order)
+        """
+        location = self._map(obs)
+        if action is None:
+            return location, None
+        if actions.GridCommand(action) == actions.GridCommand.NOP:
+            abs_action = None
+        elif actions.GridCommand(action) == actions.GridCommand.BEEP:
+            abs_action = self.abstract_env.action_interact
+        else:
+            abs_action = self.abstract_env.action_goto_state(location)
+        return location, abs_action
 
     class FluentsCallback(Callback):
         """Simulate with abstract sapientino in parallel."""
@@ -133,15 +161,9 @@ class OfficeFluents(temporal_goals.FluentExtractor):
 
         def _on_step(self, action, obs, _reward, _done, _info) -> None:
             """Step."""
-            abs_env = self._extractor.abstract_env
-            if actions.GridCommand(action) == actions.GridCommand.NOP:
-                return
-            if actions.GridCommand(action) == actions.GridCommand.BEEP:
-                abs_action = abs_env.action_interact
-            else:
-                location = self._extractor._map(obs)
-                abs_action = self._extractor.abstract_env.action_goto_state(location)
-            abs_env.step(abs_action)
+            _, abs_action = self._extractor._state_action_to_abs(obs, action)
+            if abs_action is not None:
+                self._extractor.abstract_env.step(abs_action)
 
 
 # TODO
@@ -196,9 +218,9 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     configuration = configurations.SapientinoConfiguration(
         (agent_configuration,),
         grid_map=params["map"],
-        reward_outside_grid=0.0,
-        reward_duplicate_beep=0.0,
-        reward_per_step=0.0,
+        reward_outside_grid=params["reward_outside_grid"],
+        reward_duplicate_beep=params["reward_duplicate_beep"],
+        reward_per_step=params["reward_per_step"],
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 
@@ -210,7 +232,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     env = CallbackWrapper(env, fluent_extractor.callback)
 
     # Apply temporal goals to this env
-    env = temporal_goals.with_nonmarkov_rewards(
+    env = with_nonmarkov_rewards(
         env=env,
         rewards=params["rewards"],
         fluents=fluent_extractor,

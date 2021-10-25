@@ -289,10 +289,12 @@ class TrainQ(Trainer):
     def train(self):
         """Start training."""
         # Learn
-        self.learner.learn()
+        try:
+            self.learner.learn()
 
         # Save
-        self.saver.save()
+        finally:
+            self.saver.save()
 
         # Log
         self.log()

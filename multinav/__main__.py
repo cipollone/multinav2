@@ -85,7 +85,12 @@ def main():
     elif args.do == "test":
         from multinav import testing
 
-        testing.test(params, args.load, args.interactive)
+        testing.test(
+            params,
+            args.load,
+            interactive=args.interactive,
+            render=args.render,
+        )
 
 
 def set_seed(seed: int):

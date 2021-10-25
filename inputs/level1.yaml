@@ -17,15 +17,15 @@ algorithm:
     learning_rate_end: 0.01
     gamma: 1.0
     total_timesteps: 700000
-    q_eps: 0.95
+    q_eps: 0.99
     epsilon_end: 0.0
     log_interval: 500
 
 environment:
   name: gym-sapientino
   repository: https://github.com/whitemech/gym-sapientino.git
-  version: multinav-experiments
-  commit: dfe2227e3a715625a9676f043dc6f4976eaa8b9c
+  version: develop
+  commit: ''
   diff: ''
   params:
     env: level1
@@ -36,22 +36,20 @@ environment:
     reward_per_step: 0.0
     reward_outside_grid: 0.0
     reward_duplicate_beep: 0.0
-    nb_rooms: 1
+    nb_rooms: 3
     rewards:
       - dfa: ./outputs/level2/0/logs/dfa-0.pickle
         reward: 1.0
     map: |-
-      |   ##############|
-      |## ##############|
+      | B ##############|
+      |##b##############|
       |## ##############|
       |                 |
       |                 |
-      |        r        |
-      |## ##########g###|
-      |## ########## ###|
-      |## ########## ###|
-  repository: repository
-  version: version
+      |             r   |
+      |##g########## ###|
+      |## ##########y###|
+      |##p########## ###|
 evaluation:
   episodes: 0
   frequency: 0
