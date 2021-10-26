@@ -28,7 +28,7 @@ from gym_sapientino.core import actions, configurations
 from gym_sapientino.core.types import Colors
 from temprl.types import Interpretation
 
-from multinav.algorithms.agents import ValueFunctionModel
+from multinav.algorithms.agents import QFunctionModel
 from multinav.envs.env_abstract_sapientino import OfficeAbstractSapientino
 from multinav.envs.env_abstract_sapientino import OfficeFluents as AbstractOfficeFluents
 from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
@@ -41,30 +41,6 @@ from multinav.wrappers.utils import CallbackWrapper, SingleAgentWrapper
 # Global def
 color2int = {str(c): i for i, c in enumerate(list(Colors))}
 int2color = {i: c for c, i in color2int.items()}
-
-
-# TODO
-class GridSapientinoRewardShaper(ValueFunctionRS):
-    """Reward shaper for grid Sapientino."""
-
-    def __value_function_callable(self, state):
-        return self.value_function_table[state]
-
-    def __mapping_function(self, state):
-        agent_state, automata_states = state[0], state[1:]
-        color = agent_state["color"]
-        return (color,) + tuple(*automata_states)
-
-    def __init__(self, value_function_table, gamma):
-        """Initialize the Sapientino reward shaper."""
-        self.value_function_table = value_function_table
-        ValueFunctionRS.__init__(
-            self,
-            value_function=self.__value_function_callable,
-            mapping_function=self.__mapping_function,
-            gamma=gamma,
-            zero_terminal_state=False,
-        )
 
 
 class Mapping2abs:
@@ -166,35 +142,33 @@ class OfficeFluents(FluentExtractor):
                 self._extractor.abstract_env.step(abs_action)
 
 
-# TODO
-def abs_sapientino_shaper(path: str, gamma: float) -> ValueFunctionRS:
+def abs_sapientino_shaper(path: str, n_rooms: int, seed: int) -> ValueFunctionRS:
     """Define a reward shaper on the previous environment.
 
-    This loads a saved agent for `AbstractSapientinoTemporalGoal` then
-    it uses it to compute the reward shaping to apply to this environment.
+    This loads a saved agent for `OfficeAbstractSapientino` then it uses it to
+    compute the reward shaping to apply to this environment.
 
-    :param path: path to saved checkpoint for `AbstractSapientinoTemporalGoal`
-    :param gamma: RL discount factor.
+    :param path: path to saved checkpoint.
+    :param n_rooms: number of rooms in the env where the agent was trained.
     :return: reward shaper to apply.
     """
-    # AbstractSapientinoTemporalGoal's agent is a ValueFunctionModel
-    agent = ValueFunctionModel.load(path=path)
+    # Trained agent on abstract environment
+    agent = QFunctionModel.load(path=path)
 
-    # Define mapping
-    def _map(state: StateL) -> StateH:
-        agent_state, automata_states = state[0], state[1:]
-        color = agent_state["color"]
-        # Wall (color == 1) is not mapped to anything here
-        if color != 0:
-            color -= 1
-        return (color,) + tuple(*automata_states)
+    # Mapping
+    mapping = Mapping2abs(OfficeAbstractSapientino(n_rooms=n_rooms, p_failure=0.0, seed=seed))
+
+    def map_with_temporal_goals(state: Tuple[Mapping[str, Any], list]) -> StateH:
+        obs = mapping(state[0])
+        qs = state[1]
+        return obs, *qs
 
     # Shaper
     shaper = ValueFunctionRS(
-        value_function=lambda s: agent.value_function[s],
-        mapping_function=_map,
-        gamma=1.0,   # NOTE: this is intentional
-        zero_terminal_state=False,  # NOTE ^
+        value_function=lambda s: agent.q_function[s].max(),
+        mapping_function=map_with_temporal_goals,
+        gamma=1.0,  # this is intentional
+        zero_terminal_state=False,  # this is intentional
     )
 
     return shaper
@@ -247,7 +221,8 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     if params["shaping"]:
         abs_shaper = abs_sapientino_shaper(
             path=params["shaping"],
-            gamma=params["gamma"],
+            n_rooms=params["nb_rooms"],
+            seed=params["seed"],
         )
         env = RewardShapingWrapper(env, reward_shaper=abs_shaper)
 

@@ -15,7 +15,7 @@ algorithm:
     action_bias_eps: 0.0
     learning_rate: 0.1
     learning_rate_end: 0.01
-    gamma: 1.0
+    gamma: 0.99
     total_timesteps: 700000
     q_eps: 0.99
     epsilon_end: 0.0
@@ -30,7 +30,7 @@ environment:
   params:
     env: level1
     initial_position: [2, 3]
-    shaping: null  # TODO: shaping off
+    shaping: ./outputs/level2/0/models/model_100000.pickle
     episode_time_limit: 70
     render: false
     reward_per_step: 0.0
