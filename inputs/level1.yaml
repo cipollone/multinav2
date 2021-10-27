@@ -13,7 +13,7 @@ algorithm:
     active_passive_agents: false  # TODO: activate
     action_bias: null
     action_bias_eps: 0.0
-    learning_rate: 0.1
+    learning_rate: 0.05
     learning_rate_end: 0.01
     gamma: 0.98
     total_timesteps: 700000
