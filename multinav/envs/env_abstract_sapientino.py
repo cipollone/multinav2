@@ -41,7 +41,14 @@ from multinav.wrappers.temprl import FlattenAutomataStates
 
 
 class AbstractSapientino(MyDiscreteEnv):
-    """Abstract Sapientino environment."""
+    """Abstract Sapientino environment.
+
+    From a location0, the agent can move to any other location, and vice versa.
+    There is also an 'interact' action.
+    """
+
+    # This location is connected to all other locations.
+    central_location = 0
 
     def __init__(
         self,
@@ -51,12 +58,13 @@ class AbstractSapientino(MyDiscreteEnv):
     ):
         """Initialize the environment.
 
-        :param n_locations: the number of locations/states.
+        :param n_locations: the number of additional locations other than the
+            central one.
         :param p_failure: probability of failing a trainsition and remaining on
             the same state.
-        :param initial_location: the initial state
+        :param initial_location: the initial state in [0, n_locations]
         """
-        self.n_locations = n_locations
+        self.n_locations = n_locations + 1
         self.p_failure = p_failure
         model = self._make_transitions()
         isd = np.zeros(self.n_locations)
@@ -101,20 +109,37 @@ class AbstractSapientino(MyDiscreteEnv):
         """Make the trainsition model."""
         model: Transitions = {}
 
-        for from_location in range(self.n_locations):
+        for location in range(self.n_locations):
 
-            # You can go to any other location
-            for to_location in range(self.n_locations):
-                goto_action = self.action_goto_state(to_location)
-                ok_transition = (1.0 - self.p_failure, to_location, 0.0, False)
-                fail_transition = (self.p_failure, from_location, 0.0, False)
-                model.setdefault(from_location, {}).setdefault(
-                    goto_action, []).extend([ok_transition, fail_transition])
+            if location == self.central_location:
+                continue
+
+            # From center you can go to any location
+            goto_action = self.action_goto_state(location)
+            ok_transition = (1.0 - self.p_failure, location, 0.0, False)
+            fail_transition = (self.p_failure, self.central_location, 0.0, False)
+            model.setdefault(self.central_location, {}).setdefault(
+                goto_action, []).extend([ok_transition, fail_transition])
+
+            # From any location you can go to center
+            goto_action = self.action_goto_state(self.central_location)
+            ok_transition = (1.0 - self.p_failure, self.central_location, 0.0, False)
+            fail_transition = (self.p_failure, location, 0.0, False)
+            model.setdefault(location, {}).setdefault(
+                goto_action, []).extend([ok_transition, fail_transition])
 
             # You can start the interaction
-            ok_transition = (1.0, from_location, 0.0, False)
-            model.setdefault(from_location, {}).setdefault(
+            ok_transition = (1.0, location, 0.0, False)
+            model.setdefault(location, {}).setdefault(
                 self.action_interact, []).extend([ok_transition])
+
+        # Complete with no ops
+        for state in range(self.nb_states):
+            for action in range(self.nb_actions):
+                self_loop = (1.0, state, 0.0, False)
+                transitions = model[state]
+                if action not in transitions:
+                    transitions[action] = [self_loop]
 
         return model
 
@@ -161,22 +186,24 @@ class OfficeAbstractSapientino(AbstractSapientino):
         """
         # Instantiate
         self.n_rooms = n_rooms
-        n_locations = n_rooms * 2 + 1
         super().__init__(
-            n_locations=n_locations,
+            n_locations=n_rooms * 2,
             p_failure=p_failure,
-            initial_location=n_locations - 1,
+            initial_location=AbstractSapientino.central_location,
         )
 
         # Translation
+        assert self.central_location == 0
         self.location2name = (
-            [f"out{i}" for i in range(n_rooms)]
-            + [f"in{i}" for i in range(n_rooms)] + ["corridor"]
+            ["corridor"]
+            + [f"out{i}" for i in range(n_rooms)]
+            + [f"in{i}" for i in range(n_rooms)]
         )
         self.name2location = {n: i for i, n in enumerate(self.location2name)}
         self.location2room = (
-            [i for i in range(n_rooms)]
-            + [i for i in range(n_rooms)] + [-1]
+            [-1]
+            + [i for i in range(n_rooms)]
+            + [i for i in range(n_rooms)]
         )
 
         self.__rng = np.random.default_rng(seed)

@@ -52,17 +52,16 @@ class Mapping2abs:
     def __init__(self, env: OfficeAbstractSapientino):
         """Initialize."""
         self._env = env
+        assert env.central_location == 0, "Corridor will be location 0"
 
     def __call__(self, state: Mapping[str, Any]) -> StateH:
         """Map function from this env to abstract env."""
-        color_str = int2color[state["color"]]
-        if color_str in ("blank", "wall"):
-            return self._env.name2location["corridor"]
+        if int2color[state["color"]] in ("blank", "wall"):
+            color_int = self._env.name2location["corridor"]
         else:
-            assert 0 <= state["color"] - 2 <= self._env.n_locations - 1, (
-                f"error on color '{color_str}': "
-                f"0 <= {state['color'] - 2} <= {self._env.n_locations - 1}")
-            return state["color"] - 2
+            color_int = state["color"] - 1
+        assert 0 <= color_int < self._env.n_locations, f"bad location color: {color_int}"
+        return color_int
 
 
 class OfficeFluents(FluentExtractor):
