@@ -3,7 +3,7 @@
 import pickle
 from abc import ABC, abstractmethod, abstractproperty
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, cast
+from typing import Any, Dict, List, Optional, Set, cast
 
 from gym import Env
 from logaut import ldl2dfa, ltl2dfa
@@ -11,8 +11,6 @@ from pylogics.parsers import parse_ldl, parse_ltl
 from pythomata.impl.symbolic import BooleanFunction, SymbolicDFA
 from temprl.types import Action, Interpretation, Observation
 from temprl.wrapper import TemporalGoal, TemporalGoalWrapper
-
-from multinav.helpers.reward_shaping import StateH, StateL
 
 
 class FluentExtractor(ABC):
@@ -30,6 +28,26 @@ class FluentExtractor(ABC):
     def __call__(self, obs: Observation, action: Action) -> Interpretation:
         """Compute a propositional interpretation."""
         return set()
+
+
+class TemporalGoalWrapperEnd(TemporalGoalWrapper):
+    """A temporal goal wrapper that terminates the episode.
+
+    When all temporal goals generate a reward (which is an approximate way of
+    deciding whether the trace is accepted), the episode is terminated.
+    """
+
+    def step(self, action):
+        """Do a step in the Gym environment."""
+        obs, reward, done, info = super(TemporalGoalWrapper, self).step(action)
+        fluents = self.fluent_extractor(obs, action)
+        states_and_rewards = [tg.step(fluents) for tg in self.temp_goals]
+        next_automata_states, temp_goal_rewards = zip(*states_and_rewards)
+        total_goal_rewards = sum(temp_goal_rewards)
+        obs_prime = (obs, next_automata_states)
+        reward_prime = reward + total_goal_rewards
+        all_rewards = all((r != 0 for r in temp_goal_rewards))
+        return obs_prime, reward_prime, done or all_rewards, info
 
 
 def with_nonmarkov_rewards(
@@ -79,7 +97,7 @@ def with_nonmarkov_rewards(
     ]
 
     # Move with env
-    env = TemporalGoalWrapper(
+    env = TemporalGoalWrapperEnd(
         env=env,
         temp_goals=temporal_goals,
         fluent_extractor=fluents,
