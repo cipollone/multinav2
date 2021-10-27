@@ -4,7 +4,7 @@ comment: comment
 algorithm:
   name: multinav2
   repository: https://github.com/cipollone/multinav2/
-  version: version
+  version: 0.2.1
   commit: null
   diff: null
   params:
@@ -15,27 +15,27 @@ algorithm:
     action_bias_eps: 0.0
     learning_rate: 0.1
     learning_rate_end: 0.01
+    gamma: 0.9
     total_timesteps: 100000
     q_eps: 0.95
     epsilon_end: 0.0
     log_interval: 500
-    gamma: 1.0
 
 environment:
   name: gym-sapientino
   repository: https://github.com/whitemech/gym-sapientino.git
-  version: multinav-experiments
-  commit: f2d44472d3d3d9ec2431f7cd3e4a949b165a1446
+  version: develop
+  commit: ''
   diff: ''
   params:
     env: level2
     episode_time_limit: 30
     render: false
-    nb_rooms: 1
+    nb_rooms: 3
     sapientino_fail_p: 0.05
     shaping: null
     rewards:
-      - ldlf: "<(!out0)*>(<out0>tt & (<closed>end | (<!closed>tt & <true; (!in0)*>(<in0>tt & (<person; interact>end | <!person; !interact>end)))))"
+      - ltlf: "(!out0 U (out0 & ((closed & X[!] (!out1 U (out1 & ((closed & X[!] (!out2 U (out2 & ((closed & X false) | (!closed & X[!](!in2 U (in2 & ((person & X[!]interact) | (!person & X[!]!interact)) & XX false))))))) | (!closed & X[!](!in1 U (in1 & ((person & X[!]interact) | (!person & X[!]!interact)) & X[!]X[!] (!out2 U (out2 & ((closed & X false) | (!closed & X[!](!in2 U (in2 & ((person & X[!]interact) | (!person & X[!]!interact)) & XX false))))))))))))) | (!closed & X[!](!in0 U (in0 & ((person & X[!]interact) | (!person & X[!]!interact)) & X[!]X[!] (!out1 U (out1 & ((closed & X[!] (!out2 U (out2 & ((closed & X false) | (!closed & X[!](!in2 U (in2 & ((person & X[!]interact) | (!person & X[!]!interact)) & XX false))))))) | (!closed & X[!](!in1 U (in1 & ((person & X[!]interact) | (!person & X[!]!interact)) & X[!]X[!] (!out2 U (out2 & ((closed & X false) | (!closed & X[!](!in2 U (in2 & ((person & X[!]interact) | (!person & X[!]!interact)) & XX false))))))))))))))))))"
         reward: 1.0
 evaluation:
   episodes: 0

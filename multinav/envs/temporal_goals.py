@@ -3,7 +3,7 @@
 import pickle
 from abc import ABC, abstractmethod, abstractproperty
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, cast
+from typing import Any, Callable, Dict, List, Optional, Set, cast
 
 from gym import Env
 from logaut import ldl2dfa, ltl2dfa
@@ -11,6 +11,8 @@ from pylogics.parsers import parse_ldl, parse_ltl
 from pythomata.impl.symbolic import BooleanFunction, SymbolicDFA
 from temprl.types import Action, Interpretation, Observation
 from temprl.wrapper import TemporalGoal, TemporalGoalWrapper
+
+from multinav.helpers.reward_shaping import StateH, StateL
 
 
 class FluentExtractor(ABC):

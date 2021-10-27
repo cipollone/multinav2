@@ -38,7 +38,6 @@ from multinav.helpers.gym import (
     from_discrete_env_to_graphviz,
 )
 from multinav.wrappers.temprl import FlattenAutomataStates
-from multinav.wrappers.utils import Debugger
 
 
 class AbstractSapientino(MyDiscreteEnv):
@@ -86,7 +85,8 @@ class AbstractSapientino(MyDiscreteEnv):
 
     def action_goto_state(self, state: int) -> int:
         """Return the Go-To action associated to a location."""
-        assert self._is_state(state)
+        assert self._is_state(state), (
+            f"{state} is not a state, {self.nb_states} states")
         return state
 
     def _is_state(self, state: int):
@@ -173,6 +173,7 @@ class OfficeAbstractSapientino(AbstractSapientino):
             [f"out{i}" for i in range(n_rooms)]
             + [f"in{i}" for i in range(n_rooms)] + ["corridor"]
         )
+        self.name2location = {n: i for i, n in enumerate(self.location2name)}
         self.location2room = (
             [i for i in range(n_rooms)]
             + [i for i in range(n_rooms)] + [-1]

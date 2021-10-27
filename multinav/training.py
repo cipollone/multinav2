@@ -45,57 +45,66 @@ from multinav.wrappers.reward_shaping import (
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
 
 
-def train(params: Dict[str, Any]):
-    """Train an agent.
+class TrainerSetup:
+    """Train an agent."""
 
-    :param params: for examples on these parameters see the project repository
-        in files under inputs/
-    """
-    # Get options
-    alg_params = params["algorithm"]["params"]
-    env_params = params["environment"]["params"]
-    env_params["seed"] = params["seed"]
-    alg_params["seed"] = params["seed"]
-    env_params["gamma"] = alg_params["gamma"]
-    env_name = env_params.pop("env")
+    def __init__(self, params: Dict[str, Any]):
+        """Initialize.
 
-    # Make
-    trainer: Trainer
-    if env_name == "level2":
-        # Abstract env
-        env = env_abstract_sapientino.make(
-            params=env_params,
-            log_dir=params["logs-dir"],
-        )
+        :param params: for examples on these parameters see the project repository
+            in files under inputs/
+        """
+        # Get options
+        self.params = params
+        self.alg_params = params["algorithm"]["params"]
+        self.env_params = params["environment"]["params"]
+        self.env_params["seed"] = params["seed"]
+        self.alg_params["seed"] = params["seed"]
+        self.env_params["gamma"] = self.alg_params["gamma"]
+        self.env_name = self.env_params.pop("env")
 
-        # Trainer
-        trainer = TrainQ(
-            env=env,
-            params=alg_params,
-            model_path=params["model-dir"],
-            log_path=params["logs-dir"],
-        )
-    elif env_name == "level1":
-        # Grid env
-        env = env_grid_sapientino.make(
-            params=env_params,
-            log_dir=params["logs-dir"],
-        )
-        if env_params["render"]:
-            env = Renderer(env)
+        # Make
+        self.trainer: Trainer
+        if self.env_name == "level2":
+            # Abstract env
+            self.env = env_abstract_sapientino.make(
+                params=self.env_params,
+                log_dir=params["logs-dir"],
+            )
 
-        # Trainer
-        trainer = TrainQ(
-            env=env,
-            params=alg_params,
-            model_path=params["model-dir"],
-            log_path=params["logs-dir"],
-        )
-    else:
-        raise RuntimeError("Environment not supported")
+            # Trainer
+            self.trainer = TrainQ(
+                env=self.env,
+                params=self.alg_params,
+                model_path=params["model-dir"],
+                log_path=params["logs-dir"],
+            )
+            self.agent = self.trainer.agent
+            self.passive_agent = self.trainer.passive_agent
+        elif self.env_name == "level1":
+            # Grid env
+            self.env = env_grid_sapientino.make(
+                params=self.env_params,
+                log_dir=params["logs-dir"],
+            )
+            if self.env_params["render"]:
+                self.env = Renderer(self.env)
 
-    # Start
-    trainer.train()
+            # Trainer
+            self.trainer = TrainQ(
+                env=self.env,
+                params=self.alg_params,
+                model_path=params["model-dir"],
+                log_path=params["logs-dir"],
+            )
+            self.agent = self.trainer.agent
+            self.passive_agent = self.trainer.passive_agent
+        else:
+            raise RuntimeError("Environment not supported")
+
+    def train(self):
+        """Start training."""
+        self.trainer.train()
 
 
 class Trainer(ABC):
@@ -262,7 +271,7 @@ class TrainQ(Trainer):
         draw_fig, draw_axes = plt.subplots(
             nrows=len(self._log_properties), ncols=1, figsize=(20, 12)
         )
-        draw_lines = [None for i in range(len(self._log_properties))]
+        draw_lines = [None for _ in range(len(self._log_properties))]
 
         # Create log txt file
         log_file = os.path.join(self._log_path, name + "_log.txt")
@@ -280,10 +289,12 @@ class TrainQ(Trainer):
     def train(self):
         """Start training."""
         # Learn
-        self.learner.learn()
+        try:
+            self.learner.learn()
 
         # Save
-        self.saver.save()
+        finally:
+            self.saver.save()
 
         # Log
         self.log()
