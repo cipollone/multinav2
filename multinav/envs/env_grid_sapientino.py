@@ -20,6 +20,7 @@
 # along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Reward shaping wrapper."""
+import logging
 from typing import Any, Mapping, Optional, Tuple
 
 from gym.wrappers import TimeLimit
@@ -37,6 +38,8 @@ from multinav.helpers.reward_shaping import StateH, StateL, ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper
 from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.utils import CallbackWrapper, SingleAgentWrapper
+
+logger = logging.getLogger(__name__)
 
 # Global def
 color2int = {str(c): i for i, c in enumerate(list(Colors))}
@@ -161,7 +164,9 @@ def abs_sapientino_shaper(path: str, n_rooms: int, seed: int) -> ValueFunctionRS
     def map_with_temporal_goals(state: Tuple[Mapping[str, Any], list]) -> StateH:
         obs = mapping(state[0])
         qs = state[1]
-        return obs, *qs
+        state1 = (obs, *qs)
+        logger.debug("Mapped state: %s", state1)
+        return state1
 
     # Shaper
     shaper = ValueFunctionRS(

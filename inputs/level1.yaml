@@ -15,10 +15,10 @@ algorithm:
     action_bias_eps: 0.0
     learning_rate: 0.1
     learning_rate_end: 0.01
-    gamma: 0.99
+    gamma: 0.98
     total_timesteps: 700000
-    q_eps: 0.99
-    epsilon_end: 0.0
+    q_eps: 0.8
+    epsilon_end: 0.05
     log_interval: 500
 
 environment:
@@ -31,7 +31,7 @@ environment:
     env: level1
     initial_position: [2, 3]
     shaping: ./outputs/level2/0/models/model_100000.pickle
-    episode_time_limit: 70
+    episode_time_limit: 100
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
