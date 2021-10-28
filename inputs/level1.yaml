@@ -10,7 +10,7 @@ algorithm:
   params:
     resume_file: null
     initialize_file: null
-    active_passive_agents: false  # TODO: activate
+    active_passive_agents: true
     action_bias: null
     action_bias_eps: 0.0
     learning_rate: 0.05

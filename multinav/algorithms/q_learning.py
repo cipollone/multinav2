@@ -160,6 +160,7 @@ class QLearning:
         :return: The q table stored in self.Q.
         """
         done = True
+        state = None  # for type checks
         for step in range(self.total_timesteps):
 
             if done:
@@ -182,6 +183,7 @@ class QLearning:
             )
 
             # Apply also for passive agent
+            td_passive_update = 0.0
             if self.active_passive_agents:
                 assert self.passive_reward_getter is not None  # mypy fix
                 td_passive_update = self._optimize_q_step(
@@ -197,7 +199,7 @@ class QLearning:
             state = state2
 
             # Decays
-            if step % 10 == 0:
+            if step % 20 == 0:
                 self.update_decays(step)
                 print(" Eps:", round(self.eps, 3), end="\r")
 
@@ -266,11 +268,11 @@ class QLearning:
 
             # Biased action
             else:
-                return np.argmax(self.action_bias[state])
+                return np.argmax(self.action_bias[state]).item()
 
         # Greedy
         else:
-            return np.argmax(self.Q[state])
+            return np.argmax(self.Q[state]).item()
 
     @staticmethod
     def _Q_initialization_fn(rng, nb_actions) -> np.ndarray:
