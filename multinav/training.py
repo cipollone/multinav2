@@ -33,7 +33,11 @@ from PIL import Image
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.algorithms.q_learning import QLearning
 from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
-from multinav.envs import env_abstract_sapientino, env_grid_sapientino
+from multinav.envs import (
+    env_abstract_rooms,
+    env_abstract_sapientino,
+    env_grid_sapientino,
+)
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.gym import find_wrapper
@@ -63,44 +67,37 @@ class TrainerSetup:
         self.env_params["gamma"] = self.alg_params["gamma"]
         self.env_name = self.env_params.pop("env")
 
-        # Make
-        self.trainer: Trainer
-        if self.env_name == "level2":
-            # Abstract env
+        # Interact env
+        if self.env_name == "task2":
             self.env = env_abstract_sapientino.make(
                 params=self.env_params,
                 log_dir=params["logs-dir"],
             )
-
-            # Trainer
-            self.trainer = TrainQ(
-                env=self.env,
-                params=self.alg_params,
-                model_path=params["model-dir"],
-                log_path=params["logs-dir"],
-            )
-            self.agent = self.trainer.agent
-            self.passive_agent = self.trainer.passive_agent
-        elif self.env_name == "level1":
-            # Grid env
+        elif self.env_name == "task2":
             self.env = env_grid_sapientino.make(
                 params=self.env_params,
                 log_dir=params["logs-dir"],
             )
             if self.env_params["render"]:
                 self.env = Renderer(self.env)
-
-            # Trainer
-            self.trainer = TrainQ(
-                env=self.env,
-                params=self.alg_params,
-                model_path=params["model-dir"],
-                log_path=params["logs-dir"],
+        # Rooms env
+        elif self.env_name == "rooms2":
+            self.env = env_abstract_rooms.make(
+                params=self.env_params,
+                log_dir=params["logs-dir"],
             )
-            self.agent = self.trainer.agent
-            self.passive_agent = self.trainer.passive_agent
         else:
             raise RuntimeError("Environment not supported")
+
+        # Trainer
+        self.trainer = TrainQ(
+            env=self.env,
+            params=self.alg_params,
+            model_path=params["model-dir"],
+            log_path=params["logs-dir"],
+        )
+        self.agent = self.trainer.agent
+        self.passive_agent = self.trainer.passive_agent
 
     def train(self):
         """Start training."""
