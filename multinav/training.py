@@ -36,6 +36,7 @@ from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
 from multinav.envs import (
     env_abstract_rooms,
     env_abstract_sapientino,
+    env_grid_rooms,
     env_grid_sapientino,
 )
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
@@ -73,7 +74,7 @@ class TrainerSetup:
                 params=self.env_params,
                 log_dir=params["logs-dir"],
             )
-        elif self.env_name == "task2":
+        elif self.env_name == "task1":
             self.env = env_grid_sapientino.make(
                 params=self.env_params,
                 log_dir=params["logs-dir"],
@@ -86,6 +87,13 @@ class TrainerSetup:
                 params=self.env_params,
                 log_dir=params["logs-dir"],
             )
+        elif self.env_name == "rooms1":
+            self.env = env_grid_rooms.make(
+                params=self.env_params,
+                log_dir=params["logs-dir"],
+            )
+            if self.env_params["render"]:
+                self.env = Renderer(self.env)
         else:
             raise RuntimeError("Environment not supported")
 
