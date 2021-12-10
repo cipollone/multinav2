@@ -21,7 +21,7 @@
 #
 """Reward shaping wrapper."""
 import logging
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Tuple
 
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
@@ -30,7 +30,10 @@ from gym_sapientino.core.types import Colors
 from gym_sapientino.core.types import id2color as room2color
 from temprl.types import Interpretation
 
+from multinav.algorithms.agents import QFunctionModel
 from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
+from multinav.helpers.reward_shaping import StateH, ValueFunctionRS
+from multinav.wrappers.reward_shaping import RewardShapingWrapper
 from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.utils import SingleAgentWrapper
 
@@ -75,6 +78,49 @@ class GridRoomsFluents(FluentExtractor):
         return {color}
 
 
+def grid_to_abs(obs: Mapping[str, Any]):
+    """Transform features of grid_rooms to AbstractRooms."""
+    color = int2color[obs["color"]]
+    assert color not in ("blank", "wall"), (
+        "Colors should be everywhere because they fill rooms")
+    abs_state = obs["color"] - 2  # blank and wall come first
+    assert 0 <= abs_state
+    return abs_state
+
+
+def abs_rooms_shaper(path: str, gamma: float, return_invariant: bool) -> ValueFunctionRS:
+    """Define a reward shaper on the previous environment.
+
+    This loads a saved agent for `AbstractRooms` then it uses it to
+    compute the reward shaping to apply to this environment.
+
+    :param path: path to saved checkpoint.
+    :param gamma: discount factor to apply for shaping.
+    :param return_invariant: if true, we apply classic return-invariant reward shaping.
+        We usually want this to be false.
+    :return: reward shaper to apply.
+    """
+    # Trained agent on abstract environment
+    agent = QFunctionModel.load(path=path)
+
+    def map_with_temporal_goals(state: Tuple[Mapping[str, Any], list]) -> StateH:
+        obs = grid_to_abs(state[0])
+        qs = state[1]
+        state1 = (obs, *qs)
+        logger.debug("Mapped state: %s", state1)
+        return state1
+
+    # Shaper
+    shaper = ValueFunctionRS(
+        value_function=lambda s: agent.q_function[s].max(),
+        mapping_function=map_with_temporal_goals,
+        gamma=gamma,
+        zero_terminal_state=return_invariant,
+    )
+
+    return shaper
+
+
 def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     """Make the grid_rooms environment.
 
@@ -116,7 +162,12 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
 
     # Reward shaping on previous envs
     if params["shaping"]:
-        raise AssertionError()  # TODO
+        abs_shaper = abs_rooms_shaper(
+            path=params["shaping"],
+            gamma=params["shaping_gamma"],
+            return_invariant=params["return_invariant"],
+        )
+        env = RewardShapingWrapper(env, reward_shaper=abs_shaper)
 
     # Choose the environment features
     env = GridRobotFeatures(env)

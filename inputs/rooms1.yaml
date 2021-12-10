@@ -16,8 +16,8 @@ algorithm:
     learning_rate: 0.05
     learning_rate_end: 0.01
     gamma: 0.98
-    total_timesteps: 400000
-    q_eps: 0.9
+    total_timesteps: 300000
+    q_eps: 0.8
     epsilon_end: 0.05
     log_interval: 500
 
@@ -30,15 +30,16 @@ environment:
   params:
     env: rooms1
     initial_position: [2, 3]
-    shaping: null
-    shaping_gamma: null
-    episode_time_limit: 200
+    shaping: ./outputs/rooms2/0/models/model_100000.pickle
+    shaping_gamma: 0.98
+    return_invariant: true
+    episode_time_limit: 100
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
     reward_duplicate_beep: 0.0
     rewards:
-      - dfa: ./outputs/level2/0/logs/dfa-0.pickle
+      - dfa: ./outputs/rooms2/0/logs/dfa-0.pickle
         reward: 1.0
     map: |-
       |#########################|
@@ -55,6 +56,6 @@ environment:
 evaluation:
   episodes: 0
   frequency: 0
-n-runs: 10
+n-runs: 1
 output-base: outputs
 run-command: "poetry run python -m multinav train"

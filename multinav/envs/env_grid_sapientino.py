@@ -144,7 +144,13 @@ class OfficeFluents(FluentExtractor):
                 self._extractor.abstract_env.step(abs_action)
 
 
-def abs_sapientino_shaper(path: str, n_rooms: int, gamma: float, seed: int) -> ValueFunctionRS:
+def abs_sapientino_shaper(
+    path: str,
+    n_rooms: int,
+    gamma: float,
+    seed: int,
+    return_invariant: bool,
+) -> ValueFunctionRS:
     """Define a reward shaper on the previous environment.
 
     This loads a saved agent for `OfficeAbstractSapientino` then it uses it to
@@ -153,6 +159,8 @@ def abs_sapientino_shaper(path: str, n_rooms: int, gamma: float, seed: int) -> V
     :param path: path to saved checkpoint.
     :param n_rooms: number of rooms in the env where the agent was trained.
     :param gamma: discount factor to apply for shaping.
+    :param return_invariant: if true, we apply classic return-invariant reward shaping.
+        We usually want this to be false.
     :return: reward shaper to apply.
     """
     # Trained agent on abstract environment
@@ -173,7 +181,7 @@ def abs_sapientino_shaper(path: str, n_rooms: int, gamma: float, seed: int) -> V
         value_function=lambda s: agent.q_function[s].max(),
         mapping_function=map_with_temporal_goals,
         gamma=gamma,
-        zero_terminal_state=False,  # this is intentional
+        zero_terminal_state=return_invariant,
     )
 
     return shaper
@@ -229,6 +237,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
             n_rooms=params["nb_rooms"],
             gamma=params["shaping_gamma"],
             seed=params["seed"],
+            return_invariant=params["return_invariant"],
         )
         env = RewardShapingWrapper(env, reward_shaper=abs_shaper)
 

@@ -32,6 +32,7 @@ environment:
     initial_position: [2, 3]
     shaping: ./outputs/level2/0/models/model_100000.pickle
     shaping_gamma: 1.0
+    return_invariant: false
     episode_time_limit: 100
     render: false
     reward_per_step: 0.0
