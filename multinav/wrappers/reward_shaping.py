@@ -147,3 +147,16 @@ class UnshapedEnvWrapper(CallbackWrapper):
         def _on_step(self, action, observation, reward, done, info):
             """Step."""
             self._env.step(action)
+
+
+class RewardShift(gym.RewardWrapper):
+    """Add a constant to each reward."""
+
+    def __init__(self, env: gym.Env, const: float):
+        """Initialize."""
+        super().__init__(env)
+        self._const = const
+
+    def reward(self, reward: float) -> float:
+        """Just add a constant."""
+        return reward + self._const

@@ -29,6 +29,7 @@ environment:
   diff: ''
   params:
     env: rooms2
+    reward_shift: 0.0
     episode_time_limit: 30
     render: false
     rooms_connectivity:

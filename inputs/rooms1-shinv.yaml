@@ -16,7 +16,7 @@ algorithm:
     learning_rate: 0.05
     learning_rate_end: 0.01
     gamma: 0.98
-    total_timesteps: 400000
+    total_timesteps: 300000
     q_eps: 0.8
     epsilon_end: 0.05
     log_interval: 500
@@ -29,6 +29,7 @@ environment:
   diff: ''
   params:
     env: rooms1
+    reward_shift: 0.0
     initial_position: [2, 3]
     shaping: ./outputs/rooms2/0/models/model_100000.pickle
     shaping_gamma: 0.98
