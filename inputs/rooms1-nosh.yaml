@@ -15,9 +15,9 @@ algorithm:
     action_bias_eps: 0.0
     learning_rate: 0.05
     learning_rate_end: 0.01
-    gamma: 0.98
-    total_timesteps: 300000
-    q_eps: 0.8
+    gamma: 0.99
+    total_timesteps: 400000
+    q_eps: 0.9
     epsilon_end: 0.05
     log_interval: 500
 
@@ -32,9 +32,9 @@ environment:
     reward_shift: 0.0
     initial_position: [2, 3]
     shaping: null
-    shaping_gamma: 0.98
+    shaping_gamma: 0.99
     return_invariant: true
-    episode_time_limit: 100
+    episode_time_limit: 130
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
@@ -65,6 +65,6 @@ environment:
 evaluation:
   episodes: 0
   frequency: 0
-n-runs: 20
+n-runs: 10
 output-base: outputs
 run-command: "poetry run python -m multinav train"
