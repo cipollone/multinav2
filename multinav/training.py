@@ -185,6 +185,11 @@ class TrainQ(Trainer):
         if params["action_bias"]:
             self.biased_Q = QFunctionModel.load(path=params["action_bias"]).q_function
 
+        # Q function used as exploration policy
+        self.exploration_Q = None
+        if params["exploration_policy"]:
+            self.exploration_Q = QFunctionModel.load(path=params["exploration_policy"]).q_function
+
         # Maybe stop
         if agent_only:
             return
@@ -256,6 +261,7 @@ class TrainQ(Trainer):
             epsilon_end=params["epsilon_end"],
             action_bias=self.biased_Q,
             action_bias_eps=params["action_bias_eps"],
+            exploration_policy=self.exploration_Q,
             initial_Q=self.agent.q_function if self._reinitialized else None,
             active_passive_agents=params["active_passive_agents"],
             passive_reward_getter=original_reward_getter,

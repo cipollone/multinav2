@@ -55,6 +55,7 @@ class QLearning:
         epsilon_end: float = 0.0,
         action_bias: Optional[QTableType] = None,
         action_bias_eps: float = 0.0,
+        exploration_policy: Optional[QTableType] = None,
         initial_Q: Optional[QTableType] = None,
         active_passive_agents: bool = False,
         passive_reward_getter: Optional[Callable[[], float]] = None,
@@ -81,6 +82,9 @@ class QLearning:
         :param action_bias_eps: During exploration, with eps probability
             select an action with uniform distribution, idependently of
             action_bias.
+        :param exploration_policy: if given, this Q-table is used to select
+            greedy actions instead of this learner's Q-table. Epsilon greedy still
+            applies, but action bias is ignored.
         :param initial_Q: the initial Q function.
         :param active_passive_agents: if True, a second agent is instantiated.
             This does not execute any action, but only learns from what
@@ -118,6 +122,7 @@ class QLearning:
         self.epsilon_end = epsilon_end
         self.action_bias = action_bias
         self.action_bias_eps = action_bias_eps
+        self.exploration_policy = exploration_policy
         self.active_passive_agents = active_passive_agents
         self.passive_reward_getter = passive_reward_getter
 
@@ -257,6 +262,8 @@ class QLearning:
         Random actions are uniform, if action_bias is None, biased otherwise.
         Biased actions means that they are chosed from action_bias, with
         1-action_bias_eps probability.
+        If an exploration policy is given, greedy actions are selected
+        according to this one.
         """
         # Exploration
         if self.__rng.random() < self.eps:
@@ -272,7 +279,13 @@ class QLearning:
 
         # Greedy
         else:
-            return np.argmax(self.Q[state]).item()
+            # Exploration policy?
+            if self.exploration_policy:
+                return np.argmax(self.exploration_policy[state]).item()
+
+            # Learner Q function
+            else:
+                return np.argmax(self.Q[state]).item()
 
     @staticmethod
     def _Q_initialization_fn(rng, nb_actions) -> np.ndarray:

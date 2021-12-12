@@ -13,6 +13,7 @@ algorithm:
     active_passive_agents: false
     action_bias: null
     action_bias_eps: 0.0
+    exploration_policy: null
     learning_rate: 0.05
     learning_rate_end: 0.01
     gamma: 0.99
