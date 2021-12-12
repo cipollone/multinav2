@@ -14,13 +14,13 @@ algorithm:
     action_bias: null
     action_bias_eps: 0.0
     exploration_policy: null
-    learning_rate: 0.05
-    learning_rate_end: 0.01
-    gamma: 0.98
-    total_timesteps: 300000
-    q_eps: 0.9
-    epsilon_end: 0.05
-    log_interval: 500
+    learning_rate: 0.1
+    learning_rate_end: 0.05
+    gamma: 0.99
+    total_timesteps: 500000
+    q_eps: 0.8
+    epsilon_end: 0.0
+    log_interval: 1000
 
 environment:
   name: gym-sapientino
@@ -30,12 +30,12 @@ environment:
   diff: ''
   params:
     env: rooms1
-    reward_shift: 0.0
+    reward_shift: -1.0
     initial_position: [2, 3]
     shaping: ./outputs/rooms2/0/models/model_100000.pickle
-    shaping_gamma: 0.98
+    shaping_gamma: 0.99
     return_invariant: false
-    episode_time_limit: 100
+    episode_time_limit: 130
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
@@ -52,17 +52,17 @@ environment:
       - [p, B]
       - [B, G]
     map: |-
-      |#########################|
-      |#gggg#bbbb######ooooo####|
-      |#gggggbbbb#pppppooooo####|
-      |#gggg#bbbb#pppp#ooooo####|
-      |#gggg#bbbb#pppp#ooooo####|
-      |###r#######pppp#o########|
-      |#rrrr#yyyy#pppp#BBBBB#GG#|
-      |#rrrrryyyy#ppppBBBBBBBGG#|
-      |#rrrr#yyyyypppp#BBBBB####|
-      |#rrrr#yyyy######BBBBB####|
-      |#########################|
+      |###########################################|
+      |#ggggggg#bbbbbbbb##########oooooooooooo####|
+      |#ggggggggbbbbbbbb#pppppppppoooooooooooo####|
+      |#ggggggg#bbbbbbbb#pppppppp#oooooooooooo####|
+      |#ggggggg#bbbbbbbb#pppppppp#oooooooooooo####|
+      |###r##############pppppppp#o###############|
+      |#rrrrrrr#yyyyyyyy#pppppppp#BBBBBBBBBBBB#GG#|
+      |#rrrrrrrryyyyyyyy#ppppppppBBBBBBBBBBBBBBGG#|
+      |#rrrrrrr#yyyyyyyyypppppppp#BBBBBBBBBBBB####|
+      |#rrrrrrr#yyyyyyyy##########BBBBBBBBBBBB####|
+      |###########################################|
 evaluation:
   episodes: 0
   frequency: 0

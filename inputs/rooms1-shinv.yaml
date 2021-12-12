@@ -14,13 +14,13 @@ algorithm:
     action_bias: null
     action_bias_eps: 0.0
     exploration_policy: null
-    learning_rate: 0.05
-    learning_rate_end: 0.01
+    learning_rate: 0.1
+    learning_rate_end: 0.05
     gamma: 0.99
-    total_timesteps: 400000
-    q_eps: 0.9
-    epsilon_end: 0.05
-    log_interval: 500
+    total_timesteps: 500000
+    q_eps: 0.8
+    epsilon_end: 0.0
+    log_interval: 1000
 
 environment:
   name: gym-sapientino
@@ -30,7 +30,7 @@ environment:
   diff: ''
   params:
     env: rooms1
-    reward_shift: 0.0
+    reward_shift: -1.0
     initial_position: [2, 3]
     shaping: ./outputs/rooms2/0/models/model_100000.pickle
     shaping_gamma: 0.99
