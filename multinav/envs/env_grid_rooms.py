@@ -35,7 +35,7 @@ from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import StateH, ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
 from multinav.wrappers.sapientino import GridRobotFeatures
-from multinav.wrappers.utils import SingleAgentWrapper
+from multinav.wrappers.utils import FailProbability, SingleAgentWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +166,10 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         reward_per_step=params["reward_per_step"],
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
+
+    # Fail probability
+    if params["fail_p"] > 0:
+        env = FailProbability(env, fail_p=params["fail_p"], seed=params["seed"])
 
     # Define the fluent extractor
     fluent_extractor = GridRoomsFluents(map_config=params["map"])
