@@ -44,7 +44,6 @@ from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.gym import find_wrapper
 from multinav.wrappers.reward_shaping import (
     RewardShapingWrapper,
-    RewardShift,
     UnshapedEnv,
     UnshapedEnvWrapper,
 )
@@ -97,10 +96,6 @@ class TrainerSetup:
                 self.env = Renderer(self.env)
         else:
             raise RuntimeError("Environment not supported")
-
-        # Common option
-        if self.env_params["reward_shift"] != 0:
-            self.env = RewardShift(self.env, self.env_params["reward_shift"])
 
         # Trainer
         self.trainer = TrainQ(

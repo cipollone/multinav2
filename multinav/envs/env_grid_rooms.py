@@ -33,7 +33,7 @@ from multinav.algorithms.agents import QFunctionModel
 from multinav.envs.env_abstract_rooms import AbstractRooms
 from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import StateH, ValueFunctionRS
-from multinav.wrappers.reward_shaping import RewardShapingWrapper
+from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
 from multinav.wrappers.sapientino import GridRobotFeatures
 from multinav.wrappers.utils import SingleAgentWrapper
 
@@ -178,6 +178,10 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         log_dir=log_dir,
         must_load=True,
     )
+
+    # Reward shift
+    if params["reward_shift"] != 0:
+        env = RewardShift(env, params["reward_shift"])
 
     # Time limit (this should be before reward shaping)
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
