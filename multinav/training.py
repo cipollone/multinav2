@@ -32,20 +32,12 @@ import ray
 import tensorflow as tf
 from gym import Env
 from matplotlib import pyplot as plt
-from PIL import Image
 from ray import tune
 from ray.tune.logger import UnifiedLogger
 
-from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
+from multinav.algorithms.agents import QFunctionModel
 from multinav.algorithms.q_learning import QLearning
-from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
-from multinav.envs import (
-    env_abstract_rooms,
-    env_abstract_sapientino,
-    env_cont_rooms,
-    env_grid_rooms,
-    env_grid_sapientino,
-)
+from multinav.envs.envs import EnvMaker
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.gym import find_wrapper
@@ -54,7 +46,7 @@ from multinav.wrappers.reward_shaping import (
     UnshapedEnv,
     UnshapedEnvWrapper,
 )
-from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder, Renderer
+from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
 
 
 class TrainerSetup:
@@ -68,66 +60,35 @@ class TrainerSetup:
         """
         # Get options
         self.params = params
-        self.alg_params = params["algorithm"]["params"]
-        self.env_params = params["environment"]["params"]
-        self.env_params["seed"] = params["seed"]
-        self.alg_params["seed"] = params["seed"]
-        self.env_params["gamma"] = self.alg_params["gamma"]
-        self.env_name = self.env_params.pop("env")
+        self.alg_params: Dict[str, Any] = params["algorithm"]["params"]
+        self.env_params: Dict[str, Any] = params["environment"]["params"]
+        self.env_name = self.env_params["env"]
 
-        # Interact env
-        if self.env_name == "task2":
-            self.env = env_abstract_sapientino.make(
-                params=self.env_params,
-                log_dir=params["logs-dir"],
-            )
-        elif self.env_name == "task1":
-            self.env = env_grid_sapientino.make(
-                params=self.env_params,
-                log_dir=params["logs-dir"],
-            )
-            if self.env_params["render"]:
-                self.env = Renderer(self.env)
-        # Rooms env
-        elif self.env_name == "rooms2":
-            self.env = env_abstract_rooms.make(
-                params=self.env_params,
-                log_dir=params["logs-dir"],
-            )
-        elif self.env_name == "rooms1":
-            self.env = env_grid_rooms.make(
-                params=self.env_params,
-                log_dir=params["logs-dir"],
-            )
-            if self.env_params["render"]:
-                self.env = Renderer(self.env)
-        elif self.env_name == "rooms0":
-            self.env = env_cont_rooms.make(
-                params=self.env_params,
-                log_dir=params["logs-dir"],
-            )
-            if self.env_params["render"]:
-                self.env = Renderer(self.env)
-        else:
-            raise RuntimeError("Environment not supported")
+        common_params = {
+            "seed": params["seed"],
+            "logs-dir": params["logs-dir"],
+            "model-dir": params["model-dir"],
+            "gamma": self.alg_params["gamma"],
+        }
+        self.alg_params.update(common_params)
+        self.env_params.update(common_params)
 
         # Trainer for tabular environments
+        self.trainer: Trainer
         if self.env_name not in ("rooms0", "task0"):
             self.trainer = TrainQ(
-                env=self.env,
+                env=EnvMaker(self.env_params).env,
                 params=self.alg_params,
-                model_path=params["model-dir"],
-                log_path=params["logs-dir"],
             )
             self.agent = self.trainer.agent
             self.passive_agent = self.trainer.passive_agent
 
         # Trainer for continuous environments
-        else self.trainer = TrainRllib(
+        else:
+            self.trainer = TrainRllib(
+                env_class=EnvMaker,
                 alg_params=self.alg_params,
                 env_params=self.env_params,
-                model_path=params["model-dir"],
-                log_path=params["logs-dir"],
             )
             # TODO: active passive?
 
@@ -152,20 +113,19 @@ class TrainQ(Trainer):
         self,
         env: Env,
         params: Dict[str, Any],
-        model_path: str,
-        log_path: Optional[str],
         agent_only: bool = False,
     ):
         """Initialize.
 
         :param env: discrete-state gym environment.
         :param params: dict of parameters. See `default_parameters`.
-        :param model_path: directory where to save models.
-        :param log_path: directory where to save training logs.
         :param agent_only: if True, it defines or loads the agent(s),
             then stops. The environment is not used. For training,
             this must be false.
         """
+        model_path = params["model-dir"]
+        log_path = params["logs-dir"]
+
         # Check
         if "resume_file" in params and params["resume_file"]:
             raise TypeError("Resuming a training is not supported here")
@@ -389,89 +349,6 @@ class TrainQ(Trainer):
             f.writelines(lines)
 
 
-class TrainValueIteration(Trainer):
-    """Agent and training loop for Value Iteration."""
-
-    def __init__(
-        self,
-        env: Env,
-        params: Dict[str, Any],
-        model_path: str,
-        log_path: str,
-    ):
-        """Initialize.
-
-        :param env: discrete-state gym environment.
-        :param params: dict of parameters. See `default_parameters`.
-        :param model_path: directory where to save models.
-        :param log_path: directory where to save training logs.
-        """
-        # Check
-        if params["resume_file"]:
-            raise TypeError("Resuming a trainingg is not supported for this algorithm.")
-        if params["action_bias"]:
-            raise TypeError("Action bias is not supported here.")
-        if params["active_passive_agents"]:
-            raise TypeError("Not training a passive agent here.")
-
-        # Agent
-        agent = ValueFunctionModel(
-            value_function=dict(),
-            policy=dict(),
-        )
-
-        # Saver
-        self.saver = SaverCallback(
-            save_freq=None,  # Not needed
-            saver=agent.save,
-            loader=agent.load,
-            save_path=model_path,
-            name_prefix="model",
-            model_ext=agent.file_ext,
-            extra=None,
-        )
-        env = CallbackWrapper(env=env, callback=self.saver)
-
-        # Stats recorder
-        env = MyStatsRecorder(env, gamma=params["gamma"])
-
-        # Store
-        self.env = env
-        self.params = params
-        self.agent = agent
-        self._log_path = log_path
-        self.testing_agent = agent
-
-    def train(self):
-        """Start training."""
-        # Learn
-        value_function, policy = value_iteration(
-            env=self.env,
-            max_iterations=self.params["max_iterations"],
-            eps=1e-5,
-            discount=self.params["gamma"],
-        )
-        # Store
-        self.agent.value_function = dict(value_function)
-        self.agent.policy = dict(policy)
-
-        # Save
-        self.saver.save()
-
-        # Log
-        self.log()
-
-    def log(self):
-        """Log."""
-        pretty_print_v(self.agent.value_function)
-
-        print("Policy", self.agent.policy)
-
-        frame = self.env.render(mode="rgb_array")
-        img = Image.fromarray(frame)
-        img.save(os.path.join(self._log_path, "frame.png"))
-
-
 class TrainRllib(Trainer):
     """Agent and training loop for Deep learning."""
 
@@ -480,9 +357,6 @@ class TrainRllib(Trainer):
         env_class: Type[gym.Env],
         alg_params: Dict[str, Any],
         env_params: Dict[str, Any],
-        model_path: str,
-        log_path: str,
-        seed: int,
         agent_only: bool = False,
     ):
         """Initialize.
@@ -491,8 +365,6 @@ class TrainRllib(Trainer):
         :param alg_params: algorithm parameters. See Ray rllib documentation
             and example config files in this project.
         :param env_params: environment parameters.
-        :param model_path: directory where to save models.
-        :param log_path: directory where to save training logs.
         :param agent_only: if True, it defines or loads the agent(s),
             then stops. The environment is not used. For training,
             this must be false.
@@ -501,8 +373,8 @@ class TrainRllib(Trainer):
         self.env_class = env_class
         self.alg_params = alg_params
         self.env_params = env_params
-        self.log_path = log_path
-        self.model_path = model_path
+        self.log_path = alg_params["logs-dir"]
+        self.model_path = alg_params["model-dir"]
         # TODO: agent only unused
 
         # Trainer config
@@ -519,6 +391,7 @@ class TrainRllib(Trainer):
         self.agent_conf["env_config"] = self.env_params
 
         # Set seed
+        seed = self.alg_params["seed"]
         random.seed(seed)
         np.random.seed(seed)  # type: ignore
         tf.random.set_seed(seed)
