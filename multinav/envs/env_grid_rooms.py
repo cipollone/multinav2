@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
 #
-"""Reward shaping wrapper."""
+"""Grid control on rooms environment."""
 import logging
 from typing import Any, List, Mapping, Optional, Sequence, Tuple
 
@@ -44,7 +44,7 @@ color2int = {str(c): i for i, c in enumerate(list(Colors))}
 int2color = {i: c for c, i in color2int.items()}
 
 
-class GridRoomsFluents(FluentExtractor):
+class RoomsFluents(FluentExtractor):
     """Define propositions for GridRooms."""
 
     def __init__(self, map_config: str):
@@ -172,7 +172,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         env = FailProbability(env, fail_p=params["fail_p"], seed=params["seed"])
 
     # Define the fluent extractor
-    fluent_extractor = GridRoomsFluents(map_config=params["map"])
+    fluent_extractor = RoomsFluents(map_config=params["map"])
 
     # Apply temporal goals to this env
     env = with_nonmarkov_rewards(

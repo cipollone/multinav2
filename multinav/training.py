@@ -36,6 +36,7 @@ from multinav.algorithms.value_iteration import pretty_print_v, value_iteration
 from multinav.envs import (
     env_abstract_rooms,
     env_abstract_sapientino,
+    env_cont_rooms,
     env_grid_rooms,
     env_grid_sapientino,
 )
@@ -94,18 +95,29 @@ class TrainerSetup:
             )
             if self.env_params["render"]:
                 self.env = Renderer(self.env)
+        elif self.env_name == "rooms0":
+            self.env = env_cont_rooms.make(
+                params=self.env_params,
+                log_dir=params["logs-dir"],
+            )
+            if self.env_params["render"]:
+                self.env = Renderer(self.env)
         else:
             raise RuntimeError("Environment not supported")
 
-        # Trainer
-        self.trainer = TrainQ(
-            env=self.env,
-            params=self.alg_params,
-            model_path=params["model-dir"],
-            log_path=params["logs-dir"],
-        )
-        self.agent = self.trainer.agent
-        self.passive_agent = self.trainer.passive_agent
+        # Trainer for tabular environments
+        if self.env_name not in ("rooms0", "task0"):
+            self.trainer = TrainQ(
+                env=self.env,
+                params=self.alg_params,
+                model_path=params["model-dir"],
+                log_path=params["logs-dir"],
+            )
+            self.agent = self.trainer.agent
+            self.passive_agent = self.trainer.passive_agent
+
+        # Trainer for continuous environments
+        # TODO
 
     def train(self):
         """Start training."""
