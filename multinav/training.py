@@ -68,7 +68,7 @@ class TrainerSetup:
             "seed": params["seed"],
             "logs-dir": params["logs-dir"],
             "model-dir": params["model-dir"],
-            "gamma": self.alg_params["gamma"],
+            "gamma": self.alg_params.get("gamma", self.alg_params["config"]["gamma"]),
         }
         self.alg_params.update(common_params)
         self.env_params.update(common_params)
@@ -378,13 +378,11 @@ class TrainRllib(Trainer):
         # TODO: agent only unused
 
         # Trainer config
-        self.agent_type: str = self.alg_params["params"]["agent"]
-        self.agent_conf: dict = self.alg_params["params"]["config"]
-        self.checkpoint_freq: int = self.alg_params["params"].pop("checkpoint_freq")
-        self.keep_checkpoints_num: int = self.alg_params["params"].pop("keep_checkpoints_num")
+        self.agent_type: str = self.alg_params["agent"]
+        self.agent_conf: dict = self.alg_params["config"]
 
         # Add choices to the configuration (see with_grid_search docstring)
-        self.with_grid_search(self.agent_conf, self.alg_params["params"]["tune"])
+        self.with_grid_search(self.agent_conf, self.alg_params["tune"])
 
         # Env configs
         self.agent_conf["env"] = self.env_class
@@ -408,12 +406,9 @@ class TrainRllib(Trainer):
             self.agent_type,
             config=self.agent_conf,
             local_dir=self.log_path,
-            loggers=[UnifiedLogger],
             checkpoint_at_end=True,
-            checkpoint_freq=self.checkpoint_freq,
-            keep_checkpoints_num=self.keep_checkpoints_num,
             name="run",
-            **self.alg_params["params"]["run"],
+            **self.alg_params["run"],
         )
 
     @staticmethod

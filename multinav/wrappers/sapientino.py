@@ -108,11 +108,11 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
 
     def compute_observation_space(self) -> gym.Space:
         """Get the observation space."""
+        # Position
         x_space: Box = self.robot_space.spaces["x"]
         y_space: Box = self.robot_space.spaces["y"]
-        ang_velocity_space: Box = self.robot_space.spaces["ang_velocity"]
 
-        # Try with cos, sin, instead
+        # Angle
         cos_space = Box(-1, 1, shape=[1])
         sin_space = Box(-1, 1, shape=[1])
 
@@ -128,7 +128,6 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
             sin_space,
             dx_space,
             dy_space,
-            ang_velocity_space,
         )
 
         return GymTuple((sapientino_space, self.automata_space))
@@ -148,7 +147,7 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
                 sin,
                 robot_state["velocity"] * cos,
                 robot_state["velocity"] * sin,
-                robot_state["ang_velocity"],
             ]
         )
+        sapientino_state = np.reshape(sapientino_state, [6])
         return sapientino_state, automata_states

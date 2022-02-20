@@ -58,3 +58,6 @@ class EnvMaker(Wrapper):
                 self.env = Renderer(self.env)
         else:
             raise RuntimeError("Environment not supported")
+
+        # Gym
+        super().__init__(self.env)

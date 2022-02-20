@@ -8,18 +8,18 @@ algorithm:
   commit: null
   diff: null
   params:
-    agent: IMPALA
+    agent: PPO
     config:
-      num_workers: 10
+      num_workers: 5
       num_envs_per_worker: 1
-      num_gpus: 1
-      rollout_fragment_length: 16
-      train_batch_size: 160
+      num_gpus: 0
+      num_sgd_iter: 5
+      sgd_minibatch_size: 64
       batch_mode: truncate_episodes
-      opt_type: adam
       lr: 0.001
       gamma: 0.98
-      framework: tf
+      framework: tf2
+      eager_tracing: true
       evaluation_config:
         explore: False
       model:
@@ -29,6 +29,8 @@ algorithm:
       stop:
         episodes_total: 200000
       num_samples: 1
+      checkpoint_freq: 16
+      keep_checkpoints_num: 1
     tune:
       train_batch_size: [40]
 
@@ -51,6 +53,10 @@ environment:
     reward_per_step: 0.0
     reward_outside_grid: 0.0
     reward_duplicate_beep: 0.0
+    angular_speed: 40
+    acceleration: 0.2
+    max_velocity: 0.6
+    min_velocity: 0
     rewards:
       - dfa: ./outputs/rooms2/0/logs/dfa-0.pickle
         reward: 1.0
