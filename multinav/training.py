@@ -22,13 +22,19 @@
 """This module implements the general logic of the training loop."""
 
 import os
+import random
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Optional, cast
+from typing import Any, Callable, Dict, Optional, Type, cast
 
+import gym
 import numpy as np
+import ray
+import tensorflow as tf
 from gym import Env
 from matplotlib import pyplot as plt
 from PIL import Image
+from ray import tune
+from ray.tune.logger import UnifiedLogger
 
 from multinav.algorithms.agents import QFunctionModel, ValueFunctionModel
 from multinav.algorithms.q_learning import QLearning
@@ -117,7 +123,13 @@ class TrainerSetup:
             self.passive_agent = self.trainer.passive_agent
 
         # Trainer for continuous environments
-        # TODO
+        else self.trainer = TrainRllib(
+                alg_params=self.alg_params,
+                env_params=self.env_params,
+                model_path=params["model-dir"],
+                log_path=params["logs-dir"],
+            )
+            # TODO: active passive?
 
     def train(self):
         """Start training."""
@@ -458,3 +470,102 @@ class TrainValueIteration(Trainer):
         frame = self.env.render(mode="rgb_array")
         img = Image.fromarray(frame)
         img.save(os.path.join(self._log_path, "frame.png"))
+
+
+class TrainRllib(Trainer):
+    """Agent and training loop for Deep learning."""
+
+    def __init__(
+        self,
+        env_class: Type[gym.Env],
+        alg_params: Dict[str, Any],
+        env_params: Dict[str, Any],
+        model_path: str,
+        log_path: str,
+        seed: int,
+        agent_only: bool = False,
+    ):
+        """Initialize.
+
+        :param env_class: gym Env class to be instantiated.
+        :param alg_params: algorithm parameters. See Ray rllib documentation
+            and example config files in this project.
+        :param env_params: environment parameters.
+        :param model_path: directory where to save models.
+        :param log_path: directory where to save training logs.
+        :param agent_only: if True, it defines or loads the agent(s),
+            then stops. The environment is not used. For training,
+            this must be false.
+        """
+        # Store
+        self.env_class = env_class
+        self.alg_params = alg_params
+        self.env_params = env_params
+        self.log_path = log_path
+        self.model_path = model_path
+        # TODO: agent only unused
+
+        # Trainer config
+        self.agent_type: str = self.alg_params["params"]["agent"]
+        self.agent_conf: dict = self.alg_params["params"]["config"]
+        self.checkpoint_freq: int = self.alg_params["params"].pop("checkpoint_freq")
+        self.keep_checkpoints_num: int = self.alg_params["params"].pop("keep_checkpoints_num")
+
+        # Add choices to the configuration (see with_grid_search docstring)
+        self.with_grid_search(self.agent_conf, self.alg_params["params"]["tune"])
+
+        # Env configs
+        self.agent_conf["env"] = self.env_class
+        self.agent_conf["env_config"] = self.env_params
+
+        # Set seed
+        random.seed(seed)
+        np.random.seed(seed)  # type: ignore
+        tf.random.set_seed(seed)
+        self.agent_conf["seed"] = seed
+        self.agent_conf["env_config"]["seed"] = seed
+
+        # Init library
+        ray.init()
+
+    def train(self):
+        """Start training."""
+        # Start via Tune
+        tune.run(
+            self.agent_type,
+            config=self.agent_conf,
+            local_dir=self.log_path,
+            loggers=[UnifiedLogger],
+            checkpoint_at_end=True,
+            checkpoint_freq=self.checkpoint_freq,
+            keep_checkpoints_num=self.keep_checkpoints_num,
+            name="run",
+            **self.alg_params["params"]["run"],
+        )
+
+    @staticmethod
+    def with_grid_search(conf, tune_conf):
+        """Compose the parameters to tune in the main configuration.
+
+        conf is any configuration of an agent (a dictionary). tune_conf is another
+        configuration in which values are lists instead of single elements. Any
+        list define a sequence of experiments, one for each value in the list.
+
+        NOTE: At least one list in tune_conf is always needed (even if of size 1)
+        otherwise tune library won't execute any experiment. I don't know why.
+        """
+        # Base case
+        if not isinstance(conf, dict) or not isinstance(tune_conf, dict):
+            return
+
+        # Scan conf
+        for key in conf:
+            if key in tune_conf:
+
+                # Iterate
+                TrainRllib.with_grid_search(conf[key], tune_conf[key])
+
+                # Transform to search space
+                vals = tune_conf[key]
+                assert isinstance(vals, list), "'tune_conf' should contain lists"
+                conf[key] = tune.grid_search(vals)
