@@ -33,9 +33,9 @@ import tensorflow as tf
 from gym import Env
 from matplotlib import pyplot as plt
 from ray import tune
-from ray.tune.logger import UnifiedLogger
 
 from multinav.algorithms.agents import QFunctionModel
+from multinav.algorithms.policy_net import init_models
 from multinav.algorithms.q_learning import QLearning
 from multinav.envs.envs import EnvMaker
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
@@ -398,6 +398,7 @@ class TrainRllib(Trainer):
 
         # Init library
         ray.init()
+        init_models()
 
     def train(self):
         """Start training."""

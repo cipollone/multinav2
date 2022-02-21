@@ -10,7 +10,7 @@ algorithm:
   params:
     agent: PPO
     config:
-      num_workers: 5
+      num_workers: 0
       num_envs_per_worker: 1
       num_gpus: 0
       num_sgd_iter: 5
@@ -19,12 +19,17 @@ algorithm:
       lr: 0.001
       gamma: 0.98
       framework: tf2
-      eager_tracing: true
+      eager_tracing: false
       evaluation_config:
         explore: False
+      _disable_preprocessor_api: true
       model:
-        fcnet_hiddens: [128, 128]
-        fcnet_activation: tanh
+        custom_model: composite_fc
+        layers: [128, 128]
+        shared_layers: 1
+        activation: tanh
+        batch_norm: true
+        n_states: 3
     run:
       stop:
         episodes_total: 200000
@@ -58,7 +63,7 @@ environment:
     max_velocity: 0.6
     min_velocity: 0
     rewards:
-      - dfa: ./outputs/rooms2/0/logs/dfa-0.pickle
+      - dfa: /home/roberto/repos/multinav2/outputs/rooms2/0/logs/dfa-0.pickle
         reward: 1.0
     map: |-
       |###############|
@@ -82,3 +87,4 @@ evaluation:
 n-runs: 1
 output-base: outputs
 run-command: "poetry run python -m multinav train"
+  #run-command: "poetry-debugpy -m multinav train"
