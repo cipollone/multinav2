@@ -1,0 +1,90 @@
+name: rooms0-nosh
+comment: "Reach a specific location in the map: continuous control"
+
+algorithm:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: 0.2.3
+  commit: null
+  diff: null
+  params:
+    agent: PPO
+    config:
+      num_workers: 5
+      num_envs_per_worker: 1
+      num_gpus: 1
+      num_sgd_iter: 10
+      sgd_minibatch_size: 128
+      batch_mode: truncate_episodes
+      lr: 0.001
+      gamma: 0.98
+      framework: tf2
+      eager_tracing: true
+      evaluation_config:
+        explore: False
+      _disable_preprocessor_api: true
+      model:
+        custom_model: composite_fc
+        layers: [128, 128]
+        shared_layers: 1
+        activation: tanh
+        batch_norm: true
+          #log_graph: ./outputs/debug-graph
+    run:
+      stop:
+        episodes_total: 200000
+      num_samples: 1
+      checkpoint_freq: 16
+      keep_checkpoints_num: 1
+    tune:
+      train_batch_size: [40]
+
+environment:
+  name: gym-sapientino
+  repository: https://github.com/whitemech/gym-sapientino.git
+  version: develop
+  commit: ''
+  diff: ''
+  params:
+    env: rooms0
+    reward_shift: 0.0
+    initial_position: [3, 12]
+    shaping: null
+    shaping_gamma: 0.98
+    return_invariant: true
+    episode_time_limit: 200
+    fail_p: 0.05
+    render: false
+    reward_per_step: 0.0
+    reward_outside_grid: 0.0
+    reward_duplicate_beep: 0.0
+    angular_speed: 40
+    acceleration: 0.2
+    max_velocity: 0.6
+    min_velocity: 0
+    rewards:
+      - dfa: /home/roberto/repos/multinav2/outputs/rooms2/0/logs/dfa-0.pickle
+        reward: 1.0
+    map: |-
+      |###############|
+      |#ggg#ppp#ppyyy#|
+      |#ggg#p#p#p#yyy#|
+      |#ggg#p#p#p#yyy#|
+      |#ggggp#ppp#yyy#|
+      |###bb######BBB#|
+      |#bbbbbbbbb#BBB#|
+      |#bbbbbbbbb#BBB#|
+      |#bbbbbbbbbbooo#|
+      |#bbbbbbbbbbooo#|
+      |#bbbbbbbbbbooo#|
+      |#bbbbbbbbbbrrr#|
+      |#bbbbbbbbbbrrr#|
+      |#bbbbbbbbb#rrr#|
+      |###############|
+evaluation:
+  episodes: 0
+  frequency: 0
+n-runs: 1
+output-base: outputs
+run-command: "poetry run python -m multinav train"
+  #run-command: "poetry-debugpy -m multinav train"

@@ -30,22 +30,23 @@ environment:
   diff: ''
   params:
     env: rooms2
-    reward_shift: -1.0
+    reward_shift: 0.0
     episode_time_limit: 30
     render: false
     rooms_connectivity:
+      - [g, p]
       - [g, b]
-      - [g, r]
-      - [r, y]
       - [y, p]
-      - [p, o]
-      - [p, B]
-      - [B, G]
-    fail_p: 0.05
-    initial_room: g
+      - [y, B]
+      - [o, B]
+      - [o, r]
+      - [o, b]
+      - [r, b]
+    fail_p: 0.1
+    initial_room: b
     shaping: null
     rewards:
-      - ldlf: "<(!gray)*; gray>end"
+      - ldlf: "<(!yellow)*; yellow>end"
         reward: 1.0
 evaluation:
   episodes: 0

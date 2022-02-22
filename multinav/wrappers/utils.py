@@ -21,10 +21,11 @@
 #
 """Utilities for the OpenAI Gym wrappers."""
 import logging
+import random
 import shutil
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, cast
 
 import gym
 import matplotlib.pyplot as plt
@@ -267,6 +268,24 @@ class AbstractSapientinoRenderer(Wrapper):
             self.__img.set_data(img_array)
         plt.pause(0.01)
         plt.draw()
+
+
+class FailProbability(Wrapper):
+    """Causes input actions to fail with some probability: a different action is executed."""
+
+    def __init__(self, env: gym.Env, fail_p: float, seed: int):
+        """Initialize."""
+        super().__init__(env)
+        self.fail_p = fail_p
+        self._rng = random.Random(seed)
+        assert 0 <= self.fail_p <= 1
+
+    def step(self, action):
+        """Gym step."""
+        # Random?
+        if self._rng.random() < self.fail_p:
+            action = cast(gym.Space, self.env.action_space).sample()
+        return self.env.step(action)
 
 
 class CompleteActions(Wrapper):

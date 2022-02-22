@@ -14,11 +14,11 @@ algorithm:
     action_bias: null
     action_bias_eps: 0.0
     exploration_policy: null
-    learning_rate: 0.1
-    learning_rate_end: 0.05
-    gamma: 0.99
-    total_timesteps: 500000
-    q_eps: 0.8
+    learning_rate: 0.05
+    learning_rate_end: 0.01
+    gamma: 0.98
+    total_timesteps: 200000
+    q_eps: 1.0
     epsilon_end: 0.0
     log_interval: 1000
 
@@ -30,12 +30,13 @@ environment:
   diff: ''
   params:
     env: rooms1
-    reward_shift: -1.0
-    initial_position: [2, 3]
+    reward_shift: 0.0
+    initial_position: [3, 12]
     shaping: null
-    shaping_gamma: 0.99
+    shaping_gamma: 0.98
     return_invariant: true
-    episode_time_limit: 130
+    episode_time_limit: 100
+    fail_p: 0.05
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
@@ -44,25 +45,30 @@ environment:
       - dfa: ./outputs/rooms2/0/logs/dfa-0.pickle
         reward: 1.0
     rooms_connectivity:
+      - [g, p]
       - [g, b]
-      - [g, r]
-      - [r, y]
       - [y, p]
-      - [p, o]
-      - [p, B]
-      - [B, G]
+      - [y, B]
+      - [o, B]
+      - [o, r]
+      - [o, b]
+      - [r, b]
     map: |-
-      |###########################################|
-      |#ggggggg#bbbbbbbb##########oooooooooooo####|
-      |#ggggggggbbbbbbbb#pppppppppoooooooooooo####|
-      |#ggggggg#bbbbbbbb#pppppppp#oooooooooooo####|
-      |#ggggggg#bbbbbbbb#pppppppp#oooooooooooo####|
-      |###r##############pppppppp#o###############|
-      |#rrrrrrr#yyyyyyyy#pppppppp#BBBBBBBBBBBB#GG#|
-      |#rrrrrrrryyyyyyyy#ppppppppBBBBBBBBBBBBBBGG#|
-      |#rrrrrrr#yyyyyyyyypppppppp#BBBBBBBBBBBB####|
-      |#rrrrrrr#yyyyyyyy##########BBBBBBBBBBBB####|
-      |###########################################|
+      |###############|
+      |#ggg#ppp#ppyyy#|
+      |#ggg#p#p#p#yyy#|
+      |#ggg#p#p#p#yyy#|
+      |#ggggp#ppp#yyy#|
+      |###bb######BBB#|
+      |#bbbbbbbbb#BBB#|
+      |#bbbbbbbbb#BBB#|
+      |#bbbbbbbbbbooo#|
+      |#bbbbbbbbbbooo#|
+      |#bbbbbbbbbbooo#|
+      |#bbbbbbbbbbrrr#|
+      |#bbbbbbbbbbrrr#|
+      |#bbbbbbbbb#rrr#|
+      |###############|
 evaluation:
   episodes: 0
   frequency: 0

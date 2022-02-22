@@ -32,6 +32,7 @@ from temprl.types import Interpretation
 
 from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.gym import MyDiscreteEnv, Transitions
+from multinav.wrappers.reward_shaping import RewardShift
 from multinav.wrappers.temprl import FlattenAutomataStates
 
 logger = logging.getLogger(__name__)
@@ -201,6 +202,10 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
         log_dir=log_dir,
     )
     env = FlattenAutomataStates(env)
+
+    # Reward shift
+    if params["reward_shift"] != 0:
+        env = RewardShift(env, params["reward_shift"])
 
     # Time limit
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])

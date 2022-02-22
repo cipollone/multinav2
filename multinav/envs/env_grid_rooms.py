@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with gym-sapientino.  If not, see <https://www.gnu.org/licenses/>.
 #
-"""Reward shaping wrapper."""
+"""Grid control on rooms environment."""
 import logging
 from typing import Any, List, Mapping, Optional, Sequence, Tuple
 
@@ -33,9 +33,9 @@ from multinav.algorithms.agents import QFunctionModel
 from multinav.envs.env_abstract_rooms import AbstractRooms
 from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import StateH, ValueFunctionRS
-from multinav.wrappers.reward_shaping import RewardShapingWrapper
+from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
 from multinav.wrappers.sapientino import GridRobotFeatures
-from multinav.wrappers.utils import SingleAgentWrapper
+from multinav.wrappers.utils import FailProbability, SingleAgentWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ color2int = {str(c): i for i, c in enumerate(list(Colors))}
 int2color = {i: c for c, i in color2int.items()}
 
 
-class GridRoomsFluents(FluentExtractor):
+class RoomsFluents(FluentExtractor):
     """Define propositions for GridRooms."""
 
     def __init__(self, map_config: str):
@@ -167,8 +167,12 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
 
+    # Fail probability
+    if params["fail_p"] > 0:
+        env = FailProbability(env, fail_p=params["fail_p"], seed=params["seed"])
+
     # Define the fluent extractor
-    fluent_extractor = GridRoomsFluents(map_config=params["map"])
+    fluent_extractor = RoomsFluents(map_config=params["map"])
 
     # Apply temporal goals to this env
     env = with_nonmarkov_rewards(
@@ -178,6 +182,10 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         log_dir=log_dir,
         must_load=True,
     )
+
+    # Reward shift
+    if params["reward_shift"] != 0:
+        env = RewardShift(env, params["reward_shift"])
 
     # Time limit (this should be before reward shaping)
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])

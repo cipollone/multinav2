@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "multinav"
-version = "0.2.2"
+version = "0.2.3"
 description = "RL on multiple related navigation environments"
 authors = [
 	"Roberto Cipollone <cipollone.rt@gmail.com>",
@@ -9,11 +9,15 @@ authors = [
 license = "GPL-3.0-or-later"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+# <3.11 just because tensorflow-io-gcs-filesystem requires it
+python = ">=3.9,<3.11"
 setuptools = "^58.1.0"
 gym-sapientino = {git = "https://github.com/whitemech/gym-sapientino.git", branch = "develop"}
 temprl = {git = "https://github.com/whitemech/temprl.git", branch = "develop"}
 logaut = "^0.1.1"
+ray = {version = "^1.10.0", extras = ["rllib"]}
+tensorflow = "^2.8.0"
+GPUtil = "^1.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0.1"
