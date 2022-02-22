@@ -2,11 +2,12 @@
 
 from typing import Any, Callable, Dict, Optional, Sequence
 
+import numpy as np
 import tensorflow as tf
 from gym import spaces
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
-from tensorflow import keras
+from tensorflow import keras, summary
 from tensorflow.keras import activations, layers
 
 
@@ -47,7 +48,7 @@ class CompositeNet(TFModelV2):
 
         # Inputs
         x_input = layers.Input(shape=obs_space[0].shape, name="observations")
-        states_input = layers.Input(shape=(self._n_states,), name="automaton_states")
+        states_input = layers.Input(shape=(1,), name="automaton_state")
         inputs = (x_input, states_input)
 
         # One unit is value
@@ -57,20 +58,37 @@ class CompositeNet(TFModelV2):
         x = CompositeFullyConnected(
             layers_spec=model_config["layers"],
             shared_layers=model_config["shared_layers"],
-            n_states=model_config["n_states"],
+            n_states=self._n_states,
             activation=model_config["activation"],
             batch_norm=model_config["batch_norm"],
         )(inputs)
 
         self.base_model = keras.Model(inputs=inputs, outputs=x)
-        # TODO: n_states should be taken from automaton
+
+        # Log graph NOTE: debugging only
+        if "log_graph" in self.model_config:
+            graph_writer = summary.create_file_writer(self.model_config["log_graph"])
+            fake_inputs = (
+                np.zeros((10, *x_input.shape[1:])),
+                np.zeros((10, *states_input.shape[1:]))
+            )
+            summary.trace_on(graph=True)
+            self.tf_forward(fake_inputs)
+            with graph_writer.as_default():
+                summary.trace_export(str(type(self)), 0)
 
     def forward(self, input_dict, state, seq_lens):
         """Forward pass."""
-        out = self.base_model(input_dict["obs"])
+        out = self.tf_forward(input_dict["obs"])
         model_out = out[:, :-1]
         self._value_out = out[:, -1]
+
         return model_out, state
+
+    @tf.function
+    def tf_forward(self, inputs):
+        """Forward calls as a tensorflow operation."""
+        return self.base_model(inputs)
 
     def value_function(self):
         """Return the value function associated to the last input."""

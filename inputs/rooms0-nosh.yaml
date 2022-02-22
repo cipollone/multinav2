@@ -10,16 +10,16 @@ algorithm:
   params:
     agent: PPO
     config:
-      num_workers: 0
+      num_workers: 5
       num_envs_per_worker: 1
-      num_gpus: 0
-      num_sgd_iter: 5
-      sgd_minibatch_size: 64
+      num_gpus: 1
+      num_sgd_iter: 10
+      sgd_minibatch_size: 128
       batch_mode: truncate_episodes
       lr: 0.001
       gamma: 0.98
       framework: tf2
-      eager_tracing: false
+      eager_tracing: true
       evaluation_config:
         explore: False
       _disable_preprocessor_api: true
@@ -29,7 +29,7 @@ algorithm:
         shared_layers: 1
         activation: tanh
         batch_norm: true
-        n_states: 3
+          #log_graph: ./outputs/debug-graph
     run:
       stop:
         episodes_total: 200000
@@ -54,7 +54,7 @@ environment:
     return_invariant: true
     episode_time_limit: 200
     fail_p: 0.05
-    render: true
+    render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
     reward_duplicate_beep: 0.0

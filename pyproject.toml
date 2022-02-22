@@ -17,6 +17,7 @@ temprl = {git = "https://github.com/whitemech/temprl.git", branch = "develop"}
 logaut = "^0.1.1"
 ray = {version = "^1.10.0", extras = ["rllib"]}
 tensorflow = "^2.8.0"
+GPUtil = "^1.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0.1"
