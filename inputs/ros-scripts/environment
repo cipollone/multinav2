@@ -12,7 +12,7 @@ services:
     volumes:
     - /tmp/.X11-unix:/tmp/.X11-unix
     - $HOME/.Xauthority:/home/robot/.Xauthority
-    - $HOME/repos/stage_environments:/home/robot/src/stage_environments
+    - $STAGE_ENVIRONMENTS:/home/robot/src/stage_environments
     entrypoint:
     - bash
     - -ci
@@ -30,5 +30,6 @@ services:
     - ROS_IP=$ROS_IP
     - ROBOT_TYPE=$ROBOT_TYPE
     volumes:
-    - $HOME/repos/marrtino_apps:/home/robot/src/marrtino_apps
+    - $MARTINO_APPS_PATH:/home/robot/src/marrtino_apps
+    - $STAGE_CONTROLS:/home/robot/src/stage_controls
 

@@ -11,6 +11,7 @@ fi
 #bitbucket.org:iocchi/marrtino_apps.git
 export MARTINO_APPS_PATH=$HOME/repos/marrtino_apps
 export STAGE_ENVIRONMENTS=$HOME/repos/stage_environments
+export STAGE_CONTROLS=$HOME/repos/stage-controls
 
 # These are constants
 export ROS_IP=127.0.0.1
