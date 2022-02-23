@@ -18,6 +18,7 @@ logaut = "^0.1.1"
 ray = {version = "^1.10.0", extras = ["rllib"]}
 tensorflow = "^2.8.0"
 GPUtil = "^1.4.0"
+rosstagerl = {git = "https://github.com/cipollone/ros-stage-rl.git", rev = "main"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0.1"
