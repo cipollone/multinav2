@@ -1,5 +1,6 @@
 """Environment that interacts with a running instance of ROS stage simulator."""
-
+import subprocess
+import time
 from typing import Any, Mapping, Optional
 
 from gym.wrappers import TimeLimit
@@ -54,7 +55,14 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     :param log_dir: directory where logs can be saved.
     :return: a gym Environemnt.
     """
-    # Inner env
+    # Start simulator
+    if "start_script" in params:
+        print("Initializing")
+        subprocess.run(params["start_script"], params["with_gui"])
+        time.sleep(5)
+        print("Initialized")
+
+    # Connect to simulator
     env = RosControlsEnv(
         n_actions=params["n_actions"],
         n_observations=params["n_observations"],
