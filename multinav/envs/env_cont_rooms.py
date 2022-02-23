@@ -38,6 +38,7 @@ def grid_rooms_shaper(
     agent = QFunctionModel.load(path=path)
 
     # Shaper
+    # TODO: update mapping function: discard orientations
     shaper = ValueFunctionRS(
         value_function=lambda s: agent.q_function[s].max(),
         mapping_function=lambda s: s,
@@ -101,12 +102,12 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
 
     # Reward shaping on previous envs
     if params["shaping"]:
-        abs_shaper = grid_rooms_shaper(
+        grid_shaper = grid_rooms_shaper(
             path=params["shaping"],
             gamma=params["shaping_gamma"],
             return_invariant=params["return_invariant"],
         )
-        env = RewardShapingWrapper(env, reward_shaper=abs_shaper)
+        env = RewardShapingWrapper(env, reward_shaper=grid_shaper)
 
     # Choose the environment features
     env = ContinuousRobotFeatures(env)
