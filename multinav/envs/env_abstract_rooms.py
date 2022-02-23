@@ -192,7 +192,12 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     )
 
     # Fluents for this environment
-    fluent_extractor = AbstractRoomsFluents(env)
+    if params["fluents"] == "rooms":
+        fluent_extractor = AbstractRoomsFluents(env)
+    elif params["fluents"] == "party":
+        fluent_extractor = AbstractPartyFluents(env)
+    else:
+        raise ValueError(params["fluents"])
 
     # Apply temporal goals to this env
     env = with_nonmarkov_rewards(

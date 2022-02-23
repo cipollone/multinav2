@@ -2,6 +2,7 @@
 
 from typing import Any, Mapping, Optional
 
+from gym.wrappers import TimeLimit
 from rosstagerl.envs import RosControlsEnv
 
 from multinav.algorithms.agents import QFunctionModel
@@ -60,8 +61,13 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     )
     # TODO: use action sets here
 
-    # Define the fluent extractor
-    fluent_extractor = None  # TODO
+    # Fluents for this environment
+    if params["fluents"] == "rooms":
+        raise NotImplementedError
+    elif params["fluents"] == "party":
+        fluent_extractor = RosPartyFluents()
+    else:
+        raise ValueError(params["fluents"])
 
     # Apply temporal goals to this env
     env = with_nonmarkov_rewards(
@@ -86,6 +92,6 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
             gamma=params["shaping_gamma"],
             return_invariant=params["return_invariant"],
         )
-        env = RewardShapingWrapper(env, reward_shaper=abs_shaper)
+        env = RewardShapingWrapper(env, reward_shaper=grid_shaper)
 
     return env

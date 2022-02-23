@@ -8,7 +8,7 @@ from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core import actions, configurations
 
 from multinav.algorithms.agents import QFunctionModel
-from multinav.envs.env_grid_rooms import RoomsFluents
+from multinav.envs.env_grid_rooms import GridRoomsFluents as ContRoomsFluents
 from multinav.envs.temporal_goals import with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
@@ -81,8 +81,13 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     if params["fail_p"] > 0:
         env = FailProbability(env, fail_p=params["fail_p"], seed=params["seed"])
 
-    # Define the fluent extractor
-    fluent_extractor = RoomsFluents(map_config=params["map"])
+    # Fluents for this environment
+    if params["fluents"] == "rooms":
+        fluent_extractor = ContRoomsFluents(map_config=params["map"])
+    elif params["fluents"] == "party":
+        raise NotImplementedError
+    else:
+        raise ValueError(params["fluents"])
 
     # Apply temporal goals to this env
     env = with_nonmarkov_rewards(
