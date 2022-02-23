@@ -1,0 +1,91 @@
+"""Environment that interacts with a running instance of ROS stage simulator."""
+
+from typing import Any, Mapping, Optional
+
+from rosstagerl.envs import RosControlsEnv
+
+from multinav.algorithms.agents import QFunctionModel
+from multinav.envs.temporal_goals import with_nonmarkov_rewards
+from multinav.helpers.reward_shaping import ValueFunctionRS
+from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
+
+
+def grid_rooms_shaper(
+    path: str,
+    gamma: float,
+    return_invariant: bool,
+) -> ValueFunctionRS:
+    """Define a reward shaper on the previous environment.
+
+    This loads a saved agent for `GridRooms` then it uses it to
+    compute the reward shaping to apply to this environment.
+
+    :param path: path to saved checkpoint.
+    :param gamma: discount factor to apply for shaping.
+    :param return_invariant: if true, we apply classic return-invariant reward shaping.
+        We usually want this to be false.
+    :return: reward shaper to apply.
+    """
+    # Trained agent on abstract environment
+    agent = QFunctionModel.load(path=path)
+
+    def mapping_fn(state):
+        """Return discrete position in map."""
+        # TODO
+        return state
+
+    # Shaper
+    shaper = ValueFunctionRS(
+        value_function=lambda s: agent.q_function[s].max(),
+        mapping_function=mapping_fn,
+        gamma=gamma,
+        zero_terminal_state=return_invariant,
+    )
+
+    return shaper
+
+
+def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
+    """Make the grid_rooms environment.
+
+    :param params: a dictionary of parameters; see in this function the
+        only ones that are used.
+    :param log_dir: directory where logs can be saved.
+    :return: a gym Environemnt.
+    """
+    # Inner env
+    env = RosControlsEnv(
+        n_actions=params["n_actions"],
+        n_observations=params["n_observations"],
+    )
+    # TODO: use action sets here
+
+    # Define the fluent extractor
+    fluent_extractor = None  # TODO
+
+    # Apply temporal goals to this env
+    env = with_nonmarkov_rewards(
+        env=env,
+        rewards=params["rewards"],
+        fluents=fluent_extractor,
+        log_dir=log_dir,
+        must_load=True,
+    )
+
+    # Reward shift
+    if params["reward_shift"] != 0:
+        env = RewardShift(env, params["reward_shift"])
+
+    # Time limit (this should be before reward shaping)
+    env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
+
+    # Reward shaping on previous envs
+    if params["shaping"]:
+        grid_shaper = grid_rooms_shaper(
+            path=params["shaping"],
+            gamma=params["shaping_gamma"],
+            return_invariant=params["return_invariant"],
+        )
+        env = RewardShapingWrapper(env, reward_shaper=abs_shaper)
+
+    return env
