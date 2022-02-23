@@ -16,12 +16,14 @@ export STAGE_ENVIRONMENTS=$HOME/repos/stage_environments
 export ROS_IP=127.0.0.1
 export ROBOT_TYPE=stage
 
+# Start
 docker-compose -f ./environment up &
 sleep 3
 echo 'montreal_cp;marrtino' | netcat -w 1 localhost 9235
 echo '@gbn' | netcat -w 1 localhost 9238
+
 sleep 2
-if [ "$1" == "--watch" ]; then
-	# TODO
-	echo Speeding up the simulation
+if [ "$1" != "--watch" ]; then
+	# Go faster
+	rostopic pub /stageGUIRequest std_msgs/String "data: 'speedup_4'"
 fi
