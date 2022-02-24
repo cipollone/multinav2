@@ -26,5 +26,5 @@ echo '@gbn' | netcat -w 1 localhost 9238
 sleep 2
 if [ "$1" != "--watch" ]; then
 	# Go faster
-	rostopic pub /stageGUIRequest std_msgs/String "data: 'speedup_4'"
+	docker exec -t navigation bash -il -c "rostopic pub --once /stageGUIRequest std_msgs/String 'data: speedup_4'"
 fi

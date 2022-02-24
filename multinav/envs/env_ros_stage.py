@@ -11,6 +11,14 @@ from multinav.envs.temporal_goals import with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
 
+# montreal_cp map
+locations = {
+    "start": [5, -5, 0],
+    "alice": [8.5, -0.5, 45],
+    "carol": [9.30, -5, -90],
+    "box": [5, -5, 180],
+}
+
 
 def grid_rooms_shaper(
     path: str,
