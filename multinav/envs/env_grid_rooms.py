@@ -44,7 +44,7 @@ color2int = {str(c): i for i, c in enumerate(list(Colors))}
 int2color = {i: c for c, i in color2int.items()}
 
 
-class RoomsFluents(FluentExtractor):
+class GridRoomsFluents(FluentExtractor):
     """Define propositions for GridRooms."""
 
     def __init__(self, map_config: str):
@@ -171,8 +171,13 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     if params["fail_p"] > 0:
         env = FailProbability(env, fail_p=params["fail_p"], seed=params["seed"])
 
-    # Define the fluent extractor
-    fluent_extractor = RoomsFluents(map_config=params["map"])
+    # Fluents for this environment
+    if params["fluents"] == "rooms":
+        fluent_extractor = GridRoomsFluents(map_config=params["map"])
+    elif params["fluents"] == "party":
+        fluent_extractor = GridPartyFluents(map_config=params["map"])
+    else:
+        raise ValueError(params["fluents"])
 
     # Apply temporal goals to this env
     env = with_nonmarkov_rewards(

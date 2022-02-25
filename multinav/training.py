@@ -20,9 +20,9 @@
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 """This module implements the general logic of the training loop."""
-
 import os
 import random
+import subprocess
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Optional, Type, cast
 
@@ -40,6 +40,7 @@ from multinav.algorithms.q_learning import QLearning
 from multinav.envs.envs import EnvMaker
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
+from multinav.helpers.general import QuitWithResources
 from multinav.helpers.gym import find_wrapper
 from multinav.wrappers.reward_shaping import (
     RewardShapingWrapper,
@@ -91,6 +92,14 @@ class TrainerSetup:
                 env_params=self.env_params,
             )
             # TODO: active passive?
+
+        # Closing env resources
+        if "stop_script" in params:
+            def _env_stopper():
+                print("Stopping")
+                subprocess.run(params["stop_script"])
+                print("Stopped")
+            QuitWithResources.add("env_stopper", _env_stopper)
 
     def train(self):
         """Start training."""

@@ -1,21 +1,23 @@
-"""Continuous control on rooms environment."""
-
-import logging
+"""Environment that interacts with a running instance of ROS stage simulator."""
+import subprocess
+import time
 from typing import Any, Mapping, Optional
 
 from gym.wrappers import TimeLimit
-from gym_sapientino import SapientinoDictSpace
-from gym_sapientino.core import actions, configurations
+from rosstagerl.envs import RosControlsEnv
 
 from multinav.algorithms.agents import QFunctionModel
-from multinav.envs.env_grid_rooms import GridRoomsFluents as ContRoomsFluents
 from multinav.envs.temporal_goals import with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
-from multinav.wrappers.sapientino import ContinuousRobotFeatures
-from multinav.wrappers.utils import FailProbability, SingleAgentWrapper
 
-logger = logging.getLogger(__name__)
+# montreal_cp map
+locations = {
+    "start": [5, -5, 0],
+    "alice": [8.5, -0.5, 45],
+    "carol": [9.30, -5, -90],
+    "box": [5, -5, 180],
+}
 
 
 def grid_rooms_shaper(
@@ -37,11 +39,15 @@ def grid_rooms_shaper(
     # Trained agent on abstract environment
     agent = QFunctionModel.load(path=path)
 
+    def mapping_fn(state):
+        """Return discrete position in map."""
+        # TODO
+        return state
+
     # Shaper
-    # TODO: update mapping function: discard orientations
     shaper = ValueFunctionRS(
         value_function=lambda s: agent.q_function[s].max(),
-        mapping_function=lambda s: s,
+        mapping_function=mapping_fn,
         gamma=gamma,
         zero_terminal_state=return_invariant,
     )
@@ -57,35 +63,25 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     :param log_dir: directory where logs can be saved.
     :return: a gym Environemnt.
     """
-    # Define the robot
-    agent_configuration = configurations.SapientinoAgentConfiguration(
-        initial_position=params["initial_position"],
-        commands=actions.ContinuousCommand,
-        angular_speed=params["angular_speed"],
-        acceleration=params["acceleration"],
-        max_velocity=params["max_velocity"],
-        min_velocity=params["min_velocity"],
-    )
+    # Start simulator
+    if "start_script" in params:
+        print("Initializing")
+        subprocess.run(params["start_script"], params["with_gui"])
+        time.sleep(5)
+        print("Initialized")
 
-    # Define the environment
-    configuration = configurations.SapientinoConfiguration(
-        (agent_configuration,),
-        grid_map=params["map"],
-        reward_outside_grid=params["reward_outside_grid"],
-        reward_duplicate_beep=params["reward_duplicate_beep"],
-        reward_per_step=params["reward_per_step"],
+    # Connect to simulator
+    env = RosControlsEnv(
+        n_actions=params["n_actions"],
+        n_observations=params["n_observations"],
     )
-    env = SingleAgentWrapper(SapientinoDictSpace(configuration))
-
-    # Fail probability
-    if params["fail_p"] > 0:
-        env = FailProbability(env, fail_p=params["fail_p"], seed=params["seed"])
+    # TODO: use action sets here
 
     # Fluents for this environment
     if params["fluents"] == "rooms":
-        fluent_extractor = ContRoomsFluents(map_config=params["map"])
-    elif params["fluents"] == "party":
         raise NotImplementedError
+    elif params["fluents"] == "party":
+        fluent_extractor = RosPartyFluents()
     else:
         raise ValueError(params["fluents"])
 
@@ -113,8 +109,5 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
             return_invariant=params["return_invariant"],
         )
         env = RewardShapingWrapper(env, reward_shaper=grid_shaper)
-
-    # Choose the environment features
-    env = ContinuousRobotFeatures(env)
 
     return env

@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  stage:
+    image: iocchi/stage_environments:melodic
+    container_name: stage
+    network_mode: "host"
+    tty: true
+    environment:
+    - DISPLAY=$DISPLAY
+    - ROS_IP=$ROS_IP
+    volumes:
+    - /tmp/.X11-unix:/tmp/.X11-unix
+    - $HOME/.Xauthority:/home/robot/.Xauthority
+    - $STAGE_ENVIRONMENTS:/home/robot/src/stage_environments
+    entrypoint:
+    - bash
+    - -ci
+    - rosrun stage_environments start_simulation.py $GUIOPTION --server
+
+  navigation:
+    image: iocchi/marrtino:navigation
+    container_name: navigation
+    dns: 8.8.8.8
+    network_mode: "host"
+    tty: true
+    privileged: true
+    environment:
+    - DISPLAY=$DISPLAY
+    - ROS_IP=$ROS_IP
+    - ROBOT_TYPE=$ROBOT_TYPE
+    volumes:
+    - $MARTINO_APPS_PATH:/home/robot/src/marrtino_apps
+    - $STAGE_CONTROLS:/home/robot/src/stage_controls
+
