@@ -76,7 +76,7 @@ class TrainerSetup:
 
         # Trainer for tabular environments
         self.trainer: Trainer
-        if self.env_name not in ("rooms0", "task0"):
+        if "0" not in self.env_name:  # Because 0 is for continuous environments
             self.trainer = TrainQ(
                 env=EnvMaker(self.env_params).env,
                 params=self.alg_params,

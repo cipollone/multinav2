@@ -56,6 +56,12 @@ class EnvMaker(Wrapper):
             )
             if self.env_params["render"]:
                 self.env = Renderer(self.env)
+        elif self.env_name == "party0":
+            from multinav.envs.env_ros_stage import make as make_party0
+            self.env = make_party0(
+                params=self.env_params,
+                log_dir=self.env_params["logs-dir"],
+            )
         else:
             raise RuntimeError("Environment not supported")
 

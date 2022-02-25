@@ -1,0 +1,68 @@
+name: party0ros-nosh
+comment: "Cocktail party in stage: continuous control"
+
+algorithm:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: 0.2.3
+  commit: null
+  diff: null
+  params:
+    verbose: true
+    agent: PPO
+    config:
+      num_workers: 0
+      num_envs_per_worker: 1
+      num_gpus: 1
+      num_sgd_iter: 10
+      sgd_minibatch_size: 128
+      batch_mode: truncate_episodes
+      lr: 0.001
+      gamma: 0.98
+      framework: tf2
+      eager_tracing: true
+      evaluation_config:
+        explore: False
+      _disable_preprocessor_api: true
+      model:
+        custom_model: composite_fc
+        layers: [128, 128]
+        shared_layers: 1
+        activation: tanh
+        batch_norm: true
+          #log_graph: ./outputs/debug-graph
+    run:
+      stop:
+        episodes_total: 200000
+      num_samples: 1
+      checkpoint_freq: 16
+      keep_checkpoints_num: 1
+    tune:
+      train_batch_size: [40]
+
+environment:
+  name: rosstagerl
+  repository: https://github.com/cipollone/ros_stage_rl.git
+  version: main
+  commit: ''
+  diff: ''
+  params:
+    env: party0
+    fluents: party
+    # These two must be consistent with stage_controls
+    n_actions: 5
+    n_observations: 5
+    #
+    reward_shift: 0.0
+    shaping: null
+    shaping_gamma: 0.98
+    episode_time_limit: 200
+    rewards:
+      - ltlf: F(at_carol)
+        reward: 1.0
+evaluation:
+  episodes: 0
+  frequency: 0
+n-runs: 1
+output-base: outputs
+run-command: "poetry run python -m multinav train"
