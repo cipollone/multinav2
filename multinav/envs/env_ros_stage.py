@@ -93,7 +93,11 @@ class RosPartyFluents(FluentExtractor):
 
 
 def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
-    """Make the grid_rooms environment.
+    """Make the ros-stage environment.
+
+    This assumes that a robot connector is running.
+    Execute scripts/ros-stage/docker-start.bash and
+    scripts/ros-stage/start-connector.bash.
 
     :param params: a dictionary of parameters; see in this function the
         only ones that are used.
@@ -101,7 +105,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     :return: a gym Environemnt.
     """
     # NOTE: Assuming simulator is running:
-    #  Execute inputs/ros-scripts/start-compose.bash and connector.bash
+    #  Execute scripts/
 
     # Connect to simulator
     env = RosControlsEnv(

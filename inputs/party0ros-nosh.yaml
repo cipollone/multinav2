@@ -8,29 +8,35 @@ algorithm:
   commit: null
   diff: null
   params:
-    verbose: true
-    agent: PPO
+    agent: SAC
     config:
-      num_workers: 0
-      num_envs_per_worker: 1
-      num_gpus: 1
-      num_sgd_iter: 10
-      sgd_minibatch_size: 128
-      batch_mode: truncate_episodes
-      lr: 0.001
-      gamma: 0.98
+      # Common params
       framework: tf2
       eager_tracing: true
+      num_workers: 1
+      num_envs_per_worker: 1
+      num_gpus: 1
+      batch_mode: truncate_episodes
+      train_batch_size: 256
+      lr: 0.0001
+      gamma: 0.99
       evaluation_config:
         explore: False
       _disable_preprocessor_api: true
-      model:
+      # SAC parameters
+      Q_model:
         custom_model: composite_fc
         layers: [128, 128]
         shared_layers: 1
         activation: tanh
         batch_norm: true
           #log_graph: ./outputs/debug-graph
+      policy_model:
+        custom_model: composite_fc
+        layers: [128, 128]
+        shared_layers: 1
+        activation: tanh
+        batch_norm: true
     run:
       stop:
         episodes_total: 200000
@@ -55,7 +61,7 @@ environment:
     #
     reward_shift: 0.0
     shaping: null
-    shaping_gamma: 0.98
+    shaping_gamma: 0.99
     episode_time_limit: 200
     rewards:
       - ltlf: F(at_carol)
