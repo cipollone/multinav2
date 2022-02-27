@@ -17,25 +17,30 @@ algorithm:
       num_envs_per_worker: 1
       num_gpus: 1
       batch_mode: truncate_episodes
-      train_batch_size: 256
-      optimization:
-        actor_learning_rate: 3e-4,
-        critic_learning_rate: 3e-4,
-        entropy_learning_rate: 3e-4,
+      train_batch_size: 128
       gamma: 0.99
       _disable_preprocessor_api: true
       # SAC parameters
+      prioritized_replay: true
+      replay_buffer_config:
+        capacity: 100000
+      tau: 0.05
+      target_entropy: 0.4
+      optimization:
+        actor_learning_rate: 0.001
+        critic_learning_rate: 0.001
+        entropy_learning_rate: 0.001
       Q_model:
         custom_model: composite_fc
-        layers: [128, 128]
-        shared_layers: 1
+        layers: [128, 128, 64]
+        shared_layers: 2
         activation: tanh
         batch_norm: true
           #log_graph: debug-graph1
       policy_model:
         custom_model: composite_fc
-        layers: [128, 128]
-        shared_layers: 1
+        layers: [128, 128, 64]
+        shared_layers: 2
         activation: tanh
         batch_norm: true
           #log_graph: debug-graph2
