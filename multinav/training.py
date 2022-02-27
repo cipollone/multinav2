@@ -73,7 +73,10 @@ class TrainerSetup:
             "seed": params["seed"],
             "logs-dir": params["logs-dir"],
             "model-dir": params["model-dir"],
-            "gamma": self.alg_params.get("gamma", self.alg_params["config"]["gamma"]),
+            "gamma": (
+                self.alg_params["gamma"] if "gamma" in self.alg_params
+                else self.alg_params["config"]["gamma"]
+            ),
         }
         self.alg_params.update(common_params)
         self.env_params.update(common_params)

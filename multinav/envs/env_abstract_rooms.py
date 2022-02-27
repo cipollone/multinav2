@@ -172,6 +172,49 @@ class AbstractRoomsFluents(FluentExtractor):
         return {str(room2color[self._env._id2room[obs]])}
 
 
+class AbstractPartyFluents(FluentExtractor):
+    """Define propositions for Party task."""
+
+    def __init__(self, env: AbstractRooms, interact_action: int):
+        """Initialize.
+
+        :param env: instance of AbstractRooms.
+        """
+        self._env = env
+        rooms_and_locations = [
+            ("r", "none"),
+            ("g", "bar"),
+            ("b", "alice"),
+            ("y", "carol"),
+        ]
+        self._rooms2locations = dict(rooms_and_locations)
+        self._interact = interact_action
+        self.fluents = {"at_" + loc for loc in self._rooms2locations.values()}
+
+    @property
+    def all(self):
+        """All fluents."""
+        return self.fluents
+
+    def __call__(self, obs: int, action: int) -> Interpretation:
+        """Respect temprl.types.FluentExtractor interface.
+
+        :param obs: assuming that the observation comes from an
+            `AbstractRooms` environment. Rooms are interpreted as generic
+            locations here.
+        :param action: the last action.
+        :return: current propositional interpretation of fluents
+        """
+        fluents = set()
+        if action == self._interact:
+            room = self._env._id2room[obs]
+            location = self._rooms2locations[room]
+            if location != "none":
+                fluents.add("at_" + location)
+
+        return fluents
+
+
 def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     """Make the sapientino abstract state environment (agent teleports).
 
@@ -192,10 +235,11 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     )
 
     # Fluents for this environment
+    fluent_extractor: FluentExtractor
     if params["fluents"] == "rooms":
         fluent_extractor = AbstractRoomsFluents(env)
     elif params["fluents"] == "party":
-        fluent_extractor = AbstractPartyFluents(env)
+        fluent_extractor = AbstractPartyFluents(env, interact_action=env.action_space.n - 1)
     else:
         raise ValueError(params["fluents"])
 

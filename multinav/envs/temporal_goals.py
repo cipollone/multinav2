@@ -131,4 +131,4 @@ def assert_fluents(automa: SymbolicDFA, fluents: FluentExtractor) -> None:
     atoms = {str(a) for a in atoms}
 
     # Check
-    assert atoms <= fluents.all, f"Not all {fluents.all} are in {atoms}"
+    assert atoms <= fluents.all, f"Not all {atoms} are in {fluents.all}"

@@ -1,0 +1,54 @@
+name: party2
+comment: "Cocktail party task"
+
+algorithm:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: 0.2.3
+  commit: null
+  diff: null
+  params:
+    resume_file: null
+    initialize_file: null
+    active_passive_agents: false
+    action_bias: null
+    action_bias_eps: 0.0
+    exploration_policy: null
+    learning_rate: 0.1
+    learning_rate_end: 0.01
+    gamma: 0.9
+    total_timesteps: 100000
+    q_eps: 0.95
+    epsilon_end: 0.05
+    log_interval: 500
+
+environment:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2
+  version: 0.2.3
+  commit: ''
+  diff: ''
+  params:
+    env: rooms2
+    reward_shift: 0.0
+    episode_time_limit: 30
+    render: false
+    rooms_connectivity:
+      - [r, g]
+      - [r, b]
+      - [r, y]
+      - [g, b]
+      - [g, y]
+    fail_p: 0.1
+    initial_room: y
+    shaping: null
+    rewards:
+      - ldlf: "<(!at_carol)*; at_carol>end"
+        reward: 1.0
+    fluents: party
+evaluation:
+  episodes: 0
+  frequency: 0
+n-runs: 1
+output-base: outputs
+run-command: "poetry run python -m multinav train"
