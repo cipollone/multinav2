@@ -51,48 +51,42 @@ class CompositeNet(TFModelV2):
         states_input = layers.Input(shape=(1,), name="automaton_state")
         inputs = (x_input, states_input)
 
-        # One unit is value
-        model_config["layers"].append(num_outputs + 1)
-
         # Define model
         x = CompositeFullyConnected(
-            layers_spec=model_config["layers"],
+            layers_spec=model_config["layers"] + [num_outputs],
             shared_layers=model_config["shared_layers"],
             n_states=self._n_states,
             activation=model_config["activation"],
             batch_norm=model_config["batch_norm"],
+            activation_last=model_config["activation"],
         )(inputs)
 
         self.base_model = keras.Model(inputs=inputs, outputs=x)
 
-        # Log graph NOTE: debugging only
+        # Log graph NOTE: debugging only: add @tf.function to tf_forward()
         if "log_graph" in self.model_config:
+            @tf.function
+            def tracing_graph(inputs):
+                return self.base_model(inputs)
+
             graph_writer = summary.create_file_writer(self.model_config["log_graph"])
             fake_inputs = (
                 np.zeros((10, *x_input.shape[1:])),
                 np.zeros((10, *states_input.shape[1:]))
             )
             summary.trace_on(graph=True)
-            self.tf_forward(fake_inputs)
+            tracing_graph(fake_inputs)
             with graph_writer.as_default():
                 summary.trace_export(str(type(self)), 0)
 
     def forward(self, input_dict, state, seq_lens):
         """Forward pass."""
-        out = self.tf_forward(input_dict["obs"])
-        model_out = out[:, :-1]
-        self._value_out = out[:, -1]
-
-        return model_out, state
-
-    @tf.function
-    def tf_forward(self, inputs):
-        """Forward calls as a tensorflow operation."""
-        return self.base_model(inputs)
+        out = self.base_model(input_dict["obs"])
+        return out, state
 
     def value_function(self):
         """Return the value function associated to the last input."""
-        return self._value_out
+        raise NotImplementedError
 
 
 class CompositeFullyConnected(keras.Model):
@@ -112,6 +106,7 @@ class CompositeFullyConnected(keras.Model):
         n_states: int,
         activation: str,
         batch_norm: bool,
+        activation_last: Optional[str] = None,
     ):
         """Initialize.
 
@@ -123,6 +118,7 @@ class CompositeFullyConnected(keras.Model):
             (number of automaton states).
         :param activation: name of an activation function
         :param batch_norm: whether to use batch normalization between each layer
+        :param activation_last: The activation function of the output layer
         """
         # Store
         self._layers_spec = layers_spec
@@ -130,6 +126,7 @@ class CompositeFullyConnected(keras.Model):
         self._n_states = n_states
         self._batch_norm = batch_norm
         self._activation_fn = activations.get(activation)
+        self._activation_fn_last = activations.get(activation_last)
         super().__init__()
 
         # Define layers
@@ -160,7 +157,7 @@ class CompositeFullyConnected(keras.Model):
             FullyConnectedBlock(
                 units=self._layers_spec[-1],
                 blocks=self._n_states,
-                activation=None,
+                activation=self._activation_fn_last,
             )
         )
 

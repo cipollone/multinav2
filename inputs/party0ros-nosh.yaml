@@ -20,8 +20,6 @@ algorithm:
       train_batch_size: 256
       lr: 0.0001
       gamma: 0.99
-      evaluation_config:
-        explore: False
       _disable_preprocessor_api: true
       # SAC parameters
       Q_model:
@@ -30,13 +28,14 @@ algorithm:
         shared_layers: 1
         activation: tanh
         batch_norm: true
-          #log_graph: ./outputs/debug-graph
+          #log_graph: debug-graph1
       policy_model:
         custom_model: composite_fc
         layers: [128, 128]
         shared_layers: 1
         activation: tanh
         batch_norm: true
+          #log_graph: debug-graph2
     run:
       stop:
         episodes_total: 200000

@@ -60,9 +60,13 @@ class RosPartyFluents(FluentExtractor):
         "box": np.array([5, -5, 180]),
     }
 
-    def __init__(self):
-        """Initialize."""
+    def __init__(self, interact_action: int):
+        """Initialize.
+
+        :param interact_action: the action associated to an environment interaction.
+        """
         self.fluents = {"at_" + location for location in self.montreal_cp_locations}
+        self._interact = interact_action
 
     @property
     def all(self):
@@ -84,9 +88,10 @@ class RosPartyFluents(FluentExtractor):
         :return: current propositional interpretation of fluents
         """
         fluents = set()
-        for location in self.montreal_cp_locations:
-            if self._closeto(state=obs, location=location):
-                fluents.add("at_" + location)
+        if action == self._interact:
+            for location in self.montreal_cp_locations:
+                if self._closeto(state=obs, location=location):
+                    fluents.add("at_" + location)
         assert fluents.issubset(self.fluents)
         logger.debug(f"Fluents for observation {obs}:\n" + str(fluents))
         return fluents
@@ -117,7 +122,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     if params["fluents"] == "rooms":
         raise NotImplementedError
     elif params["fluents"] == "party":
-        fluent_extractor = RosPartyFluents()
+        fluent_extractor = RosPartyFluents(interact_action=env.action_space.n - 1)
     else:
         raise ValueError(params["fluents"])
 

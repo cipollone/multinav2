@@ -384,7 +384,7 @@ class TrainRllib(Trainer):
         self.env_params = env_params
         self.log_path = alg_params["logs-dir"]
         self.model_path = alg_params["model-dir"]
-        # TODO: agent only unused
+        # TODO: agent only
 
         # Trainer config
         self.agent_type: str = self.alg_params["agent"]
