@@ -18,7 +18,10 @@ algorithm:
       num_gpus: 1
       batch_mode: truncate_episodes
       train_batch_size: 256
-      lr: 0.0001
+      optimization:
+        actor_learning_rate: 3e-4,
+        critic_learning_rate: 3e-4,
+        entropy_learning_rate: 3e-4,
       gamma: 0.99
       _disable_preprocessor_api: true
       # SAC parameters

@@ -22,7 +22,7 @@
 """Test on environment."""
 
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import gym
 
@@ -48,13 +48,13 @@ def test(
     :param render: render the image and and delays.
     """
     # Make
-    train_setup = TrainerSetup(params)
+    train_setup = TrainerSetup(params, agent_only=True)
 
     # Load
     agent = train_setup.agent.load(load)
 
     # Start
-    Tester(env=train_setup.env, model=agent, interactive=interactive, render=render).test()
+    Tester(env_maker=train_setup.env_maker, model=agent, interactive=interactive, render=render).test()
 
 
 class Tester:
@@ -62,13 +62,13 @@ class Tester:
 
     def __init__(
         self,
-        env: gym.Env,
+        env_maker: Callable[[], gym.Env],
         model: AgentModel,
         interactive: bool = False,
         render: bool = False,
     ):
         """Initialize."""
-        self.env = env
+        self.env = env_maker()
         self.model = model
         self._interactive = interactive
         self._render = render

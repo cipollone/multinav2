@@ -78,7 +78,7 @@ class RosPartyFluents(FluentExtractor):
         assert location in self.montreal_cp_locations
         desired_pose = self.montreal_cp_locations[location]
         # Only positions for now
-        return (np.abs(state[:2] - desired_pose[:2]) < 0.1).all()
+        return (np.abs(state[:2] - desired_pose[:2]) < 0.6).all()
 
     def __call__(self, obs, action: int) -> Interpretation:
         """Respect temprl.types.FluentExtractor interface.

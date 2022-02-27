@@ -2006,7 +2006,7 @@ numpy = "^1.19.4"
 type = "git"
 url = "https://github.com/cipollone/ros-stage-rl.git"
 reference = "main"
-resolved_reference = "258185f0baf4430cba769e46e9647fb948ecb63f"
+resolved_reference = "091b78bce5cc308f35442cf04b3e1dfa56cb2364"
 
 [[package]]
 name = "rsa"
@@ -2577,7 +2577,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.11" # <3.11 just because tensorflow-io-gcs-filesystem requires it
-content-hash = "9fcf77576fb49312b76844856fd51c8383bb65b7dafaedff02f166e7b54defa8"
+content-hash = "7b23e60b7810ade583f20e6f601113469c7f405de4d60a382743224d82c4681a"
 
 [metadata.files]
 absl-py = [
