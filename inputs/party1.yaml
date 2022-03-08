@@ -10,7 +10,7 @@ algorithm:
   params:
     resume_file: null
     initialize_file: null
-    active_passive_agents: false
+    active_passive_agents: true
     action_bias: null
     action_bias_eps: 0.0
     exploration_policy: null
@@ -34,8 +34,8 @@ environment:
     fail_p: 0.05
     reward_shift: 0.0
     initial_position: [1, 1]
-    shaping: null
-    shaping_gamma: 1.0
+    shaping: "./outputs/party2/0/models/model_100000.pickle"
+    shaping_gamma: 0.98
     return_invariant: false
     episode_time_limit: 100
     render: false

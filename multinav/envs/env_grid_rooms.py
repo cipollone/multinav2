@@ -160,7 +160,7 @@ def abs_rooms_shaper(
     path: str,
     gamma: float,
     return_invariant: bool,
-    rooms_connectivity: List[List[str]],
+    rooms_and_locations: Sequence[Sequence[str]],
 ) -> ValueFunctionRS:
     """Define a reward shaper on the previous environment.
 
@@ -171,17 +171,17 @@ def abs_rooms_shaper(
     :param gamma: discount factor to apply for shaping.
     :param return_invariant: if true, we apply classic return-invariant reward shaping.
         We usually want this to be false.
-    :param rooms_connectivity: see AbstractRooms.
+    :param rooms_and_locations: see env_abstract_rooms.AbstractRoomsFluents.
     :return: reward shaper to apply.
     """
     # Trained agent on abstract environment
     agent = QFunctionModel.load(path=path)
 
     # Map
-    grid_to_abs = Grid2Abs(rooms_connectivity=rooms_connectivity)
+    mapping = Grid2Abs(rooms_and_locations)
 
     def map_with_temporal_goals(state: Tuple[Mapping[str, Any], list]) -> StateH:
-        obs = grid_to_abs(state[0])
+        obs = mapping(state[0])
         qs = state[1]
         state1 = (obs, *qs)
         logger.debug("Mapped state: %s", state1)
@@ -261,7 +261,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
             path=params["shaping"],
             gamma=params["shaping_gamma"],
             return_invariant=params["return_invariant"],
-            rooms_connectivity=params["rooms_connectivity"],
+            rooms_and_locations=params["rooms_and_locations"],
         )
         env = RewardShapingWrapper(env, reward_shaper=abs_shaper)
 
