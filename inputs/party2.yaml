@@ -15,7 +15,7 @@ algorithm:
     action_bias_eps: 0.0
     exploration_policy: null
     learning_rate: 0.1
-    learning_rate_end: 0.01
+    learning_rate_end: 0.5
     gamma: 0.9
     total_timesteps: 100000
     q_eps: 0.95
@@ -37,13 +37,16 @@ environment:
       - [r, g]
       - [r, b]
       - [r, y]
-      - [g, b]
-      - [g, y]
+    rooms_and_locations:
+      - [r, none]
+      - [g, bar]
+      - [b, carol]
+      - [y, alice]
     fail_p: 0.1
     initial_room: y
     shaping: null
     rewards:
-      - ldlf: "<(!at_carol)*; at_carol>end"
+      - ldlf: "<(!at_bar)*; at_bar; (!at_carol)*; at_carol>end"
         reward: 1.0
     fluents: party
 evaluation:
@@ -51,4 +54,4 @@ evaluation:
   frequency: 0
 n-runs: 1
 output-base: outputs
-run-command: "poetry run python -m multinav train"
+run-command: "poetry run python -m multinav -v train"
