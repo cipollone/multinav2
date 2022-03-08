@@ -71,29 +71,31 @@ def with_nonmarkov_rewards(
         for N temporal goals.
     """
     # Compute or load automata
+    automata = []
     for reward_spec in rewards:
         if must_load:
             assert "ldlf" not in reward_spec and "ltlf" not in reward_spec, (
                 "Specify an automaton directly, not a formula")
         if "ldlf" in reward_spec:
-            reward_spec["dfa"] = ldl2dfa(parse_ldl(reward_spec["ldlf"]))
+            automaton = ldl2dfa(parse_ldl(reward_spec["ldlf"]))
         elif "ltlf" in reward_spec:
-            reward_spec["dfa"] = ltl2dfa(parse_ltl(reward_spec["ltlf"]))
+            automaton = ltl2dfa(parse_ltl(reward_spec["ltlf"]))
         else:
             assert "dfa" in reward_spec, (
                 "You must specify ldlf, ldlf, or dfa to pickled automaton")
             with open(reward_spec["dfa"], "rb") as f:
-                reward_spec["dfa"] = pickle.load(f)
+                automaton = pickle.load(f)
 
         # Check
-        assert isinstance(reward_spec["dfa"], SymbolicDFA)
-        assert_fluents(reward_spec["dfa"], fluents)
+        assert isinstance(automaton, SymbolicDFA)
+        assert_fluents(automaton, fluents)
+        automata.append(automaton)
 
     temporal_goals = [
         TemporalGoal(
-            automaton=reward_spec["dfa"],
+            automaton=automaton,
             reward=reward_spec["reward"],
-        ) for reward_spec in rewards
+        ) for automaton, reward_spec in zip(automata, rewards)
     ]
 
     # Move with env
@@ -105,16 +107,16 @@ def with_nonmarkov_rewards(
 
     # Save dfa
     if log_dir is not None:
-        for i, reward_spec in enumerate(rewards):
+        for i, automaton in enumerate(automata):
             filename = f"dfa-{i}"
             filepath = Path(log_dir) / filename
 
             # Save object
             with open(filepath.with_suffix(".pickle"), "wb") as f:
-                pickle.dump(reward_spec["dfa"], f)
+                pickle.dump(automaton, f)
 
             # Save graph
-            graph = reward_spec["dfa"].to_graphviz()
+            graph = automaton.to_graphviz()
             with open(filepath.with_suffix(".pdf"), "wb") as f:
                 f.write(graph.pipe(format="pdf", quiet=True))
 

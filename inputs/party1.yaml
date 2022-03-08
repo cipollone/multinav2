@@ -1,0 +1,70 @@
+name: party1
+comment: "Cocktail party task"
+
+algorithm:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: 0.2.3
+  commit: null
+  diff: null
+  params:
+    resume_file: null
+    initialize_file: null
+    active_passive_agents: false
+    action_bias: null
+    action_bias_eps: 0.0
+    exploration_policy: null
+    learning_rate: 0.05
+    learning_rate_end: 0.01
+    gamma: 0.98
+    total_timesteps: 700000
+    q_eps: 0.8
+    epsilon_end: 0.05
+    log_interval: 1000
+
+environment:
+  name: gym-sapientino
+  repository: https://github.com/whitemech/gym-sapientino.git
+  version: develop
+  commit: ''
+  diff: ''
+  params:
+    env: rooms1
+    fluents: party
+    fail_p: 0.05
+    reward_shift: 0.0
+    initial_position: [1, 1]
+    shaping: null
+    shaping_gamma: 1.0
+    return_invariant: false
+    episode_time_limit: 100
+    render: false
+    reward_per_step: 0.0
+    reward_outside_grid: 0.0
+    reward_duplicate_beep: 0.0
+    rewards:
+      - dfa: ./outputs/party2/0/logs/dfa-0.pickle
+        reward: 1.0
+    rooms_and_locations:
+      - [r, none]
+      - [g, bar]
+      - [b, carol]
+      - [y, alice]
+    map: |-
+      |#############|
+      |#rrrrrrrrrry#|
+      |#rrrrrrr#rrr#|
+      |#####rrr#rrr#|
+      |#####rrr##r##|
+      |#######rrrrr#|
+      |#####grrrrrr#|
+      |#####rrrrrb##|
+      |#####rr#rrr##|
+      |#####rrrrrrr#|
+      |#############|
+evaluation:
+  episodes: 0
+  frequency: 0
+n-runs: 1
+output-base: outputs
+run-command: "poetry run python -m multinav train"

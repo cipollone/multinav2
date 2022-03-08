@@ -18,23 +18,8 @@ class EnvMaker(Wrapper):
         self.env_params = dict(env_config)
         self.env_name = self.env_params.pop("env")
 
-        # Interact env
-        if self.env_name == "task2":
-            from multinav.envs.env_abstract_sapientino import make as make_task2
-            self.env = make_task2(
-                params=self.env_params,
-                log_dir=self.env_params["logs-dir"],
-            )
-        elif self.env_name == "task1":
-            from multinav.envs.env_grid_sapientino import make as make_task1
-            self.env = make_task1(
-                params=self.env_params,
-                log_dir=self.env_params["logs-dir"],
-            )
-            if self.env_params["render"]:
-                self.env = Renderer(self.env)
         # Rooms env
-        elif self.env_name == "rooms2":
+        if self.env_name == "rooms2":
             from multinav.envs.env_abstract_rooms import make as make_room2
             self.env = make_room2(
                 params=self.env_params,

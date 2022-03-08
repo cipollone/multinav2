@@ -54,4 +54,4 @@ evaluation:
   frequency: 0
 n-runs: 1
 output-base: outputs
-run-command: "poetry run python -m multinav -v train"
+run-command: "poetry run python -m multinav train"

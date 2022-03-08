@@ -26,11 +26,11 @@ from typing import Any, List, Mapping, Optional, Sequence, Tuple
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core import actions, configurations
-from gym_sapientino.core.types import Colors, color2id, id2color
+from gym_sapientino.core.types import Colors, color2id, color2int, id2color
 from temprl.types import Interpretation
 
 from multinav.algorithms.agents import QFunctionModel
-from multinav.envs.env_abstract_rooms import AbstractRooms
+from multinav.envs.env_abstract_rooms import AbstractPartyFluents, AbstractRooms
 from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import StateH, ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
@@ -40,7 +40,6 @@ from multinav.wrappers.utils import FailProbability, SingleAgentWrapper
 logger = logging.getLogger(__name__)
 
 # Global def
-color2int = {str(c): i for i, c in enumerate(list(Colors))}
 int2color = {i: c for c, i in color2int.items()}
 
 
@@ -72,32 +71,88 @@ class GridRoomsFluents(FluentExtractor):
         :param action: the last action.
         :return: current propositional interpretation of fluents
         """
-        color = int2color[obs["color"]]
+        color = str(int2color[obs["color"]])
         assert color not in ("blank", "wall"), (
             "Colors should be everywhere because they fill rooms")
         return {color}
 
 
-class Grid2Abs:
-    """Transform features of grid_rooms to AbstractRooms."""
+class GridPartyFluents(FluentExtractor):
+    """Define propositions for Party task."""
 
-    def __init__(self, rooms_connectivity: Sequence[Sequence[str]]):
+    def __init__(
+        self,
+        map_config: str,
+        rooms_and_locations: Sequence[Sequence[str]],
+        interact_action: int,
+    ):
         """Initialize.
 
-        :param rooms_connectivity: see AbstractRooms.
+        :param map_config: the charmap of a sapientino map.
+            Each color denotes an interesting location. The rest of the space
+            should be filled with another color.
+        :param rooms_and_locations: see env_abstract_rooms.AbstractRoomsFluents.
+        :param interact_action: the action associated to an interaction
+            with the environment.
         """
-        self._abs_env = AbstractRooms(
-            rooms_connectivity=rooms_connectivity,
-            initial_room=rooms_connectivity[0][0],
+        # Abstract fluents
+        self.mapping = Grid2Abs(rooms_and_locations)
+        self.abstract_fluents = AbstractPartyFluents(
+            env=self.mapping.abstract_env,
+            rooms_and_locations=rooms_and_locations,
+            interact_action=interact_action,
+        )
+
+        # Store
+        self.fluents = self.abstract_fluents.fluents
+
+        # Check
+        charset = set(map_config)
+        charset -= {'|', '#', ' ', '\n', '\r'}
+        assert self.abstract_fluents._rooms2locations.keys() <= charset, (
+            f"Not all {self.abstract_fluents._rooms2locations.keys()} "
+            f"are in map locations {charset}"
+        )
+        self._interact = interact_action
+
+    @property
+    def all(self):
+        """All fluents."""
+        return self.fluents
+
+    def __call__(self, obs: Mapping[str, Any], action: int) -> Interpretation:
+        """Respect temprl.types.FluentExtractor interface.
+
+        :param obs: assuming that the observation comes from a SapientinoDictSpace
+            wrapped in SingleAgentWrapper.
+        :param action: the last action.
+        :return: current propositional interpretation of fluents
+        """
+        abs_obs = self.mapping(obs)
+        return self.abstract_fluents(abs_obs, action)
+
+
+class Grid2Abs:
+    """Transform features of GridRooms to AbstractRooms."""
+
+    def __init__(self, rooms_and_locations: Sequence[Sequence[str]]):
+        """Initialize.
+
+        :param rooms_and_locations: see env_abstract_rooms.AbstractRoomsFluents.
+        """
+        self.abstract_env = AbstractRooms(
+            rooms_connectivity=[(pair[0], pair[0]) for pair in rooms_and_locations],
+            initial_room=rooms_and_locations[0][0],
             p_failure=0.0,
         )
 
-    def __call__(self, obs: Mapping[str, Any]):
+    def __call__(self, obs: Mapping[str, Any]) -> int:
         """Convert to abstract."""
         color = int2color[obs["color"]]
-        assert color not in ("blank", "wall"), (
-            "Colors should be everywhere because they fill rooms")
-        abs_state = self._abs_env._room2id[color2id[Colors(color)]]
+        assert color != Colors.BLANK, "Colors should fill rooms"
+        assert color != Colors.WALL
+
+        abs_state = self.abstract_env._room2id[color2id[color]]
         return abs_state
 
 
@@ -172,10 +227,15 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         env = FailProbability(env, fail_p=params["fail_p"], seed=params["seed"])
 
     # Fluents for this environment
+    fluent_extractor: FluentExtractor
     if params["fluents"] == "rooms":
         fluent_extractor = GridRoomsFluents(map_config=params["map"])
     elif params["fluents"] == "party":
-        fluent_extractor = GridPartyFluents(map_config=params["map"])
+        fluent_extractor = GridPartyFluents(
+            map_config=params["map"],
+            rooms_and_locations=params["rooms_and_locations"],
+            interact_action=int(actions.GridCommand.BEEP.value),
+        )
     else:
         raise ValueError(params["fluents"])
 
