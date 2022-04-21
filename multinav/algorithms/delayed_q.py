@@ -16,7 +16,8 @@ from typing import DefaultDict, Dict, Tuple
 
 import numpy as np
 from gym import Env
-from gym.spaces import Discrete
+
+from multinav.helpers.gym import discrete_space_size
 
 StateT = int
 ActionT = int
@@ -55,10 +56,10 @@ class DelayedQAgent:
         self.minr = minr
 
         # Constants
-        assert isinstance(self.env.observation_space, Discrete)
-        assert isinstance(self.env.action_space, Discrete)
-        self.n_states = self.env.observation_space.n
-        self.n_actions = self.env.action_space.n
+        assert self.env.observation_space is not None
+        assert self.env.action_space is not None
+        self.n_states = discrete_space_size(self.env.observation_space)
+        self.n_actions = discrete_space_size(self.env.action_space)
 
         # Compute constants
         self.m = self._compute_m()

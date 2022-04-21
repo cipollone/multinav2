@@ -30,7 +30,7 @@ import gym
 import numpy as np
 from graphviz import Digraph
 from gym.envs.toy_text.discrete import DiscreteEnv
-from gym.spaces import Box, Discrete, MultiDiscrete
+from gym.spaces import Box, Discrete, MultiDiscrete, Space
 from gym.wrappers import TimeLimit
 
 State = Any
@@ -212,3 +212,13 @@ def find_wrapper(env: gym.Wrapper, wrapper_type: type) -> Optional[gym.Env]:
             return env
         env = env.env
     return None
+
+
+def discrete_space_size(space: Space) -> int:
+    """Compute the dimension of a discrete gym space."""
+    if isinstance(space, Discrete):
+        return space.n
+    elif isinstance(space, MultiDiscrete):
+        return np.prod(space.nvec)
+    else:
+        raise TypeError(f"Class not supported for space {space}")
