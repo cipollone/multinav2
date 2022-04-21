@@ -172,6 +172,69 @@ class AbstractRoomsFluents(FluentExtractor):
         return {str(room2color[self._env._id2room[obs]])}
 
 
+class AbstractPartyFluents(FluentExtractor):
+    """Define propositions for Party task."""
+
+    def __init__(
+        self,
+        env: AbstractRooms,
+        rooms_and_locations: Sequence[Sequence[str]],
+        interact_action: int,
+    ):
+        """Initialize.
+
+        :param env: instance of AbstractRooms.
+        :param rooms_and_locations: an association between rooms and locations.
+            Each row should be something like ("g", "alice"), where "g" is the
+            identifier of a location and "alice" is a location.
+        :param interact_action: One of the action is assumed to be an interaction.
+        """
+        self._env = env
+
+        # The association between persons and locations should be consistent
+        self._rooms2locations = dict()
+        common_room = None
+        for pair in rooms_and_locations:
+            assert len(pair) == 2, f"Expected a pair, got {pair}"
+            room, loc = pair
+            assert room in env.rooms, "Every room should also in room connections"
+            self._rooms2locations[room] = loc
+            if loc == "none":
+                common_room = room
+        assert common_room is not None, (
+            "There should be at least one pair with location 'none'"
+        )
+
+        self._interact = interact_action
+        self.fluents = {"at_" + loc for loc in self._rooms2locations.values()}
+
+        logger.debug(f"Party Fluents, rooms2locations: {self._rooms2locations}")
+        logger.debug(f"Party Fluents, fluents: {self.fluents}")
+
+    @property
+    def all(self):
+        """All fluents."""
+        return self.fluents
+
+    def __call__(self, obs: int, action: int) -> Interpretation:
+        """Respect temprl.types.FluentExtractor interface.
+
+        :param obs: assuming that the observation comes from an
+            `AbstractRooms` environment. Rooms are interpreted as generic
+            locations here.
+        :param action: the last action.
+        :return: current propositional interpretation of fluents
+        """
+        fluents = set()
+        if action == self._interact:
+            room = self._env._id2room[obs]
+            location = self._rooms2locations[room]
+            if location != "none":
+                fluents.add("at_" + location)
+
+        return fluents
+
+
 def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     """Make the sapientino abstract state environment (agent teleports).
 
@@ -192,10 +255,15 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     )
 
     # Fluents for this environment
+    fluent_extractor: FluentExtractor
     if params["fluents"] == "rooms":
         fluent_extractor = AbstractRoomsFluents(env)
     elif params["fluents"] == "party":
-        fluent_extractor = AbstractPartyFluents(env)
+        fluent_extractor = AbstractPartyFluents(
+            env=env,
+            rooms_and_locations=params["rooms_and_locations"],
+            interact_action=env.action_space.n - 1,
+        )
     else:
         raise ValueError(params["fluents"])
 

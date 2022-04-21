@@ -24,12 +24,14 @@
 These classes are just interfaces of agents that have been computed from these
 algorithms.
 """
-
 import logging
 import pickle
-from typing import Dict
+from pathlib import Path
+from typing import Any, Dict
 
 import numpy as np
+import ray.rllib.agents.registry
+import yaml
 from typing_extensions import Protocol
 
 from multinav.helpers.gym import Action, State
@@ -52,8 +54,7 @@ class AgentModel(Protocol):
         """
         raise NotImplementedError("Abstract")
 
-    @classmethod
-    def load(cls, path: str) -> "AgentModel":
+    def load(self, path: str) -> "AgentModel":
         """Load model from path.
 
         :param path: exact file path to load.
@@ -86,8 +87,8 @@ class QFunctionModel(AgentModel):
             pickle.dump(self.q_function, f, protocol=4)
         return full_path
 
-    @classmethod
-    def load(cls, path: str) -> "QFunctionModel":
+    @staticmethod
+    def load(path: str) -> "QFunctionModel":
         """Load model from exact path."""
         with open(path, "rb") as f:
             q_function = pickle.load(f)
@@ -128,9 +129,39 @@ class ValueFunctionModel(AgentModel):
             pickle.dump(data, f, protocol=4)
         return full_path
 
-    @classmethod
-    def load(cls, path: str) -> "ValueFunctionModel":
+    @staticmethod
+    def load(path: str) -> "ValueFunctionModel":
         """Load model from exact path."""
         with open(path, "rb") as f:
             data = pickle.load(f)
         return ValueFunctionModel(**data)
+
+
+class RllibAgentModel(AgentModel):
+    """Act from a trained Rllib agent."""
+
+    def __init__(self, agent_type: str, agent_conf: Dict[str, Any]):
+        """Initialize.
+
+        See TrainRllib for an explanation of arguments.
+        """
+        self.agent_type = agent_type
+        self.agent_conf = agent_conf
+        self.trainer = None
+
+    def load(self, path: str) -> "RllibAgentModel":
+        """Restore from checkpoint."""
+        conf = dict(self.agent_conf)
+        conf["num_workers"] = 0  # This creates the environment on local worker
+        trainer_class = ray.rllib.agents.registry.get_trainer_class(self.agent_type)
+        self.trainer = trainer_class(conf)
+        self.trainer.restore(path)
+        return self
+
+    def save(self, path: str) -> str:
+        """Can't save this."""
+        raise NotImplementedError("Just user trainer checkpoints.")
+
+    def predict(self, observations: State) -> Action:
+        """Compute next action."""
+        return self.trainer.compute_single_action(observations)

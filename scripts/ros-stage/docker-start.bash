@@ -25,9 +25,9 @@ sleep 3
 
 # Start simulation
 if [ "$1" == "--watch" ]; then
-	echo 'montreal_cp;marrtino' | netcat -w 1 localhost 9235
+	echo 'montreal_cp;orazio' | netcat -w 1 localhost 9235
 else
-	docker exec -it stage bash -ci "rosrun stage_environments start_simulation.py --no_gui montreal_cp marrtino"
+	docker exec -it stage bash -ci "rosrun stage_environments start_simulation.py --no_gui montreal_cp orazio"
 fi
 echo '@gbn' | netcat -w 1 localhost 9238
 

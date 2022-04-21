@@ -34,7 +34,7 @@ from gym import Env
 from matplotlib import pyplot as plt
 from ray import tune
 
-from multinav.algorithms.agents import QFunctionModel
+from multinav.algorithms.agents import AgentModel, QFunctionModel, RllibAgentModel
 from multinav.algorithms.policy_net import init_models
 from multinav.algorithms.q_learning import QLearning
 from multinav.envs.envs import EnvMaker
@@ -49,15 +49,19 @@ from multinav.wrappers.reward_shaping import (
 )
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
 
+# Ray initialization with custom models
+init_models()
+
 
 class TrainerSetup:
     """Train an agent."""
 
-    def __init__(self, params: Dict[str, Any]):
+    def __init__(self, params: Dict[str, Any], agent_only=False):
         """Initialize.
 
         :param params: for examples on these parameters see the project repository
             in files under inputs/
+        :param agent_only: if true, only load definitions but do not start.
         """
         # Get options
         self.params = params
@@ -69,20 +73,26 @@ class TrainerSetup:
             "seed": params["seed"],
             "logs-dir": params["logs-dir"],
             "model-dir": params["model-dir"],
-            "gamma": self.alg_params.get("gamma", self.alg_params["config"]["gamma"]),
+            "gamma": (
+                self.alg_params["gamma"] if "gamma" in self.alg_params
+                else self.alg_params["config"]["gamma"]
+            ),
         }
         self.alg_params.update(common_params)
         self.env_params.update(common_params)
 
         # Trainer for tabular environments
         self.trainer: Trainer
-        if self.env_name not in ("rooms0", "task0"):
+        self.agent: AgentModel
+        if "0" not in self.env_name:  # Because 0 is for continuous environments
             self.trainer = TrainQ(
                 env=EnvMaker(self.env_params).env,
                 params=self.alg_params,
+                agent_only=agent_only,
             )
             self.agent = self.trainer.agent
             self.passive_agent = self.trainer.passive_agent
+            self.env_maker = lambda: EnvMaker(self.env_params)
 
         # Trainer for continuous environments
         else:
@@ -90,7 +100,10 @@ class TrainerSetup:
                 env_class=EnvMaker,
                 alg_params=self.alg_params,
                 env_params=self.env_params,
+                agent_only=agent_only,
             )
+            self.agent = self.trainer.agent
+            self.env_maker = lambda: self.agent.trainer.workers.local_worker().env
             # TODO: active passive?
 
         # Closing env resources
@@ -384,7 +397,6 @@ class TrainRllib(Trainer):
         self.env_params = env_params
         self.log_path = alg_params["logs-dir"]
         self.model_path = alg_params["model-dir"]
-        # TODO: agent only unused
 
         # Trainer config
         self.agent_type: str = self.alg_params["agent"]
@@ -397,6 +409,11 @@ class TrainRllib(Trainer):
         self.agent_conf["env"] = self.env_class
         self.agent_conf["env_config"] = self.env_params
 
+        # Agent interface (used when restoring from checkpoint)
+        self.agent = RllibAgentModel(self.agent_type, self.agent_conf)
+        if agent_only:
+            return
+
         # Set seed
         seed = self.alg_params["seed"]
         random.seed(seed)
@@ -407,7 +424,6 @@ class TrainRllib(Trainer):
 
         # Init library
         ray.init()
-        init_models()
 
     def train(self):
         """Start training."""
