@@ -20,21 +20,22 @@
 # along with multinav.  If not, see <https://www.gnu.org/licenses/>.
 #
 """Q-Learning implementation."""
+
 import logging
 import sys
 from collections import defaultdict
 from functools import partial
-from typing import Any, Callable, Dict, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 import gym
 import numpy as np
 
+from multinav.algorithms.agents import QTableType
 from multinav.wrappers.utils import MyStatsRecorder
 
 logger = logging.getLogger(__name__)
 
 State = Any
-QTableType = Dict[State, np.ndarray]
 
 
 class QLearning:
@@ -45,7 +46,6 @@ class QLearning:
         env: gym.Env,
         stats_envs: Sequence[MyStatsRecorder],
         seed: int,
-        total_timesteps: int = 2000000,
         alpha: float = 0.1,
         eps: float = 0.1,
         gamma: float = 0.9,
@@ -67,7 +67,6 @@ class QLearning:
         :param stats_envs: a list of MyStatsRecorder wrappers.
             Just one is usually enough, but if active_passive_agents is True,
             a second one is needed for the passive agent.
-        :param total_timesteps: total number of optimizations.
         :param alpha: learning rate.
         :param eps: probability of random action.
         :param gamma: RL discount factor.
@@ -112,7 +111,6 @@ class QLearning:
         # Store
         self.env = env
         self.stats_envs = stats_envs
-        self.total_timesteps = total_timesteps
         self.alpha0 = alpha
         self.eps0 = eps
         self.gamma = gamma
@@ -158,15 +156,17 @@ class QLearning:
         self.alpha = self.alpha0
         self.eps = self.eps0
 
-    def learn(self) -> QTableType:
+    def learn(self, max_steps: int) -> QTableType:
         """Start training.
 
         The result is stored in self.Q.
         :return: The q table stored in self.Q.
         """
+        self.max_steps = max_steps
+
         done = True
         state = None  # for type checks
-        for step in range(self.total_timesteps):
+        for step in range(self.max_steps):
 
             if done:
                 state = self.env.reset()
@@ -221,7 +221,7 @@ class QLearning:
 
         :param step: current step.
         """
-        frac = step / self.total_timesteps
+        frac = step / self.max_steps
         if self.learning_rate_decay:
             self.alpha = self.alpha0 * (1 - frac) + self.learning_rate_end * frac
         if self.epsilon_decay:
