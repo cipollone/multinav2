@@ -38,7 +38,15 @@ logger = logging.getLogger(__name__)
 State = Any
 
 
-class QLearning:
+class Learner:
+    """Stub for learn classes."""
+
+    def learn(self, max_steps: int):
+        """Learn for a maximum of timesteps."""
+        raise NotImplementedError("Only use subclasses")
+
+
+class QLearning(Learner):
     """Learn a Q-function from a Gym env using vanilla Q-Learning."""
 
     def __init__(

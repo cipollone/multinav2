@@ -23,9 +23,10 @@
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
 
 import logging
-from typing import Any, Dict, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, Optional, Sequence, Set, Tuple, Union
 
 import numpy as np
+from gym import Wrapper
 from gym.wrappers import TimeLimit
 from gym_sapientino.core.types import id2color as room2color
 from temprl.types import Interpretation
@@ -34,6 +35,7 @@ from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.gym import MyDiscreteEnv, Transitions
 from multinav.wrappers.reward_shaping import RewardShift
 from multinav.wrappers.temprl import FlattenAutomataStates
+from multinav.wrappers.utils import WithExtraAction
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +179,7 @@ class AbstractPartyFluents(FluentExtractor):
 
     def __init__(
         self,
-        env: AbstractRooms,
+        env: Union[AbstractRooms, Wrapper],
         rooms_and_locations: Sequence[Sequence[str]],
         interact_action: int,
     ):
@@ -189,7 +191,7 @@ class AbstractPartyFluents(FluentExtractor):
             identifier of a location and "alice" is a location.
         :param interact_action: One of the action is assumed to be an interaction.
         """
-        self._env = env
+        self._id2room = env.unwrapped._id2room
 
         # The association between persons and locations should be consistent
         self._rooms2locations = dict()
@@ -227,7 +229,7 @@ class AbstractPartyFluents(FluentExtractor):
         """
         fluents = set()
         if action == self._interact:
-            room = self._env._id2room[obs]
+            room = self._id2room[obs]
             location = self._rooms2locations[room]
             if location != "none":
                 fluents.add("at_" + location)
@@ -259,6 +261,7 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     if params["fluents"] == "rooms":
         fluent_extractor = AbstractRoomsFluents(env)
     elif params["fluents"] == "party":
+        env = WithExtraAction(env)
         fluent_extractor = AbstractPartyFluents(
             env=env,
             rooms_and_locations=params["rooms_and_locations"],

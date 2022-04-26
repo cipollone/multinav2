@@ -25,11 +25,12 @@ import random
 import shutil
 import time
 from pathlib import Path
-from typing import List, Optional, cast
+from typing import Any, List, Optional, Tuple, cast
 
 import gym
 import matplotlib.pyplot as plt
 from gym import Wrapper
+from gym.spaces import Discrete
 from gym.spaces import Tuple as GymTuple
 from PIL import Image
 
@@ -135,7 +136,7 @@ class MyStatsRecorder(gym.Wrapper):
         if done:
             self.save_complete()
 
-        logger.debug(f"state {state}, reward {reward}, done {done}, info {info}")
+        logger.debug(f"action {action}, state {state}, reward {reward}, done {done}, info {info}")
 
         return state, reward, done, info
 
@@ -335,3 +336,34 @@ class Debugger(Wrapper):
         ret = self.env.step(action)
         self.pdb.set_trace()
         return ret
+
+
+class WithExtraAction(Wrapper):
+    """Wrapper that adds an extra action with no effect."""
+
+    def __init__(self, env: gym.Env):
+        """Initialize."""
+        super().__init__(env)
+        assert isinstance(self.env.action_space, Discrete)
+
+        self._extra_action = self.env.action_space.n
+        self.action_space = Discrete(self.env.action_space.n + 1)
+
+        self._last_transition: Tuple[Any, float, bool, dict] = (None, 0.0, False, {})
+
+    def step(self, action):
+        """Act."""
+        assert self._last_transition[0] is not None, "Reset env"
+        if action == self._extra_action:
+            obs, rew, done, info = self._last_transition
+            info["noop"] = True
+            return obs, rew, done, info
+        else:
+            self._last_transition = self.env.step(action)
+            return self._last_transition
+
+    def reset(self):
+        """Reset."""
+        obs = self.env.reset()
+        self._last_transition = (obs, 0.0, False, {})
+        return obs

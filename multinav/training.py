@@ -37,7 +37,7 @@ from ray import tune
 from multinav.algorithms.agents import AgentModel, QFunctionModel, RllibAgentModel
 from multinav.algorithms.delayed_q import DelayedQAgent
 from multinav.algorithms.policy_net import init_models
-from multinav.algorithms.q_learning import QLearning
+from multinav.algorithms.q_learning import Learner, QLearning
 from multinav.envs.envs import EnvMaker
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
@@ -250,7 +250,7 @@ class TrainQ(Trainer):
             self._init_log("passive_agent", self._passive_agent_plot_vars)
 
         # Learner
-        self.learner = QLearning(
+        self.learner: Learner = QLearning(
             env=self.env,
             stats_envs=stats_envs,
             alpha=params["learning_rate"],
@@ -466,6 +466,7 @@ class TrainDelayedQ(TrainQ):
             delta=params["delta"],
             maxr=params["maxr"],
             minr=params["minr"],
+            m=params["m"],
         )
 
         # Link trained and saved agents
