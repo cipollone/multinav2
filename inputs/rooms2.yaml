@@ -4,23 +4,22 @@ comment: "Reach a specific location in the map: abstract representation"
 algorithm:
   name: multinav2
   repository: https://github.com/cipollone/multinav2/
-  version: 0.2.1
+  version: 0.2.5
   commit: null
   diff: null
   params:
     resume_file: null
     initialize_file: null
+    algorithm: DelayedQ
     active_passive_agents: false
-    action_bias: null
-    action_bias_eps: 0.0
-    exploration_policy: null
-    learning_rate: 0.1
-    learning_rate_end: 0.01
     gamma: 0.9
-    total_timesteps: 100000
-    q_eps: 0.95
-    epsilon_end: 0.05
-    log_interval: 500
+    eps1: 0.001
+    delta: 0.1
+    maxr: 1.0
+    minr: 0.0
+    m: 200
+    total_timesteps: 180000
+    log_interval: 10000
 
 environment:
   name: multinav2
@@ -34,17 +33,17 @@ environment:
     episode_time_limit: 30
     render: false
     rooms_connectivity:
-      - [g, p]
       - [g, b]
+      - [g, r]
+      - [r, y]
       - [y, p]
-      - [y, B]
-      - [o, B]
-      - [o, r]
-      - [o, b]
-      - [r, b]
+      - [p, o]
+      - [p, B]
+      - [B, G]
     fail_p: 0.1
-    initial_room: b
+    initial_room: g
     shaping: null
+    fluents: rooms
     rewards:
       - ldlf: "<(!yellow)*; yellow>end"
         reward: 1.0

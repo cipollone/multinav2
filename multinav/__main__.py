@@ -18,7 +18,7 @@ def main():
     parser.add_argument(
         "-v",
         "--verbose",
-        default="WARNING",
+        default="INFO",
         metavar="LOG_LEVEL",
         help="Log level (info by default)",
     )

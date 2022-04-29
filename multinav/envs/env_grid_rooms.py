@@ -21,7 +21,7 @@
 #
 """Grid control on rooms environment."""
 import logging
-from typing import Any, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Mapping, Optional, Sequence, Tuple
 
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace

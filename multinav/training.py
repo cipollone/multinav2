@@ -86,7 +86,15 @@ class TrainerSetup:
         self.trainer: Trainer
         self.agent: AgentModel
         if "0" not in self.env_name:  # Because 0 is for continuous environments
-            self.trainer = TrainDelayedQ(
+            algorithm = self.alg_params["algorithm"]
+            if algorithm == "Q":
+                TrainerClass = TrainQ
+            elif algorithm == "DelayedQ":
+                TrainerClass = TrainDelayedQ
+            else:
+                raise ValueError("Error in training algorithm name")
+
+            self.trainer = TrainerClass(
                 env=EnvMaker(self.env_params).env,
                 params=self.alg_params,
                 agent_only=agent_only,
