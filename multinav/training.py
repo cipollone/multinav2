@@ -35,8 +35,9 @@ from matplotlib import pyplot as plt
 from ray import tune
 
 from multinav.algorithms.agents import AgentModel, QFunctionModel, RllibAgentModel
+from multinav.algorithms.delayed_q import DelayedQAgent
 from multinav.algorithms.policy_net import init_models
-from multinav.algorithms.q_learning import QLearning
+from multinav.algorithms.q_learning import Learner, QLearning
 from multinav.envs.envs import EnvMaker
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
@@ -85,7 +86,15 @@ class TrainerSetup:
         self.trainer: Trainer
         self.agent: AgentModel
         if "0" not in self.env_name:  # Because 0 is for continuous environments
-            self.trainer = TrainQ(
+            algorithm = self.alg_params["algorithm"]
+            if algorithm == "Q":
+                TrainerClass = TrainQ
+            elif algorithm == "DelayedQ":
+                TrainerClass = TrainDelayedQ
+            else:
+                raise ValueError("Error in training algorithm name")
+
+            self.trainer = TrainerClass(
                 env=EnvMaker(self.env_params).env,
                 params=self.alg_params,
                 agent_only=agent_only,
@@ -249,10 +258,9 @@ class TrainQ(Trainer):
             self._init_log("passive_agent", self._passive_agent_plot_vars)
 
         # Learner
-        self.learner = QLearning(
+        self.learner: Learner = QLearning(
             env=self.env,
             stats_envs=stats_envs,
-            total_timesteps=params["total_timesteps"],
             alpha=params["learning_rate"],
             eps=params["q_eps"],
             gamma=params["gamma"],
@@ -307,7 +315,7 @@ class TrainQ(Trainer):
         """Start training."""
         # Learn
         try:
-            self.learner.learn()
+            self.learner.learn(max_steps=self.params["total_timesteps"])
 
         # Save
         finally:
@@ -369,6 +377,110 @@ class TrainQ(Trainer):
         with open(variables["txt_file"], "w") as f:
             f.write(self._log_header)
             f.writelines(lines)
+
+
+class TrainDelayedQ(TrainQ):
+    """Agent and training loop for DelayedQ learning."""
+
+    def __init__(
+        self,
+        env: Env,
+        params: Dict[str, Any],
+        agent_only: bool = False,
+    ):
+        """Initialize.
+
+        :param env: discrete-state gym environment.
+        :param params: dict of parameters. See `default_parameters`.
+        :param agent_only: if True, it defines or loads the agent(s),
+            then stops. The environment is not used. For training,
+            this must be false.
+        """
+        model_path = params["model-dir"]
+        log_path = params["logs-dir"]
+
+        # Check
+        if "resume_file" in params and params["resume_file"]:
+            raise TypeError("Resuming a training is not supported here")
+        if params["active_passive_agents"]:
+            raise NotImplementedError("Passive agent not implemented yet")
+
+        # Define agent(s)
+        self.agent = QFunctionModel(q_function=dict())
+        self.passive_agent = QFunctionModel(q_function=dict())
+        self._reinitialized = False
+
+        # Saver
+        self.saver = SaverCallback(
+            save_freq=None,  # Not needed
+            saver=self.agent.save,
+            loader=self.agent.load,
+            save_path=model_path,
+            name_prefix="model",
+            model_ext=self.agent.file_ext,
+            extra=self.passive_agent.q_function,
+        )
+
+        # Load agent
+        if params["initialize_file"] is not None:
+            self.agent, extra, _ = self.saver.load(params["initialize_file"])
+            self.passive_agent.q_function = extra
+            # Update saver
+            self.saver.saver = self.agent.save
+            self.saver.loader = self.agent.load
+            self.saver.extra_model = extra
+            self._reinitialized = True
+
+            # Save an agent that may be used for testing
+            self.testing_agent = self.agent if not params["test_passive"] else self.passive_agent
+
+        # Maybe stop
+        if agent_only:
+            return
+        assert log_path is not None  # mypy
+
+        # Store
+        self.env = env
+        self.params = params
+        self._log_path = log_path
+
+        # Logger
+        logger = FnCallback(
+            ep_freq=params["log_interval"], ep_fn=lambda _o, _i: self.log()
+        )
+
+        # Stats recorder
+        self.stats_env = MyStatsRecorder(self.env, gamma=params["gamma"])
+        self.env = self.stats_env
+        # stats_envs = [self.stats_env] TODO
+
+        # Wrap callbacks
+        self.callbacks = CustomCallbackList([self.saver, logger])
+        self.env = CallbackWrapper(env=self.env, callback=self.callbacks)
+
+        # Log properties
+        self._log_properties = ["episode_lengths", "episode_returns", "episode_td_max"]
+        self._agent_plot_vars: Dict[str, Any] = {}
+        self._init_log("agent", self._agent_plot_vars)
+        if params["active_passive_agents"]:
+            self._passive_agent_plot_vars: Dict[str, Any] = {}
+            self._init_log("passive_agent", self._passive_agent_plot_vars)
+
+        # Learner
+        self.learner = DelayedQAgent(
+            env=self.env,
+            gamma=params["gamma"],
+            eps1=params["eps1"],
+            delta=params["delta"],
+            maxr=params["maxr"],
+            minr=params["minr"],
+            m=params["m"],
+        )
+
+        # Link trained and saved agents
+        self.agent.q_function = self.learner.Q
+        # self.passive_agent.q_function = self.learner.passive_Q TODO
+        self.saver.extra_model = self.passive_agent.q_function
 
 
 class TrainRllib(Trainer):

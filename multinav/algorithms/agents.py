@@ -26,17 +26,17 @@ algorithms.
 """
 import logging
 import pickle
-from pathlib import Path
 from typing import Any, Dict
 
 import numpy as np
 import ray.rllib.agents.registry
-import yaml
 from typing_extensions import Protocol
 
 from multinav.helpers.gym import Action, State
 
 logger = logging.getLogger(__name__)
+
+QTableType = Dict[State, np.ndarray]
 
 
 class AgentModel(Protocol):

@@ -4,21 +4,22 @@ comment: "Reach a specific location in the map: gridworld"
 algorithm:
   name: multinav2
   repository: https://github.com/cipollone/multinav2/
-  version: 0.2.1
+  version: 0.2.5
   commit: null
   diff: null
   params:
     resume_file: null
     initialize_file: null
+    algorithm: Q
     active_passive_agents: true
     action_bias: null
     action_bias_eps: 0.0
     exploration_policy: null
-    learning_rate: 0.05
-    learning_rate_end: 0.01
+    learning_rate: 0.01
+    learning_rate_end: 0.002
     gamma: 0.98
-    total_timesteps: 200000
-    q_eps: 1.0
+    total_timesteps: 100000
+    q_eps: 0.5
     epsilon_end: 0.0
     log_interval: 1000
 
@@ -31,7 +32,7 @@ environment:
   params:
     env: rooms1
     reward_shift: 0.0
-    initial_position: [3, 12]
+    initial_position: [2, 3]
     shaping: ./outputs/rooms2/0/models/model_100000.pickle
     shaping_gamma: 0.98
     return_invariant: false
@@ -44,34 +45,30 @@ environment:
     rewards:
       - dfa: ./outputs/rooms2/0/logs/dfa-0.pickle
         reward: 1.0
+    fluents: rooms
     rooms_connectivity:
-      - [g, p]
       - [g, b]
+      - [g, r]
+      - [r, y]
       - [y, p]
-      - [y, B]
-      - [o, B]
-      - [o, r]
-      - [o, b]
-      - [r, b]
+      - [p, o]
+      - [p, B]
+      - [B, G]
     map: |-
-      |###############|
-      |#ggg#ppp#ppyyy#|
-      |#ggg#p#p#p#yyy#|
-      |#ggg#p#p#p#yyy#|
-      |#ggggp#ppp#yyy#|
-      |###bb######BBB#|
-      |#bbbbbbbbb#BBB#|
-      |#bbbbbbbbb#BBB#|
-      |#bbbbbbbbbbooo#|
-      |#bbbbbbbbbbooo#|
-      |#bbbbbbbbbbooo#|
-      |#bbbbbbbbbbrrr#|
-      |#bbbbbbbbbbrrr#|
-      |#bbbbbbbbb#rrr#|
-      |###############|
+      |#########################|
+      |#gggg#bbbb######ooooo####|
+      |#gggggbbbb#pppppooooo####|
+      |#gggg#bbbb#pppp#ooooo####|
+      |#gggg#bbbb#pppp#ooooo####|
+      |###r#######pppp#o########|
+      |#rrrr#yyyy#pppp#BBBBB#GG#|
+      |#rrrrryyyy#ppppBBBBBBBGG#|
+      |#rrrr#yyyyypppp#BBBBB####|
+      |#rrrr#yyyy######BBBBB####|
+      |#########################|
 evaluation:
   episodes: 0
   frequency: 0
-n-runs: 10
+n-runs: 1
 output-base: outputs
 run-command: "poetry run python -m multinav train"

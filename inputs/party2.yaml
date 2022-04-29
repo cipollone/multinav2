@@ -4,23 +4,22 @@ comment: "Cocktail party task"
 algorithm:
   name: multinav2
   repository: https://github.com/cipollone/multinav2/
-  version: 0.2.4
+  version: 0.2.5
   commit: null
   diff: null
   params:
     resume_file: null
     initialize_file: null
+    algorithm: DelayedQ
     active_passive_agents: false
-    action_bias: null
-    action_bias_eps: 0.0
-    exploration_policy: null
-    learning_rate: 0.1
-    learning_rate_end: 0.5
     gamma: 0.9
-    total_timesteps: 100000
-    q_eps: 0.95
-    epsilon_end: 0.05
-    log_interval: 500
+    eps1: 0.001
+    delta: 0.1
+    maxr: 1.0
+    minr: 0.0
+    m: 200
+    total_timesteps: 180000
+    log_interval: 10000
 
 environment:
   name: multinav2
@@ -31,7 +30,7 @@ environment:
   params:
     env: rooms2
     reward_shift: 0.0
-    episode_time_limit: 30
+    episode_time_limit: 20
     render: false
     rooms_connectivity:
       - [r, g]
@@ -46,7 +45,7 @@ environment:
     initial_room: y
     shaping: null
     rewards:
-      - ldlf: "<(!at_bar)*; at_bar; (!at_carol)*; at_carol>end"
+      - ldlf: "<(!at_bar)*; at_bar; (!at_carol)*; at_carol; (!at_bar)*; at_bar; (!at_alice)*; at_alice>end"
         reward: 1.0
     fluents: party
 evaluation:

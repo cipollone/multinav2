@@ -18,8 +18,9 @@ def main():
     parser.add_argument(
         "-v",
         "--verbose",
-        action="store_true",
-        help="Print debug information",
+        default="INFO",
+        metavar="LOG_LEVEL",
+        help="Log level (info by default)",
     )
     ops = parser.add_subparsers(dest="do", help="what to do")
 
@@ -66,8 +67,7 @@ def main():
     args = parser.parse_args()
 
     # logging
-    if args.verbose:
-        logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=args.verbose)
 
     # Load params
     with open(args.params) as f:
