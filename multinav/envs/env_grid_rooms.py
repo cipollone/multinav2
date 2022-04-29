@@ -135,15 +135,15 @@ class GridPartyFluents(FluentExtractor):
 class Grid2Abs:
     """Transform features of GridRooms to AbstractRooms."""
 
-    def __init__(self, rooms_and_locations: Sequence[Sequence[str]]):
+    def __init__(self, rooms_connectivity: Sequence[Sequence[str]]):
         """Initialize.
 
-        :param rooms_and_locations: see env_abstract_rooms.AbstractRoomsFluents.
+        :param rooms_and_locations: see AbstractRooms class.
         """
         self.abstract_env = AbstractRooms(
-            rooms_connectivity=[(pair[0], pair[0]) for pair in rooms_and_locations],
-            initial_room=rooms_and_locations[0][0],
-            p_failure=0.0,
+            rooms_connectivity=rooms_connectivity,
+            initial_room=rooms_connectivity[0][0],  # don't care
+            p_failure=0.0,                          # don't care
         )
 
     def __call__(self, obs: Mapping[str, Any]) -> int:
@@ -160,7 +160,7 @@ def abs_rooms_shaper(
     path: str,
     gamma: float,
     return_invariant: bool,
-    rooms_and_locations: Sequence[Sequence[str]],
+    rooms_connectivity: Sequence[Sequence[str]],
 ) -> ValueFunctionRS:
     """Define a reward shaper on the previous environment.
 
@@ -171,14 +171,14 @@ def abs_rooms_shaper(
     :param gamma: discount factor to apply for shaping.
     :param return_invariant: if true, we apply classic return-invariant reward shaping.
         We usually want this to be false.
-    :param rooms_and_locations: see env_abstract_rooms.AbstractRoomsFluents.
+    :param rooms_connectivity: see AbstractRooms.
     :return: reward shaper to apply.
     """
     # Trained agent on abstract environment
     agent = QFunctionModel.load(path=path)
 
     # Map
-    mapping = Grid2Abs(rooms_and_locations)
+    mapping = Grid2Abs(rooms_connectivity)
 
     def map_with_temporal_goals(state: Tuple[Mapping[str, Any], list]) -> StateH:
         obs = mapping(state[0])
@@ -261,7 +261,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
             path=params["shaping"],
             gamma=params["shaping_gamma"],
             return_invariant=params["return_invariant"],
-            rooms_and_locations=params["rooms_and_locations"],
+            rooms_connectivity=params["rooms_connectivity"],
         )
         env = RewardShapingWrapper(env, reward_shaper=abs_shaper)
 

@@ -17,9 +17,9 @@ algorithm:
     delta: 0.1
     maxr: 1.0
     minr: 0.0
-    m: 200
-    total_timesteps: 180000
-    log_interval: 10000
+    m: 100
+    total_timesteps: 100000
+    log_interval: 2000
 
 environment:
   name: multinav2
@@ -45,7 +45,7 @@ environment:
     shaping: null
     fluents: rooms
     rewards:
-      - ldlf: "<(!yellow)*; yellow>end"
+      - ldlf: "<(!gray)*; gray>end"
         reward: 1.0
 evaluation:
   episodes: 0
