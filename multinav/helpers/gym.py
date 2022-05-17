@@ -168,7 +168,7 @@ def evaluate(
             callback((state, reward, done, info))
 
             # Sum
-            cumreturn += reward * discounting
+            cumreturn += float(reward) * discounting
             discounting *= gamma
 
         # Update

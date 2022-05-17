@@ -13,13 +13,14 @@ Delayed Q learning, from
 import logging
 import math
 from collections import defaultdict
-from typing import DefaultDict, Dict, Optional, Tuple
+from typing import DefaultDict, Dict, List, Optional, Tuple
 
 import numpy as np
 from gym import Env
 
 from multinav.algorithms.q_learning import Learner
-from multinav.helpers.gym import discrete_space_size
+from multinav.helpers.gym import discrete_space_size, evaluate
+from multinav.wrappers.utils import MyStatsRecorder
 
 logger = logging.getLogger(__name__)
 
@@ -36,30 +37,39 @@ class DelayedQAgent(Learner):
     def __init__(
         self,
         env: Env,
+        stats_env: MyStatsRecorder,
         gamma: float,
         eps1: float,
         delta: float,
         maxr: float,
         minr: float,
         m: Optional[int] = None,
+        rollout_interval: int = 0,
+        rollout_episodes: int = 0,
     ):
         """Initialize.
 
         :param env: environment (discrete state and observations)
+        :param stats_envs: the MyStatsRecorder wrapper of env.
         :param gamma: discounting
         :param eps1: a small optimism constant for values (see paper)
         :param delta: guarantee failure probability of the PAC analysis
         :param maxr: maximum reward
         :param minr: minimum reward
         :param m: number of samples per state-action per update (optional).
+        :param rollout_interval: minimum number of steps between rollouts.
+        :param rollout_episodes: number of episodes for each rollout.
         """
         # Store
         self.env = env
+        self.stats_env = stats_env
         self.gamma = gamma
         self.eps1 = eps1
         self.delta = delta
         self.maxr = maxr
         self.minr = minr
+        self.rollout_interval = rollout_interval
+        self.rollout_episodes = rollout_episodes
 
         # Constants
         assert self.env.observation_space is not None
@@ -87,6 +97,10 @@ class DelayedQAgent(Learner):
                 m = {self.m}
             """)
 
+        # Dict from training episode to sequence of returns
+        self.eval_returns: Dict[int, List[float]] = {}
+
+        # Init
         self._init_learner()
 
     def _init_learner(self):
@@ -131,31 +145,47 @@ class DelayedQAgent(Learner):
         """
         done = True
         obs = 0  # Any initialization
+        should_evaluate = True
+        ep = 0
 
         # Learning loop
         for step in range(max_steps):
 
             # New episode
             if done:
+                if should_evaluate:
+                    self.eval_returns[ep] = evaluate(
+                        env=self.stats_env.env,
+                        gamma=self.gamma,
+                        policy=lambda state: np.argmax(self.Q[state]),
+                        nb_episodes=self.rollout_episodes,
+                    )
+                should_evaluate = False
                 obs = self.env.reset()
+                done = False
+                ep += 1
 
             # Step
             action = self._choose_action(obs)
             obs2, reward, done, info = self.env.step(action)
 
             # Apply
-            stats = self._learn_step(
+            self._learn_step(
                 obs=obs,
                 action=action,
                 reward=reward,
                 obs2=obs2,
                 step=step,
             )
-
             obs = obs2
 
-            # TODO: log stats
-            # TODO: active,passive
+            # Print
+            if ep % 5 == 0:
+                print(" Episode:", ep, end="\r")
+
+            # Evaluation
+            if self.rollout_interval > 0 and step % self.rollout_interval == 0:
+                should_evaluate = True
 
     def _learn_step(
         self,
@@ -166,11 +196,6 @@ class DelayedQAgent(Learner):
         step: int,
     ) -> Dict[str, float]:
         """One step of the learning algorithm."""
-        # Debugging
-        if self.Q[obs][action] < 0.01955:
-            print("stop")
-            pass
-
         # Not learning for this state
         if not self._learn[(obs, action)]:
 
@@ -226,7 +251,6 @@ class DelayedQAgent(Learner):
 
         The action is greedy with respect to learner Q-function.
         """
-        logger.debug(f"Q values for {obs}: {self.Q[obs]}")
         return np.argmax(self.Q[obs]).item()
 
 

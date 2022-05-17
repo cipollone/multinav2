@@ -1,5 +1,5 @@
-name: rooms2
-comment: "Reach a specific location in the map: abstract representation"
+name: rooms8-2
+comment: "8 rooms, abstract representation, q-learning"
 
 algorithm:
   name: multinav2
@@ -10,21 +10,25 @@ algorithm:
   params:
     resume_file: null
     initialize_file: null
-    algorithm: DelayedQ
+    algorithm: Q
     active_passive_agents: false
+    action_bias: null
+    action_bias_eps: 0.0
+    exploration_policy: null
+    learning_rate: 0.1
+    learning_rate_end: 0.01
     gamma: 0.9
-    eps1: 0.001
-    delta: 0.1
-    maxr: 1.0
-    minr: 0.0
-    m: 100
-    total_timesteps: 100000
+    total_timesteps: 50000
+    q_eps: 1.0
+    epsilon_end: 0.0
     log_interval: 2000
+    rollout_interval: 2000
+    rollout_episodes: 10
 
 environment:
   name: multinav2
   repository: https://github.com/cipollone/multinav2
-  version: 0.2.1
+  version: 0.2.5
   commit: ''
   diff: ''
   params:
@@ -38,6 +42,7 @@ environment:
       - [r, y]
       - [y, p]
       - [p, o]
+      - [o, B]
       - [p, B]
       - [B, G]
     fail_p: 0.1

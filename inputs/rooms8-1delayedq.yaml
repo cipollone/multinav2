@@ -1,4 +1,4 @@
-name: rooms1-nosh
+name: rooms8-1delayedq
 comment: "Reach a specific location in the map: gridworld"
 
 algorithm:
@@ -13,13 +13,15 @@ algorithm:
     algorithm: DelayedQ
     active_passive_agents: false
     gamma: 0.98
-    eps1: 0.002
+    eps1: 0.005
     delta: 0.1
     maxr: 1.0
     minr: 0.0
-    m: 50
+    m: 30
+    log_interval: 10000
     total_timesteps: 500000
-    log_interval: 1000
+    rollout_interval: 5000
+    rollout_episodes: 10
 
 environment:
   name: gym-sapientino
@@ -41,7 +43,7 @@ environment:
     reward_outside_grid: 0.0
     reward_duplicate_beep: 0.0
     rewards:
-      - dfa: ./outputs/rooms2/0/logs/dfa-0.pickle
+      - dfa: "./outputs/rooms8-2/0/logs/dfa-0.pickle"
         reward: 1.0
     fluents: rooms
     rooms_connectivity:

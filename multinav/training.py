@@ -478,12 +478,15 @@ class TrainDelayedQ(TrainQ):
         # Learner
         self.learner = DelayedQAgent(
             env=self.env,
+            stats_env=self.stats_env,
             gamma=params["gamma"],
             eps1=params["eps1"],
             delta=params["delta"],
             maxr=params["maxr"],
             minr=params["minr"],
             m=params["m"],
+            rollout_interval=params["rollout_interval"],
+            rollout_episodes=params["rollout_episodes"],
         )
 
         # Link trained and saved agents

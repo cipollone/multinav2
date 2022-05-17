@@ -171,6 +171,14 @@ class QLearning(Learner):
 
         # Dict from training episode to sequence of returns
         self.eval_returns: Dict[int, List[float]] = {}
+        self.eval_policy = self._get_evaluation_policy()
+
+    def _get_evaluation_policy(self) -> Callable[[Any], int]:
+        """Return the evaluation policy."""
+        if self.active_passive_agents:
+            return lambda state: np.argmax(self.passive_Q[state]).item()
+        else:
+            return lambda state: np.argmax(self.Q[state]).item()
 
     def learn(self, max_steps: int) -> QTableType:
         """Start training.
@@ -191,7 +199,7 @@ class QLearning(Learner):
                     self.eval_returns[ep] = evaluate(
                         env=self.stats_envs[0].env,
                         gamma=self.gamma,
-                        policy=lambda state: np.argmax(self.passive_Q[state]),
+                        policy=self.eval_policy,
                         nb_episodes=self.rollout_episodes,
                     )
                 should_evaluate = False
