@@ -25,12 +25,13 @@ import logging
 import sys
 from collections import defaultdict
 from functools import partial
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import gym
 import numpy as np
 
 from multinav.algorithms.agents import QTableType
+from multinav.helpers.gym import evaluate
 from multinav.wrappers.utils import MyStatsRecorder
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,8 @@ class QLearning(Learner):
         active_passive_agents: bool = False,
         passive_reward_getter: Optional[Callable[[], float]] = None,
         initial_passive_Q: Optional[QTableType] = None,
+        rollout_interval: int = 0,
+        rollout_episodes: int = 0,
     ):
         """Initialize.
 
@@ -100,8 +103,8 @@ class QLearning(Learner):
         :param passive_reward_getter: a callable that returns the last reward
             that should be passed to the passive agent.
         :param initial_passive_Q: initialization for the passive agent.
-        :return the Q function: a dictionary from states to array of Q values
-            for every action.
+        :param rollout_interval: minimum number of steps between rollouts.
+        :param rollout_episodes: number of episodes for each rollout.
         """
         # Check
         if active_passive_agents and not passive_reward_getter:
@@ -131,6 +134,8 @@ class QLearning(Learner):
         self.exploration_policy = exploration_policy
         self.active_passive_agents = active_passive_agents
         self.passive_reward_getter = passive_reward_getter
+        self.rollout_interval = rollout_interval
+        self.rollout_episodes = rollout_episodes
 
         # Initialize
         self.__rng = np.random.default_rng(seed)
@@ -164,6 +169,9 @@ class QLearning(Learner):
         self.alpha = self.alpha0
         self.eps = self.eps0
 
+        # Dict from training episode to sequence of returns
+        self.eval_returns: Dict[int, List[float]] = {}
+
     def learn(self, max_steps: int) -> QTableType:
         """Start training.
 
@@ -174,11 +182,22 @@ class QLearning(Learner):
 
         done = True
         state = None  # for type checks
+        ep = 0
+        should_evaluate = True
         for step in range(self.max_steps):
 
             if done:
+                if should_evaluate:
+                    self.eval_returns[ep] = evaluate(
+                        env=self.stats_envs[0].env,
+                        gamma=self.gamma,
+                        policy=lambda state: np.argmax(self.passive_Q[state]),
+                        nb_episodes=self.rollout_episodes,
+                    )
+                should_evaluate = False
                 state = self.env.reset()
                 done = False
+                ep += 1
 
             # Step
             action = self._choose_action(state)
@@ -212,7 +231,7 @@ class QLearning(Learner):
             state = state2
 
             # Decays
-            if step % 20 == 0:
+            if step % 50 == 0:
                 self.update_decays(step)
                 print(" Eps:", round(self.eps, 3), end="\r")
 
@@ -220,6 +239,10 @@ class QLearning(Learner):
             self.stats_envs[0].update_extras(td=abs(td_update))
             if self.active_passive_agents:
                 self.stats_envs[1].update_extras(td=abs(td_passive_update))
+
+            # Evaluation
+            if self.rollout_interval > 0 and step % self.rollout_interval == 0:
+                should_evaluate = True
 
         print()
         return self.Q

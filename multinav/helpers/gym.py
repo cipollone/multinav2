@@ -31,7 +31,6 @@ import numpy as np
 from graphviz import Digraph
 from gym.envs.toy_text.discrete import DiscreteEnv
 from gym.spaces import Box, Discrete, MultiDiscrete, Space
-from gym.wrappers import TimeLimit
 
 State = Any
 Observation = Any
@@ -131,33 +130,51 @@ def _random_action(env: gym.Env, state):
     return random.choice(list(actions))
 
 
-def rollout(
+def evaluate(
     env: gym.Env,
+    gamma: float,
+    policy=Callable[[Any], int],
     nb_episodes: int = 1,
-    max_steps: Optional[int] = None,
-    policy=lambda env, state: _random_action(env, state),
-    callback=lambda env, step: None,
-):
-    """
-    Do a rollout.
+    callback=lambda _: None,
+) -> List[float]:
+    """Compute statistics for average discounted cumulative return.
 
     :param env: the OpenAI Gym environment.
+    :param gamma: discounting.
     :param nb_episodes: the number of rollout episodes.
-    :param max_steps: maximum number of steps per episodes.
-    :param policy: a callable that takes the enviornment and the state and returns the action.
-    :param callback: a callback that takes the environment and it is called at each step.
-    :return: None
+    :param policy: a callable that takes the state and returns the action.
+    :param callback: a callback that takes results of a gym.step
+    :return: cumulative discounted return for each episode.
     """
-    if max_steps:
-        env = TimeLimit(env, max_episode_steps=max_steps)
+    # Average
+    returns = []
+
+    # Rollouts
     for _ in range(nb_episodes):
+
+        # Accumulators
+        discounting = 1.0
+        cumreturn = 0.0
+
+        #
         state = env.reset()
         done = False
-        callback(env, (state, 0.0, done, {}))
+        callback((state, 0.0, done, {}))
+
+        # Episode
         while not done:
-            action = policy(env, state)
+            action = policy(state)
             state, reward, done, info = env.step(action)
-            callback(env, (state, reward, done, info))
+            callback((state, reward, done, info))
+
+            # Sum
+            cumreturn += reward * discounting
+            discounting *= gamma
+
+        # Update
+        returns.append(cumreturn)
+
+    return returns
 
 
 @singledispatch

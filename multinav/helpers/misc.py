@@ -26,7 +26,6 @@ import multiprocessing
 import os
 import pickle
 import random
-import shutil
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 

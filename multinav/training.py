@@ -30,6 +30,7 @@ import gym
 import numpy as np
 import ray
 import tensorflow as tf
+import yaml
 from gym import Env
 from matplotlib import pyplot as plt
 from ray import tune
@@ -37,7 +38,7 @@ from ray import tune
 from multinav.algorithms.agents import AgentModel, QFunctionModel, RllibAgentModel
 from multinav.algorithms.delayed_q import DelayedQAgent
 from multinav.algorithms.policy_net import init_models
-from multinav.algorithms.q_learning import Learner, QLearning
+from multinav.algorithms.q_learning import QLearning
 from multinav.envs.envs import EnvMaker
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
@@ -258,7 +259,7 @@ class TrainQ(Trainer):
             self._init_log("passive_agent", self._passive_agent_plot_vars)
 
         # Learner
-        self.learner: Learner = QLearning(
+        self.learner = QLearning(
             env=self.env,
             stats_envs=stats_envs,
             alpha=params["learning_rate"],
@@ -278,6 +279,8 @@ class TrainQ(Trainer):
                 self.passive_agent.q_function if self._reinitialized else None
             ),
             seed=params["seed"],
+            rollout_interval=params["rollout_interval"],
+            rollout_episodes=params["rollout_episodes"],
         )
 
         # Link trained and saved agents
@@ -377,6 +380,12 @@ class TrainQ(Trainer):
         with open(variables["txt_file"], "w") as f:
             f.write(self._log_header)
             f.writelines(lines)
+
+        # Save evaluation metrics to file
+        if hasattr(self.learner, "eval_returns"):
+            eval_file = os.path.join(self._log_path, "evaluation_log.yaml")
+            with open(eval_file, "w") as f:
+                yaml.dump(self.learner.eval_returns, f)
 
 
 class TrainDelayedQ(TrainQ):
