@@ -1,5 +1,5 @@
-name: rooms8-1delayedq
-comment: "Reach a specific location in the map: gridworld"
+name: rooms8-1shinv
+comment: "8 rooms, gridworld, q-learning and invariant shaping"
 
 algorithm:
   name: multinav2
@@ -10,16 +10,18 @@ algorithm:
   params:
     resume_file: null
     initialize_file: null
-    algorithm: DelayedQ
-    active_passive_agents: false
+    active_passive_agents: true
+    algorithm: Q
+    action_bias: null
+    action_bias_eps: 0.0
+    exploration_policy: null
+    learning_rate: 0.02
+    learning_rate_end: 0.002
     gamma: 0.98
-    eps1: 0.005
-    delta: 0.1
-    maxr: 1.0
-    minr: 0.0
-    m: 30
-    log_interval: 10000
     total_timesteps: 500000
+    q_eps: 0.5
+    epsilon_end: 0.0
+    log_interval: 500
     rollout_interval: 5000
     rollout_episodes: 10
 
@@ -33,7 +35,7 @@ environment:
     env: rooms1
     reward_shift: 0.0
     initial_position: [2, 3]
-    shaping: null
+    shaping: "./outputs/rooms8-2/0/models/model_50000.pickle"
     shaping_gamma: 0.98
     return_invariant: true
     episode_time_limit: 100
@@ -52,6 +54,7 @@ environment:
       - [r, y]
       - [y, p]
       - [p, o]
+      - [o, B]
       - [p, B]
       - [B, G]
     map: |-

@@ -1,5 +1,5 @@
 name: rooms4-2
-comment: "Abstract representation of four rooms"
+comment: "4 rooms, abstract representation, q-learning"
 
 algorithm:
   name: multinav2
@@ -20,8 +20,10 @@ algorithm:
     gamma: 0.9
     total_timesteps: 10000
     q_eps: 1.0
-    epsilon_end: 0.3
+    epsilon_end: 0.0
     log_interval: 2000
+    rollout_interval: 1000
+    rollout_episodes: 10
 
 environment:
   name: multinav2

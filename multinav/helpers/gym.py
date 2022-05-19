@@ -136,7 +136,7 @@ def evaluate(
     policy=Callable[[Any], int],
     nb_episodes: int = 1,
     callback=lambda _: None,
-) -> List[float]:
+) -> List[List[float]]:
     """Compute statistics for average discounted cumulative return.
 
     :param env: the OpenAI Gym environment.
@@ -144,7 +144,7 @@ def evaluate(
     :param nb_episodes: the number of rollout episodes.
     :param policy: a callable that takes the state and returns the action.
     :param callback: a callback that takes results of a gym.step
-    :return: cumulative discounted return for each episode.
+    :return: episode lenghts and returns for each episode
     """
     # Average
     returns = []
@@ -160,6 +160,7 @@ def evaluate(
         state = env.reset()
         done = False
         callback((state, 0.0, done, {}))
+        step = 0
 
         # Episode
         while not done:
@@ -170,9 +171,10 @@ def evaluate(
             # Sum
             cumreturn += float(reward) * discounting
             discounting *= gamma
+            step += 1
 
         # Update
-        returns.append(cumreturn)
+        returns.append([step, cumreturn])
 
     return returns
 

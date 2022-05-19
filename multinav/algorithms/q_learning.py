@@ -25,7 +25,7 @@ import logging
 import sys
 from collections import defaultdict
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import gym
 import numpy as np
@@ -169,8 +169,8 @@ class QLearning(Learner):
         self.alpha = self.alpha0
         self.eps = self.eps0
 
-        # Dict from training episode to sequence of returns
-        self.eval_returns: Dict[int, List[float]] = {}
+        # Dict from training step to evaluation metrics
+        self.eval_stats: Dict[int, List[List[float]]] = {}
         self.eval_policy = self._get_evaluation_policy()
 
     def _get_evaluation_policy(self) -> Callable[[Any], int]:
@@ -190,13 +190,13 @@ class QLearning(Learner):
 
         done = True
         state = None  # for type checks
-        ep = 0
-        should_evaluate = True
+        ep = -1
+        should_evaluate = False
         for step in range(self.max_steps):
 
             if done:
                 if should_evaluate:
-                    self.eval_returns[ep] = evaluate(
+                    self.eval_stats[step] = evaluate(
                         env=self.stats_envs[0].env,
                         gamma=self.gamma,
                         policy=self.eval_policy,

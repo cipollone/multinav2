@@ -382,10 +382,10 @@ class TrainQ(Trainer):
             f.writelines(lines)
 
         # Save evaluation metrics to file
-        if hasattr(self.learner, "eval_returns"):
+        if hasattr(self.learner, "eval_stats"):
             eval_file = os.path.join(self._log_path, "evaluation_log.yaml")
             with open(eval_file, "w") as f:
-                yaml.dump(self.learner.eval_returns, f)
+                yaml.dump(self.learner.eval_stats, f)
 
 
 class TrainDelayedQ(TrainQ):

@@ -1,5 +1,5 @@
-name: rooms8-1delayedq
-comment: "Reach a specific location in the map: gridworld"
+name: rooms4-1delayedq
+comment: "4 rooms, gridworld, delayed q-learning"
 
 algorithm:
   name: multinav2
@@ -12,15 +12,15 @@ algorithm:
     initialize_file: null
     algorithm: DelayedQ
     active_passive_agents: false
-    gamma: 0.98
-    eps1: 0.005
+    gamma: 0.95
+    eps1: 0.01
     delta: 0.1
     maxr: 1.0
     minr: 0.0
-    m: 30
+    m: 15
     log_interval: 10000
-    total_timesteps: 500000
-    rollout_interval: 5000
+    total_timesteps: 50000
+    rollout_interval: 1000
     rollout_episodes: 10
 
 environment:
@@ -34,38 +34,35 @@ environment:
     reward_shift: 0.0
     initial_position: [2, 3]
     shaping: null
-    shaping_gamma: 0.98
+    shaping_gamma: 0.95
     return_invariant: true
-    episode_time_limit: 100
+    episode_time_limit: 50
     fail_p: 0.05
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
     reward_duplicate_beep: 0.0
     rewards:
-      - dfa: "./outputs/rooms8-2/0/logs/dfa-0.pickle"
+      - dfa: "./outputs/rooms4-2/0/logs/dfa-0.pickle"
         reward: 1.0
     fluents: rooms
     rooms_connectivity:
-      - [g, b]
-      - [g, r]
-      - [r, y]
-      - [y, p]
-      - [p, o]
-      - [p, B]
-      - [B, G]
+      - [r, g]
+      - [r, b]
+      - [y, g]
+      - [y, b]
     map: |-
-      |#########################|
-      |#gggg#bbbb######ooooo####|
-      |#gggggbbbb#pppppooooo####|
-      |#gggg#bbbb#pppp#ooooo####|
-      |#gggg#bbbb#pppp#ooooo####|
-      |###r#######pppp#o########|
-      |#rrrr#yyyy#pppp#BBBBB#GG#|
-      |#rrrrryyyy#ppppBBBBBBBGG#|
-      |#rrrr#yyyyypppp#BBBBB####|
-      |#rrrr#yyyy######BBBBB####|
-      |#########################|
+      |###########|
+      |#gggg#yyyy#|
+      |#gggggyyyy#|
+      |#gggg#yyyy#|
+      |#gggg#yyyy#|
+      |##g###yyyy#|
+      |#rrrr###b##|
+      |#rrrrbbbbb#|
+      |#rrrr#bbbb#|
+      |#rrrr#bbbb#|
+      |###########|
 evaluation:
   episodes: 0
   frequency: 0

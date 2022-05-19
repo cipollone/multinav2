@@ -97,8 +97,8 @@ class DelayedQAgent(Learner):
                 m = {self.m}
             """)
 
-        # Dict from training episode to sequence of returns
-        self.eval_returns: Dict[int, List[float]] = {}
+        # Dict from training step to evaluation metrics
+        self.eval_stats: Dict[int, List[List[float]]] = {}
 
         # Init
         self._init_learner()
@@ -145,8 +145,8 @@ class DelayedQAgent(Learner):
         """
         done = True
         obs = 0  # Any initialization
-        should_evaluate = True
-        ep = 0
+        should_evaluate = False
+        ep = -1
 
         # Learning loop
         for step in range(max_steps):
@@ -154,7 +154,7 @@ class DelayedQAgent(Learner):
             # New episode
             if done:
                 if should_evaluate:
-                    self.eval_returns[ep] = evaluate(
+                    self.eval_stats[step] = evaluate(
                         env=self.stats_env.env,
                         gamma=self.gamma,
                         policy=lambda state: np.argmax(self.Q[state]),

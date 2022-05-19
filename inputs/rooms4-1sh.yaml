@@ -1,5 +1,5 @@
 name: rooms4-1sh
-comment: "Grid representation of four rooms, with our reward shaping"
+comment: "4 rooms, gridworld, q-learning and our shaping"
 
 algorithm:
   name: multinav2
@@ -10,19 +10,19 @@ algorithm:
   params:
     resume_file: null
     initialize_file: null
-    algorithm: Q
     active_passive_agents: true
+    algorithm: Q
     action_bias: null
     action_bias_eps: 0.0
     exploration_policy: null
-    learning_rate: 0.05
-    learning_rate_end: 0.005
+    learning_rate: 0.1
+    learning_rate_end: 0.01
     gamma: 0.95
     total_timesteps: 50000
     q_eps: 0.5
     epsilon_end: 0.0
-    log_interval: 5000
-    rollout_interval: 2000
+    log_interval: 500
+    rollout_interval: 1000
     rollout_episodes: 10
 
 environment:
@@ -38,7 +38,7 @@ environment:
     shaping: "./outputs/rooms4-2/0/models/model_10000.pickle"
     shaping_gamma: 0.95
     return_invariant: false
-    episode_time_limit: 100
+    episode_time_limit: 50
     fail_p: 0.05
     render: false
     reward_per_step: 0.0
@@ -68,6 +68,6 @@ environment:
 evaluation:
   episodes: 0
   frequency: 0
-n-runs: 1
+n-runs: 10
 output-base: outputs
 run-command: "poetry run python -m multinav train"

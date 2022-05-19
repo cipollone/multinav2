@@ -1,5 +1,5 @@
-name: rooms8-1q
-comment: "8 rooms, gridworld, q-learning"
+name: rooms4-1shinv
+comment: "4 rooms, gridworld, q-learning and our shaping"
 
 algorithm:
   name: multinav2
@@ -10,19 +10,19 @@ algorithm:
   params:
     resume_file: null
     initialize_file: null
-    active_passive_agents: false
+    active_passive_agents: true
     algorithm: Q
     action_bias: null
     action_bias_eps: 0.0
     exploration_policy: null
-    learning_rate: 0.02
-    learning_rate_end: 0.002
-    gamma: 0.98
-    total_timesteps: 500000
-    q_eps: 1.0
+    learning_rate: 0.1
+    learning_rate_end: 0.01
+    gamma: 0.95
+    total_timesteps: 50000
+    q_eps: 0.5
     epsilon_end: 0.0
     log_interval: 500
-    rollout_interval: 5000
+    rollout_interval: 1000
     rollout_episodes: 10
 
 environment:
@@ -34,40 +34,37 @@ environment:
   params:
     env: rooms1
     reward_shift: 0.0
-    initial_position: [2, 3]
-    shaping: null
-    shaping_gamma: 0.98
+    initial_position: [1, 9]
+    shaping: "./outputs/rooms4-2/0/models/model_10000.pickle"
+    shaping_gamma: 0.95
     return_invariant: true
-    episode_time_limit: 100
+    episode_time_limit: 50
     fail_p: 0.05
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
     reward_duplicate_beep: 0.0
     rewards:
-      - dfa: "./outputs/rooms8-2/0/logs/dfa-0.pickle"
+      - dfa: "./outputs/rooms4-2/0/logs/dfa-0.pickle"
         reward: 1.0
     fluents: rooms
     rooms_connectivity:
-      - [g, b]
-      - [g, r]
-      - [r, y]
-      - [y, p]
-      - [p, o]
-      - [p, B]
-      - [B, G]
+      - [r, g]
+      - [r, b]
+      - [y, g]
+      - [y, b]
     map: |-
-      |#########################|
-      |#gggg#bbbb######ooooo####|
-      |#gggggbbbb#pppppooooo####|
-      |#gggg#bbbb#pppp#ooooo####|
-      |#gggg#bbbb#pppp#ooooo####|
-      |###r#######pppp#o########|
-      |#rrrr#yyyy#pppp#BBBBB#GG#|
-      |#rrrrryyyy#ppppBBBBBBBGG#|
-      |#rrrr#yyyyypppp#BBBBB####|
-      |#rrrr#yyyy######BBBBB####|
-      |#########################|
+      |###########|
+      |#gggg#yyyy#|
+      |#gggggyyyy#|
+      |#gggg#yyyy#|
+      |#gggg#yyyy#|
+      |##g###yyyy#|
+      |#rrrr###b##|
+      |#rrrrbbbbb#|
+      |#rrrr#bbbb#|
+      |#rrrr#bbbb#|
+      |###########|
 evaluation:
   episodes: 0
   frequency: 0
