@@ -1,0 +1,61 @@
+name: rooms8-2-1error
+comment: "8 rooms, abstract representation, q-learning, 1 model mistake"
+
+algorithm:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: 0.2.5
+  commit: null
+  diff: null
+  params:
+    resume_file: null
+    initialize_file: null
+    algorithm: Q
+    active_passive_agents: false
+    action_bias: null
+    action_bias_eps: 0.0
+    exploration_policy: null
+    learning_rate: 0.1
+    learning_rate_end: 0.01
+    gamma: 0.9
+    total_timesteps: 50000
+    q_eps: 1.0
+    epsilon_end: 0.0
+    log_interval: 2000
+    rollout_interval: 2000
+    rollout_episodes: 10
+
+environment:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2
+  version: 0.2.5
+  commit: ''
+  diff: ''
+  params:
+    env: rooms2
+    reward_shift: 0.0
+    episode_time_limit: 30
+    render: false
+    rooms_connectivity:
+      - [g, b]
+      - [g, r]
+      - [r, y]
+      - [y, p]
+      - [p, o]
+      - [o, B]
+      - [p, B]
+      - [p, G]
+      - [B, G]
+    fail_p: 0.1
+    initial_room: g
+    shaping: null
+    fluents: rooms
+    rewards:
+      - ldlf: "<(!gray)*; gray>end"
+        reward: 1.0
+evaluation:
+  episodes: 0
+  frequency: 0
+n-runs: 1
+output-base: outputs
+run-command: "poetry run python -m multinav train"

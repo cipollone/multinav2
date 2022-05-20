@@ -1,5 +1,5 @@
-name: rooms8-1shinv
-comment: "8 rooms, gridworld, q-learning and invariant shaping"
+name: rooms8-1sh-1error
+comment: "8 rooms, gridworld, q-learning and our shaping, 1 model mistake"
 
 algorithm:
   name: multinav2
@@ -19,8 +19,8 @@ algorithm:
     learning_rate_end: 0.002
     gamma: 0.98
     total_timesteps: 500000
-    q_eps: 1.0
-    epsilon_end: 0.0
+    q_eps: 0.9
+    epsilon_end: 0.1
     log_interval: 500
     rollout_interval: 2000
     rollout_episodes: 10
@@ -35,9 +35,9 @@ environment:
     env: rooms1
     reward_shift: 0.0
     initial_position: [2, 3]
-    shaping: "./outputs/rooms8-2/0/models/model_50000.pickle"
+    shaping: "./outputs/rooms8-2-1error/0/models/model_50000.pickle"
     shaping_gamma: 0.98
-    return_invariant: true
+    return_invariant: false
     episode_time_limit: 100
     fail_p: 0.05
     render: false
@@ -56,6 +56,7 @@ environment:
       - [p, o]
       - [o, B]
       - [p, B]
+      - [p, G]
       - [B, G]
     map: |-
       |#########################|

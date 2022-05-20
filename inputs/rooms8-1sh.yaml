@@ -19,10 +19,10 @@ algorithm:
     learning_rate_end: 0.002
     gamma: 0.98
     total_timesteps: 500000
-    q_eps: 0.5
-    epsilon_end: 0.0
+    q_eps: 0.9
+    epsilon_end: 0.1
     log_interval: 500
-    rollout_interval: 5000
+    rollout_interval: 2000
     rollout_episodes: 10
 
 environment:
