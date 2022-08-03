@@ -9,6 +9,7 @@ from gym import Env
 from logaut import ldl2dfa, ltl2dfa
 from pylogics.parsers import parse_ldl, parse_ltl
 from pythomata.impl.symbolic import BooleanFunction, SymbolicDFA
+from temprl.reward_machines.automata import RewardAutomaton
 from temprl.types import Action, Interpretation, Observation
 from temprl.wrapper import TemporalGoal, TemporalGoalWrapper
 
@@ -31,23 +32,14 @@ class FluentExtractor(ABC):
 
 
 class TemporalGoalWrapperEnd(TemporalGoalWrapper):
-    """A temporal goal wrapper that terminates the episode.
-
-    When all temporal goals generate a reward (which is an approximate way of
-    deciding whether the trace is accepted), the episode is terminated.
-    """
+    """A temporal goal wrapper that terminates the episode."""
 
     def step(self, action):
         """Do a step in the Gym environment."""
-        obs, reward, done, info = super(TemporalGoalWrapper, self).step(action)
-        fluents = self.fluent_extractor(obs, action)
-        states_and_rewards = [tg.step(fluents) for tg in self.temp_goals]
-        next_automata_states, temp_goal_rewards = zip(*states_and_rewards)
-        total_goal_rewards = sum(temp_goal_rewards)
-        obs_prime = (obs, next_automata_states)
-        reward_prime = reward + total_goal_rewards
-        all_rewards = all((r != 0 for r in temp_goal_rewards))
-        return obs_prime, reward_prime, done or all_rewards, info
+        obs, reward, done, info = super().step(action)
+        if reward > 0:
+            info["goal_end"] = True
+        return obs, reward, done or reward > 0, info
 
 
 def with_nonmarkov_rewards(
@@ -93,8 +85,10 @@ def with_nonmarkov_rewards(
 
     temporal_goals = [
         TemporalGoal(
-            automaton=automaton,
-            reward=reward_spec["reward"],
+            RewardAutomaton(
+                dfa=automaton,
+                reward=reward_spec["reward"],
+            )
         ) for automaton, reward_spec in zip(automata, rewards)
     ]
 
