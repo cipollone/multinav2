@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "multinav"
-version = "0.2.5"
+version = "0.2.6"
 description = "RL on multiple related navigation environments"
 authors = [
 	"Roberto Cipollone <cipollone.rt@gmail.com>",
@@ -11,10 +11,9 @@ license = "GPL-3.0-or-later"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11" # <3.11 just because tensorflow-io-gcs-filesystem requires it
 gym-sapientino = {git = "https://github.com/whitemech/gym-sapientino.git", branch = "develop"}
-temprl = {git = "https://github.com/whitemech/temprl.git", branch = "develop"}
+temprl = {git = "https://github.com/whitemech/temprl.git", branch = "main"}
 logaut = "^0.1.1"
 ray = {version = "^1.10.0", extras = ["rllib"]}
-grpcio = "<1.44.0"   # Remove when https://github.com/ray-project/ray/issues/22518 is closed
 tensorflow = "^2.8.0"
 GPUtil = "^1.4.0"
 rosstagerl = {git = "https://github.com/cipollone/ros-stage-rl.git", rev = "main"}
@@ -26,9 +25,8 @@ pytest-cov = "^2.10.1"
 pytest-randomly = "^3.4.1"
 tox = "^3.19.0"
 codecov = "^2.1.9"
-black = "==20.8b1"
+black = ">=20.8b1"
 mypy = ">=0.782"
-isort = "^5.4.2"
 flake8 = "^3.8.3"
 flake8-docstrings = "^1.5.0"
 flake8-bugbear = "^20.1.4"
