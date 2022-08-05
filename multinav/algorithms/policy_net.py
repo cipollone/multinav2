@@ -48,7 +48,7 @@ class CompositeNet(TFModelV2):
 
         # Inputs
         x_input = layers.Input(shape=obs_space[0].shape, name="observations")
-        states_input = layers.Input(shape=(1,), name="automaton_state")
+        states_input = layers.Input(shape=(1,), dtype=tf.dtypes.int32, name="automaton_state")
         inputs = (x_input, states_input)
 
         # Define model
@@ -63,7 +63,7 @@ class CompositeNet(TFModelV2):
 
         self.base_model = keras.Model(inputs=inputs, outputs=x)
 
-        # Log graph NOTE: debugging only: add @tf.function to tf_forward()
+        # Log graph
         if "log_graph" in self.model_config:
             @tf.function
             def tracing_graph(inputs):

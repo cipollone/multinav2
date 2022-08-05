@@ -160,7 +160,7 @@ class RllibAgentModel(AgentModel):
 
     def save(self, path: str) -> str:
         """Can't save this."""
-        raise NotImplementedError("Just user trainer checkpoints.")
+        raise NotImplementedError("Just use trainer checkpoints.")
 
     def predict(self, observations: State) -> Action:
         """Compute next action."""

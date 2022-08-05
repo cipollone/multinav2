@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Mapping, Optional
 
+from gym.envs.registration import EnvSpec
 from gym.wrappers import TimeLimit
 from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core import actions, configurations
@@ -76,6 +77,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         reward_per_step=params["reward_per_step"],
     )
     env = SingleAgentWrapper(SapientinoDictSpace(configuration))
+    env.unwrapped.spec = EnvSpec("SapientinoCont-v0")  # Later wrappers may write in spec
 
     # Fail probability
     if params["fail_p"] > 0:
@@ -102,8 +104,9 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     if params["reward_shift"] != 0:
         env = RewardShift(env, params["reward_shift"])
 
-    # Time limit (this should be before reward shaping)
+    # Time limit (this should be before reward shaping, also a spec is mandatory)
     env = TimeLimit(env, max_episode_steps=params["episode_time_limit"])
+    assert env.spec.max_episode_steps == params["episode_time_limit"]
 
     # Reward shaping on previous envs
     if params["shaping"]:

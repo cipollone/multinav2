@@ -11,9 +11,9 @@ license = "GPL-3.0-or-later"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11" # <3.11 just because tensorflow-io-gcs-filesystem requires it
 gym-sapientino = {git = "https://github.com/whitemech/gym-sapientino.git", rev = "e219008"}
-temprl = {git = "https://github.com/whitemech/temprl.git", rev = "5d3aa4f"}
+temprl = {git = "https://github.com/whitemech/temprl.git", rev = "83570e5"}
 logaut = "^0.1.1"
-ray = {version = "^1.10.0", extras = ["rllib"]}
+ray = {version = "^1.10.0", extras = ["default", "rllib"]}
 tensorflow = "^2.8.0"
 GPUtil = "^1.4.0"
 rosstagerl = {git = "https://github.com/cipollone/ros-stage-rl.git", rev = "47231a9"}
