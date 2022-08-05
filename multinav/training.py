@@ -532,6 +532,7 @@ class TrainRllib(Trainer):
             tune_conf=self.alg_params["tune"],
             just_first=agent_only,
         )
+        print("tune conf: ", self.agent_conf)
 
         # Env configs
         self.agent_conf["env"] = self.env_class
@@ -580,18 +581,25 @@ class TrainRllib(Trainer):
         :param just_first: insert the first element of the list into the configuration.
             This does not create a tune config, but it's useful to just initialize an agent.
         """
-        # Base case
-        if not isinstance(conf, dict) or not isinstance(tune_conf, dict):
-            return
+        # Scan dictionaries
+        assert isinstance(conf, dict) and isinstance(tune_conf, dict)
+        assert all((k in conf for k in tune_conf.keys())), (
+            f"{tune_conf.keys()} not a subset of {conf.keys()}")
 
-        # Scan conf
+        # Scan
         for key in conf:
             if key in tune_conf:
 
-                # Iterate
-                TrainRllib.with_grid_search(conf[key], tune_conf[key], just_first)
+                # If not nested dict
+                if not isinstance(tune_conf[key], dict):
 
-                # Transform to search space
-                vals = tune_conf[key]
-                assert isinstance(vals, list), "'tune_conf' should contain lists"
-                conf[key] = tune.grid_search(vals) if not just_first else vals[0]
+                    # Make search space
+                    vals = tune_conf[key]
+                    assert isinstance(vals, list), "'tune_conf' should contain lists"
+                    old_conf_val = conf[key]
+                    conf[key] = tune.grid_search(vals) if not just_first else vals[0]
+                    print(f"{old_conf_val} is now {conf[key]}")
+
+                # Else traverse
+                else:
+                    TrainRllib.with_grid_search(conf[key], tune_conf[key], just_first)
