@@ -1,48 +1,59 @@
-name: rooms0-nosh
-comment: "Reach a specific location in the map: continuous control"
+name: rooms4-0nosh-dqn
+comment: "4 rooms, continuous, Dueling DQN"
 
 algorithm:
   name: multinav2
   repository: https://github.com/cipollone/multinav2/
-  version: 0.2.3
+  version: 0.2.6
   commit: null
   diff: null
   params:
-    agent: PPO
+    agent: DQN
     config:
-      num_workers: 5
+      # Common
+      num_workers: 1
       num_envs_per_worker: 1
-      num_gpus: 1
-      num_sgd_iter: 10
-      sgd_minibatch_size: 128
-      batch_mode: truncate_episodes
-      lr: 0.001
-      gamma: 0.98
-      framework: tf2
+      log_level: WARN
+      num_gpus: 0.18
+      batch_mode: complete_episodes
+      gamma: 0.99
+      framework: tf
       eager_tracing: true
+      eager_max_retraces: 12
+      evaluation_interval: 5
+      evaluation_duration: 5
+      evaluation_duration_unit: episodes
+      evaluation_num_workers: 0
       evaluation_config:
         explore: False
-      _disable_preprocessor_api: true
-      model:
-        custom_model: composite_fc
-        layers: [128, 128]
-        shared_layers: 1
-        activation: tanh
-        batch_norm: true
-          #log_graph: ./outputs/debug-graph
+      # DQN parameters
+      double_q: True
+      dueling: true
+      n_step: 4
+      lr: 0.0001
+      exploration_config:
+        epsilon_timesteps: 200000
+        final_epsilon: 0.1
+      replay_buffer_config:
+        capacity: 100000
+        learning_starts: 10000
+      shuffle_buffer_size: 10000
+      train_batch_size: 64
+      training_intensity: 256
     run:
       stop:
-        episodes_total: 200000
+        timesteps_total: 200000
+        episode_reward_mean: 1.0
       num_samples: 1
-      checkpoint_freq: 16
-      keep_checkpoints_num: 1
+      checkpoint_freq: 50
+      keep_checkpoints_num: 2
     tune:
-      train_batch_size: [40]
+      lr: [0.001, 0.0001, 0.00001]
 
 environment:
-  name: gym-sapientino
-  repository: https://github.com/whitemech/gym-sapientino.git
-  version: develop
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: same as algorithm
   commit: ''
   diff: ''
   params:
@@ -50,7 +61,7 @@ environment:
     reward_shift: 0.0
     initial_position: [3, 12]
     shaping: null
-    shaping_gamma: 0.98
+    shaping_gamma: 0.99
     return_invariant: true
     episode_time_limit: 200
     fail_p: 0.05
@@ -62,8 +73,9 @@ environment:
     acceleration: 0.2
     max_velocity: 0.6
     min_velocity: 0
+    fluents: rooms
     rewards:
-      - dfa: /home/roberto/repos/multinav2/outputs/rooms2/0/logs/dfa-0.pickle
+      - ldlf: "<(!yellow)*; yellow>end"
         reward: 1.0
     map: |-
       |###############|

@@ -598,7 +598,7 @@ class TrainRllib(Trainer):
                     assert isinstance(vals, list), "'tune_conf' should contain lists"
                     old_conf_val = conf[key]
                     conf[key] = tune.grid_search(vals) if not just_first else vals[0]
-                    print(f"{old_conf_val} is now {conf[key]}")
+                    print(f"{key}: {old_conf_val} is now {key}: {conf[key]}")
 
                 # Else traverse
                 else:

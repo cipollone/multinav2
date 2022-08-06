@@ -12,7 +12,7 @@ algorithm:
     config:
       # Common
       log_level: WARN
-      num_workers: 5
+      num_workers: 0
       num_envs_per_worker: 1
       num_gpus: 0.18
       num_gpus_per_worker: 0
@@ -34,7 +34,6 @@ algorithm:
         explore: False
       replay_buffer_config:
         capacity: 200000
-      shuffle_buffer_size: 10000
       _disable_preprocessor_api: True
       # SAC parameters
       twin_q: True
@@ -43,35 +42,35 @@ algorithm:
         layers: [64, 64, 64]
         shared_layers: 2
         activation: relu
-        batch_norm: true
+        batch_norm: false
           #log_graph: debug-graph1
       policy_model:
         custom_model: composite_fc
         layers: [64, 64, 64]
         shared_layers: 2
         activation: relu
-        batch_norm: true
+        batch_norm: false
           #log_graph: debug-graph2
-      tau: 0.005
+      tau: 0.1
+      target_network_update_freq: 32
       target_entropy: auto
-        #target_entropy: 0.4
+        #target_entropy: 1.7
       n_step: 1
       optimization:
         actor_learning_rate: 0.001
         critic_learning_rate: 0.001
-        entropy_learning_rate: 0.001
-      learning_starts: 1500
+        entropy_learning_rate: 0.0002
+      learning_starts: 10000
       rollout_fragment_length: 1
-      train_batch_size: 256
-      target_network_update_freq: 0
+      train_batch_size: 64
     run:
       stop:
-        episodes_total: 100000
+        episodes_total: 10000
       num_samples: 1
       checkpoint_freq: 50
       keep_checkpoints_num: 2
     tune:
-      lr: [0.002, 0.0005]
+      n_step: [1]
 
 environment:
   name: multinav2
