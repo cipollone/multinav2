@@ -166,6 +166,7 @@ class RllibAgentModel(AgentModel):
 
         # Load for testing, not training
         self.agent_conf["num_workers"] = 0  # This creates the environment on local worker
+        self.agent_conf.pop("callbacks", [])
 
         # Init
         trainer_class = ray.rllib.agents.registry.get_trainer_class(self.agent_type)

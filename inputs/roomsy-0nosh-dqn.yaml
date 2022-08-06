@@ -1,5 +1,5 @@
-name: rooms4-0nosh-dqn
-comment: "4 rooms, continuous, Dueling DQN"
+name: roomsy-0nosh-dqn
+comment: "example room with yellow goal, continuous, Dueling DQN"
 
 algorithm:
   name: multinav2
@@ -41,7 +41,7 @@ algorithm:
       exploration_config:
         type: EpsilonGreedy
         initial_epsilon: 1.0
-        final_epsilon: 0.03
+        final_epsilon: 0.0
         epsilon_timesteps: tuned
       replay_buffer_config:
         capacity: 100000
@@ -51,7 +51,6 @@ algorithm:
       training_intensity: 256
     run:
       stop:
-        timesteps_total: 400000
         episode_reward_mean: 1.0
       num_samples: 1
       checkpoint_freq: 50
