@@ -97,7 +97,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         rewards=params["rewards"],
         fluents=fluent_extractor,
         log_dir=log_dir,
-        must_load=True,
+        #must_load=True,  # Debugging
     )
 
     # Reward shift

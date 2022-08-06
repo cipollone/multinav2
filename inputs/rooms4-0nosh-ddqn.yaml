@@ -56,7 +56,8 @@ algorithm:
       keep_checkpoints_num: 2
     tune:
       model:
-        layers: [[512], [64, 64], [64, 64, 64]]
+        activation: [relu, tanh]
+        batch_norm: [false, true]
 
 environment:
   name: multinav2

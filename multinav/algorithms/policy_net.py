@@ -29,6 +29,7 @@ class CompositeNet(TFModelV2):
         num_outputs: int,
         model_config: Dict[str, Any],
         name: str,
+        **kwargs,
     ):
         """Initialize."""
         # Super
@@ -64,12 +65,12 @@ class CompositeNet(TFModelV2):
         self.base_model = keras.Model(inputs=inputs, outputs=x)
 
         # Log graph
-        if "log_graph" in self.model_config:
+        if "log_graph" in model_config:
             @tf.function
             def tracing_graph(inputs):
                 return self.base_model(inputs)
 
-            graph_writer = summary.create_file_writer(self.model_config["log_graph"])
+            graph_writer = summary.create_file_writer(model_config["log_graph"])
             fake_inputs = (
                 np.zeros((10, *x_input.shape[1:])),
                 np.zeros((10, *states_input.shape[1:]))
