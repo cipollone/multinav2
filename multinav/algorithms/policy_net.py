@@ -5,15 +5,9 @@ from typing import Any, Callable, Dict, Optional, Sequence
 import numpy as np
 import tensorflow as tf
 from gym import spaces
-from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from tensorflow import keras, summary
 from tensorflow.keras import activations, layers
-
-
-def init_models():
-    """Register custom models."""
-    ModelCatalog.register_custom_model("composite_fc", CompositeNet)
 
 
 class CompositeNet(TFModelV2):
@@ -29,7 +23,6 @@ class CompositeNet(TFModelV2):
         num_outputs: int,
         model_config: Dict[str, Any],
         name: str,
-        **kwargs,
     ):
         """Initialize."""
         # Super

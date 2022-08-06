@@ -24,12 +24,15 @@
 These classes are just interfaces of agents that have been computed from these
 algorithms.
 """
+import json
 import logging
 import pickle
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, Optional, cast
 
 import numpy as np
 import ray.rllib.agents.registry
+from ray.rllib.agents import Trainer as RllibTrainer
 from typing_extensions import Protocol
 
 from multinav.helpers.gym import Action, State
@@ -147,14 +150,26 @@ class RllibAgentModel(AgentModel):
         """
         self.agent_type = agent_type
         self.agent_conf = agent_conf
-        self.trainer = None
+        self.trainer: Optional[RllibTrainer] = None
 
     def load(self, path: str) -> "RllibAgentModel":
         """Restore from checkpoint."""
-        conf = dict(self.agent_conf)
-        conf["num_workers"] = 0  # This creates the environment on local worker
+        # Checks
+        checkpoint_path = Path(path)
+        assert checkpoint_path.is_file(), f"Checkpoint not found at {checkpoint_path}"
+        rllib_params_path = checkpoint_path.parent.parent / "params.json"
+        assert rllib_params_path.is_file(), f"Rllib params not found at {rllib_params_path}"
+
+        # Load conf
+        with open(rllib_params_path, "r") as f:
+            self.agent_conf = json.load(f)
+
+        # Load for testing, not training
+        self.agent_conf["num_workers"] = 0  # This creates the environment on local worker
+
+        # Init
         trainer_class = ray.rllib.agents.registry.get_trainer_class(self.agent_type)
-        self.trainer = trainer_class(conf)
+        self.trainer = cast(RllibTrainer, trainer_class(self.agent_conf))
         self.trainer.restore(path)
         return self
 
@@ -164,4 +179,4 @@ class RllibAgentModel(AgentModel):
 
     def predict(self, observations: State) -> Action:
         """Compute next action."""
-        return self.trainer.compute_single_action(observations)
+        return self.trainer.compute_single_action(observations, explore=False)

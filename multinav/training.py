@@ -37,7 +37,6 @@ from ray import tune
 
 from multinav.algorithms.agents import AgentModel, QFunctionModel, RllibAgentModel
 from multinav.algorithms.delayed_q import DelayedQAgent
-from multinav.algorithms.policy_net import init_models
 from multinav.algorithms.q_learning import QLearning
 from multinav.envs.envs import EnvMaker
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
@@ -50,9 +49,6 @@ from multinav.wrappers.reward_shaping import (
     UnshapedEnvWrapper,
 )
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
-
-# Ray initialization with custom models
-init_models()
 
 
 class TrainerSetup:
