@@ -22,6 +22,12 @@
 
 """Multinav project."""
 
+# Tensorflow2
+from ray.rllib.utils.framework import try_import_tf
+tf1, tf, tfv = try_import_tf()
+tf1.enable_eager_execution()
+
+# Register custom classes
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 

@@ -1,5 +1,6 @@
 name: rooms4-0nosh-sac
 comment: "4 rooms, continuous, SAC"
+# I'm not sure this converges. Prefer dqn
 
 algorithm:
   name: multinav2
