@@ -22,4 +22,21 @@
 
 """Multinav project."""
 
-__version__ = "0.1.0"
+# Tensorflow2
+from ray.rllib.utils.framework import try_import_tf
+tf1, tf, tfv = try_import_tf()
+tf1.enable_eager_execution()
+
+# Register custom classes
+from ray.rllib.models import ModelCatalog
+from ray.tune.registry import register_env
+
+from multinav.algorithms.policy_net import CompositeNet
+from multinav.envs.envs import EnvMaker
+
+# Custom model
+ModelCatalog.register_custom_model("composite_fc", CompositeNet)
+
+# Custom environment
+register_env("<class 'multinav.envs.envs.EnvMaker'>", EnvMaker)
+

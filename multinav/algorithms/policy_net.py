@@ -5,15 +5,9 @@ from typing import Any, Callable, Dict, Optional, Sequence
 import numpy as np
 import tensorflow as tf
 from gym import spaces
-from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from tensorflow import keras, summary
 from tensorflow.keras import activations, layers
-
-
-def init_models():
-    """Register custom models."""
-    ModelCatalog.register_custom_model("composite_fc", CompositeNet)
 
 
 class CompositeNet(TFModelV2):
@@ -48,7 +42,7 @@ class CompositeNet(TFModelV2):
 
         # Inputs
         x_input = layers.Input(shape=obs_space[0].shape, name="observations")
-        states_input = layers.Input(shape=(1,), name="automaton_state")
+        states_input = layers.Input(shape=(1,), dtype=tf.dtypes.int32, name="automaton_state")
         inputs = (x_input, states_input)
 
         # Define model
@@ -63,13 +57,13 @@ class CompositeNet(TFModelV2):
 
         self.base_model = keras.Model(inputs=inputs, outputs=x)
 
-        # Log graph NOTE: debugging only: add @tf.function to tf_forward()
-        if "log_graph" in self.model_config:
+        # Log graph
+        if "log_graph" in model_config:
             @tf.function
             def tracing_graph(inputs):
                 return self.base_model(inputs)
 
-            graph_writer = summary.create_file_writer(self.model_config["log_graph"])
+            graph_writer = summary.create_file_writer(model_config["log_graph"])
             fake_inputs = (
                 np.zeros((10, *x_input.shape[1:])),
                 np.zeros((10, *states_input.shape[1:]))

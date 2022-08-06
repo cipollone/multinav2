@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "multinav"
-version = "0.2.6"
+version = "0.2.7"
 description = "RL on multiple related navigation environments"
 authors = [
 	"Roberto Cipollone <cipollone.rt@gmail.com>",
@@ -11,9 +11,9 @@ license = "GPL-3.0-or-later"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11" # <3.11 just because tensorflow-io-gcs-filesystem requires it
 gym-sapientino = {git = "https://github.com/whitemech/gym-sapientino.git", rev = "e219008"}
-temprl = {git = "https://github.com/whitemech/temprl.git", rev = "5d3aa4f"}
+temprl = {git = "https://github.com/whitemech/temprl.git", rev = "83570e55389"}
 logaut = "^0.1.1"
-ray = {version = "^1.10.0", extras = ["rllib"]}
+ray = {version = "^1.13.0", extras = ["default", "rllib"]}
 tensorflow = "^2.8.0"
 GPUtil = "^1.4.0"
 rosstagerl = {git = "https://github.com/cipollone/ros-stage-rl.git", rev = "47231a9"}
@@ -22,25 +22,15 @@ tensorflow-probability = "^0.16.0"
 [tool.poetry.dev-dependencies]
 pytest = "^6.0.1"
 pytest-cov = "^2.10.1"
-pytest-randomly = "^3.4.1"
-tox = "^3.19.0"
-codecov = "^2.1.9"
 black = ">=20.8b1"
 mypy = ">=0.782"
 flake8 = "^3.8.3"
 flake8-docstrings = "^1.5.0"
-flake8-bugbear = "^20.1.4"
-flake8-eradicate = "^0.4.0"
 pylint = "^2.6.0"
 safety = "^1.9.0"
 vulture = "^2.1"
 bandit = "^1.6.2"
 mkdocs = "^1.1.2"
-markdown_include = "^0.6.0"
-mkdocs-material = "^5.5.11"
-jupyter = "^1.0.0"
-mknotebooks = "^0.6.0"
-markdown = "^3.2.2"
 rope = "^0.18.0"
 jedi = "<0.18.0"
 isort = "^5.10.1"

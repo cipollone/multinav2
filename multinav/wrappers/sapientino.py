@@ -41,11 +41,12 @@ class AbstractRobotFeatures(gym.Wrapper):
     and flattens the automata spaces due to the temporal wrapper.
     """
 
-    def __init__(self, env: gym.Env):
+    def __init__(self, env: gym.Env, features_only=False):
         """
         Initialize the wrapper.
 
         :param env: the environment to wrap.
+        :param features_only: if True, discards the automaton state
         """
         super().__init__(env)
 
@@ -55,6 +56,7 @@ class AbstractRobotFeatures(gym.Wrapper):
         assert isinstance(self.automata_space, MultiDiscrete)
         assert isinstance(self.robot_space, GymDict)
 
+        self.features_only = features_only
         self.observation_space = self.compute_observation_space()
 
     @abstractmethod
@@ -90,16 +92,25 @@ class GridRobotFeatures(AbstractRobotFeatures):
         """Get the observation space."""
         x_space: Discrete = self.robot_space.spaces["discrete_x"]
         y_space: Discrete = self.robot_space.spaces["discrete_y"]
-        return MultiDiscrete([x_space.n, y_space.n, *self.automata_space.nvec])
+        if self.features_only:
+            return MultiDiscrete([x_space.n, y_space.n])
+        else:
+            return MultiDiscrete([x_space.n, y_space.n, *self.automata_space.nvec])
 
     def _process_state(self, state):
         """Process the observation."""
         robot_state, automata_states = state[0], state[1]
-        new_state = (
-            robot_state["discrete_x"],
-            robot_state["discrete_y"],
-            *automata_states,
-        )
+        if self.features_only:
+            new_state = (
+                robot_state["discrete_x"],
+                robot_state["discrete_y"],
+            )
+        else:
+            new_state = (
+                robot_state["discrete_x"],
+                robot_state["discrete_y"],
+                *automata_states,
+            )
         return new_state
 
 
@@ -130,7 +141,10 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
             dy_space,
         )
 
-        return GymTuple((sapientino_space, self.automata_space))
+        if self.features_only:
+            return sapientino_space
+        else:
+            return GymTuple((sapientino_space, self.automata_space))
 
     def _process_state(self, state):
         """Process the observation."""
@@ -150,4 +164,7 @@ class ContinuousRobotFeatures(AbstractRobotFeatures):
             ]
         )
         sapientino_state = np.reshape(sapientino_state, [6])
-        return sapientino_state, automata_states
+        if self.features_only:
+            return sapientino_state
+        else:
+            return sapientino_state, automata_states

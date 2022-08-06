@@ -1,0 +1,125 @@
+name: rooms4-0nosh-sac
+comment: "4 rooms, continuous, SAC"
+# I'm not sure this converges. Prefer dqn
+
+algorithm:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: 0.2.6
+  commit: null
+  diff: null
+  params:
+    agent: SAC
+    config:
+      # Common
+      log_level: WARN
+      num_workers: 0
+      num_envs_per_worker: 1
+      num_gpus: 0.18
+      num_gpus_per_worker: 0
+        #rollout_fragment_length: 50
+      batch_mode: complete_episodes
+      gamma: 0.99
+        #lr: 0.0005
+        #train_batch_size: 200
+      normalize_actions: False
+      preprocessor_pref: None
+      framework: tf
+      eager_tracing: true
+      eager_max_retraces: 12
+      evaluation_interval: 10
+      evaluation_duration: 10
+      evaluation_duration_unit: episodes
+      evaluation_num_workers: 0
+      evaluation_config:
+        explore: False
+      replay_buffer_config:
+        capacity: 200000
+      _disable_preprocessor_api: True
+      # SAC parameters
+      twin_q: True
+      Q_model:
+        custom_model: composite_fc
+        layers: [64, 64, 64]
+        shared_layers: 2
+        activation: relu
+        batch_norm: false
+          #log_graph: debug-graph1
+      policy_model:
+        custom_model: composite_fc
+        layers: [64, 64, 64]
+        shared_layers: 2
+        activation: relu
+        batch_norm: false
+          #log_graph: debug-graph2
+      tau: 0.1
+      target_network_update_freq: 32
+      target_entropy: auto
+        #target_entropy: 1.7
+      n_step: 1
+      optimization:
+        actor_learning_rate: 0.001
+        critic_learning_rate: 0.001
+        entropy_learning_rate: 0.0002
+      learning_starts: 10000
+      rollout_fragment_length: 1
+      train_batch_size: 64
+    run:
+      stop:
+        episodes_total: 10000
+      num_samples: 1
+      checkpoint_freq: 50
+      keep_checkpoints_num: 2
+    tune:
+      n_step: [1]
+
+environment:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: same as algorithm
+  commit: ''
+  diff: ''
+  params:
+    env: rooms0
+    reward_shift: 0.0
+    initial_position: [3, 12]
+    shaping: null
+    shaping_gamma: 0.99
+    return_invariant: true
+    episode_time_limit: 200
+    fail_p: 0.05
+    render: false
+    reward_per_step: 0.0
+    reward_outside_grid: 0.0
+    reward_duplicate_beep: 0.0
+    angular_speed: 40
+    acceleration: 0.2
+    max_velocity: 0.6
+    min_velocity: 0
+    fluents: rooms
+    rewards:
+      - ldlf: "<(!yellow)*; yellow>end"
+        reward: 1.0
+    map: |-
+      |###############|
+      |#ggg#ppp#ppyyy#|
+      |#ggg#p#p#p#yyy#|
+      |#ggg#p#p#p#yyy#|
+      |#ggggp#ppp#yyy#|
+      |###bb######BBB#|
+      |#bbbbbbbbb#BBB#|
+      |#bbbbbbbbb#BBB#|
+      |#bbbbbbbbbbooo#|
+      |#bbbbbbbbbbooo#|
+      |#bbbbbbbbbbooo#|
+      |#bbbbbbbbbbrrr#|
+      |#bbbbbbbbbbrrr#|
+      |#bbbbbbbbb#rrr#|
+      |###############|
+evaluation:
+  episodes: 0
+  frequency: 0
+n-runs: 1
+output-base: outputs
+run-command: "poetry run python -m multinav train"
+  #run-command: "poetry-debugpy -m multinav train"

@@ -37,7 +37,6 @@ from ray import tune
 
 from multinav.algorithms.agents import AgentModel, QFunctionModel, RllibAgentModel
 from multinav.algorithms.delayed_q import DelayedQAgent
-from multinav.algorithms.policy_net import init_models
 from multinav.algorithms.q_learning import QLearning
 from multinav.envs.envs import EnvMaker
 from multinav.helpers.callbacks import CallbackList as CustomCallbackList
@@ -50,9 +49,6 @@ from multinav.wrappers.reward_shaping import (
     UnshapedEnvWrapper,
 )
 from multinav.wrappers.utils import CallbackWrapper, MyStatsRecorder
-
-# Ray initialization with custom models
-init_models()
 
 
 class TrainerSetup:
@@ -526,8 +522,13 @@ class TrainRllib(Trainer):
         self.agent_type: str = self.alg_params["agent"]
         self.agent_conf: dict = self.alg_params["config"]
 
-        # Add choices to the configuration (see with_grid_search docstring)
-        self.with_grid_search(self.agent_conf, self.alg_params["tune"])
+        # Add choices to the configuration otherwise tune won't run (see with_grid_search docstring)
+        self.with_grid_search(
+            conf=self.agent_conf,
+            tune_conf=self.alg_params["tune"],
+            just_first=agent_only,
+        )
+        print("tune conf: ", self.agent_conf)
 
         # Env configs
         self.agent_conf["env"] = self.env_class
@@ -535,8 +536,6 @@ class TrainRllib(Trainer):
 
         # Agent interface (used when restoring from checkpoint)
         self.agent = RllibAgentModel(self.agent_type, self.agent_conf)
-        if agent_only:
-            return
 
         # Set seed
         seed = self.alg_params["seed"]
@@ -546,8 +545,11 @@ class TrainRllib(Trainer):
         self.agent_conf["seed"] = seed
         self.agent_conf["env_config"]["seed"] = seed
 
+        if agent_only:
+            return
+
         # Init library
-        ray.init()
+        ray.init(include_dashboard=True)
 
     def train(self):
         """Start training."""
@@ -562,7 +564,7 @@ class TrainRllib(Trainer):
         )
 
     @staticmethod
-    def with_grid_search(conf, tune_conf):
+    def with_grid_search(conf, tune_conf, just_first: bool):
         """Compose the parameters to tune in the main configuration.
 
         conf is any configuration of an agent (a dictionary). tune_conf is another
@@ -571,19 +573,29 @@ class TrainRllib(Trainer):
 
         NOTE: At least one list in tune_conf is always needed (even if of size 1)
         otherwise tune library won't execute any experiment. I don't know why.
-        """
-        # Base case
-        if not isinstance(conf, dict) or not isinstance(tune_conf, dict):
-            return
 
-        # Scan conf
+        :param just_first: insert the first element of the list into the configuration.
+            This does not create a tune config, but it's useful to just initialize an agent.
+        """
+        # Scan dictionaries
+        assert isinstance(conf, dict) and isinstance(tune_conf, dict)
+        assert all((k in conf for k in tune_conf.keys())), (
+            f"{tune_conf.keys()} not a subset of {conf.keys()}")
+
+        # Scan
         for key in conf:
             if key in tune_conf:
 
-                # Iterate
-                TrainRllib.with_grid_search(conf[key], tune_conf[key])
+                # If not nested dict
+                if not isinstance(tune_conf[key], dict):
 
-                # Transform to search space
-                vals = tune_conf[key]
-                assert isinstance(vals, list), "'tune_conf' should contain lists"
-                conf[key] = tune.grid_search(vals)
+                    # Make search space
+                    vals = tune_conf[key]
+                    assert isinstance(vals, list), "'tune_conf' should contain lists"
+                    old_conf_val = conf[key]
+                    conf[key] = tune.grid_search(vals) if not just_first else vals[0]
+                    print(f"{key}: {old_conf_val} is now {key}: {conf[key]}")
+
+                # Else traverse
+                else:
+                    TrainRllib.with_grid_search(conf[key], tune_conf[key], just_first)
