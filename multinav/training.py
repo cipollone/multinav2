@@ -34,6 +34,7 @@ import yaml
 from gym import Env
 from matplotlib import pyplot as plt
 from ray import tune
+from ray.rllib.agents.callbacks import DefaultCallbacks, MultiCallbacks
 
 from multinav.algorithms.agents import AgentModel, QFunctionModel, RllibAgentModel
 from multinav.algorithms.delayed_q import DelayedQAgent
@@ -43,6 +44,7 @@ from multinav.helpers.callbacks import CallbackList as CustomCallbackList
 from multinav.helpers.callbacks import FnCallback, SaverCallback
 from multinav.helpers.general import QuitWithResources
 from multinav.helpers.gym import find_wrapper
+from multinav.helpers.rllib import DiscountedRewardLogger
 from multinav.wrappers.reward_shaping import (
     RewardShapingWrapper,
     UnshapedEnv,
@@ -553,6 +555,12 @@ class TrainRllib(Trainer):
 
     def train(self):
         """Start training."""
+        # Insert callbacks
+        self.agent_conf["callbacks"] = MultiCallbacks([
+            DefaultCallbacks,
+            DiscountedRewardLogger,
+        ])
+
         # Start via Tune
         tune.run(
             self.agent_type,
