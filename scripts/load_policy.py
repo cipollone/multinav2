@@ -12,3 +12,4 @@ with open(tabular_agent_ckpt, "rb") as f:
     q_table = pickle.load(f)
 
 policy = {obs: np.argmax(q) for obs, q in q_table.items()}
+valuefn = {s: q.max() for s, q in q_table.items()}

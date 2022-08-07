@@ -1,0 +1,6 @@
+# TODO: write the normal way of reproducing experiments
+
+
+# Then, when executing continuous domains (there's a zero in their name),
+#  go to your ray installation, then
+patch -i dqn-fix.patch rllib/agents/dqn/dqn.py
