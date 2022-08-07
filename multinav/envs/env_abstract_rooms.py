@@ -23,6 +23,7 @@
 """This package contains the implementation of an 'abstract' Sapientino with teleport."""
 
 import logging
+import random
 from typing import Any, Dict, Optional, Sequence, Set, Tuple, Union
 
 import numpy as np
@@ -237,6 +238,130 @@ class AbstractPartyFluents(FluentExtractor):
         return fluents
 
 
+class AbstractOfficeFluents(FluentExtractor):
+    """Propositions for Office task.
+
+    This class represent features such as "ouside_room1", "inside_room1",
+    "door_closed", "person_detected". We are using the same environment
+    AbstractRooms for this purpose, because they are conceptually equivalent.
+    However, careful with the meaning of rooms. In AbstractRooms,
+    a room is an alias for a color or location. Thus,
+    we use two rooms/colors for each office room, one for outside_room1,
+    one for inside_room1. I'll rename AbstractRooms in the future.
+    """
+
+    def __init__(
+        self,
+        env: Union[AbstractRooms, Wrapper],
+        rooms_and_colors: Sequence[Tuple[str, str, str]],
+        interact_action: int,
+        seed: int,
+    ):
+        """Initialize.
+
+        With these features, we assume the environment is using one
+        color for all the space, exept few locations which
+        have their own color.
+
+        :param env: instance of AbstractRooms.
+        :param rooms_and_colors: features of this class represent rooms.
+            This argument is the association between a "room" and two colors.
+            One for being ouside of the room, one inside.
+            There should be a connection between the two colors.
+            Example ("1", "r", "y"), where "1" is the name of a room,
+            and the other two are colors.
+        :param interact_action: One of the action is assumed to be an interaction.
+        """
+        self._env: AbstractRooms = env.unwrapped
+        self._interact = interact_action
+        self._seed = seed
+
+        # Check associations and collect map
+        self._common_color = " "
+        self._colors2locations: Dict[str, str] = {}
+        self._location2room: Dict[str, str] = {}
+        for room, out_color, in_color in rooms_and_colors:
+            assert out_color in self._env.rooms, "Every color should also in connections"
+            assert in_color in self._env.rooms, "Every color should also in connections"
+            self._colors2locations[out_color] = "out" + room
+            self._colors2locations[in_color] = "in" + room
+            self._location2room["out" + room] = room
+            self._location2room["in" + room] = room
+
+        # There should be one common room
+        assert self._common_color is not None, (
+            "There should be at least one pair with location 'none'"
+        )
+        # Are connections reflecting int room/out room/common room?
+        for room, out_color, in_color in rooms_and_colors:
+            assert (out_color, in_color) in self._env.rooms_connections, f"{out_color, in_color}"
+            assert (self._common_color, out_color) in self._env.rooms_connections, f"{self._common_color, out_color}"
+            assert (self._common_color, in_color) not in self._env.rooms_connections, f"{self._common_color, in_color}"
+            for room2, out_color2, in_color2 in rooms_and_colors:
+                if room != room2:
+                    assert (out_color, out_color2) not in self._env.rooms_connections, f"{out_color}, {out_color2}"
+                    assert (out_color, in_color2) not in self._env.rooms_connections, f"{out_color}, {in_color2}"
+                    assert (in_color, in_color2) not in self._env.rooms_connections, f"{in_color}, {in_color2}"
+
+        # Store fluents
+        self.fluents: Set[str] = set()
+        self.fluents.update(self._colors2locations.values())
+        self.fluents.add("person")  # A person was detected
+        self.fluents.add("closed")  # The door is closed
+        self.fluents.add("bip")     # Just executed the interact action
+
+        logger.debug(f"Office Fluents, colors2locations: {self._colors2locations}")
+        logger.debug(f"Office Fluents, fluents: {self.fluents}")
+
+    @property
+    def all(self):
+        """All fluents."""
+        return self.fluents
+
+    def on_episode_start(self):
+        """Call when episode starts.
+
+        Some features are not present in AbstractRooms;
+        sampling them here.
+        """
+        # For each room
+        self._episode_doors: Dict[str, bool] = {}
+        self._episode_persons: Dict[str, bool] = {}
+        for room in self._location2room.values():
+            self._episode_doors[room] = random.random() > 0.5
+            self._episode_persons[room] = random.random() > 0.5
+
+    def __call__(self, obs: int, action: int) -> Interpretation:
+        """Respect temprl.types.FluentExtractor interface.
+
+        :param obs: assuming that the observation comes from an
+            `AbstractRooms` environment. Rooms are interpreted as
+            locations here.
+        :param action: the last action.
+        :return: current propositional interpretation of fluents
+        """
+        fluents = set()
+
+        # Where the agent is
+        color = self._env._id2room[obs]
+        if color != self._common_color:
+            location = self._colors2locations[color]
+            fluents.add(location)
+
+            # What it perceives
+            room = self._location2room[location]
+            if location.startswith("out") and self._episode_doors[room]:
+                fluents.add("closed")
+            elif location.startswith("in") and self._episode_persons[room]:
+                fluents.add("person")
+
+        # Whether it had interacted
+        if action == self._interact:
+            fluents.add("bip")
+
+        return fluents
+
+
 def make(params: Dict[str, Any], log_dir: Optional[str] = None):
     """Make the sapientino abstract state environment (agent teleports).
 
@@ -266,6 +391,14 @@ def make(params: Dict[str, Any], log_dir: Optional[str] = None):
             env=env,
             rooms_and_locations=params["rooms_and_locations"],
             interact_action=env.action_space.n - 1,
+        )
+    elif params["fluents"] == "office":
+        env = WithExtraAction(env)
+        fluent_extractor = AbstractOfficeFluents(
+            env=env,
+            rooms_and_colors=params["rooms_and_colors"],
+            interact_action=env.action_space.n - 1,
+            seed=params["seed"],
         )
     else:
         raise ValueError(params["fluents"])
