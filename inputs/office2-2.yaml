@@ -16,9 +16,9 @@ algorithm:
     action_bias_eps: 0.0
     exploration_policy: null
     learning_rate: 0.1
-    learning_rate_end: 0.01
+    learning_rate_end: 0.02
     gamma: 0.9
-    total_timesteps: 20000
+    total_timesteps: 10000
     q_eps: 1.0
     epsilon_end: 0.0
     log_interval: 2000
