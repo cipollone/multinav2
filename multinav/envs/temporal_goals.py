@@ -10,6 +10,7 @@ from logaut import ldl2dfa, ltl2dfa
 from pylogics.parsers import parse_ldl, parse_ltl
 from pythomata.impl.symbolic import BooleanFunction, SymbolicDFA
 from temprl.reward_machines.automata import RewardAutomaton
+from temprl.step_controllers.base import AbstractStepController
 from temprl.types import Action, Interpretation, Observation
 from temprl.wrapper import TemporalGoal, TemporalGoalWrapper
 
@@ -25,6 +26,10 @@ class FluentExtractor(ABC):
         """Return all fluents/propositions."""
         return set()
 
+    def on_episode_start(self):
+        """Small callback for generic purposes."""
+        pass
+
     @abstractmethod
     def __call__(self, obs: Observation, action: Action) -> Interpretation:
         """Compute a propositional interpretation."""
@@ -33,6 +38,28 @@ class FluentExtractor(ABC):
 
 class TemporalGoalWrapperEnd(TemporalGoalWrapper):
     """A temporal goal wrapper that terminates the episode."""
+
+    def __init__(
+        self,
+        env: Env,
+        temp_goals: List[TemporalGoal],
+        fluent_extractor: FluentExtractor,
+        step_controller: Optional[AbstractStepController] = None,
+    ):
+        """Initialize."""
+        super().__init__(
+            env=env,
+            temp_goals=temp_goals,
+            fluent_extractor=fluent_extractor,
+            step_controller=step_controller,
+        )
+        self.fluent_extractor: FluentExtractor
+
+    def reset(self, **kwargs) -> Observation:
+        """Inject callbacks."""
+        obs = super().reset(**kwargs)
+        self.fluent_extractor.on_episode_start()
+        return obs
 
     def step(self, action):
         """Do a step in the Gym environment."""

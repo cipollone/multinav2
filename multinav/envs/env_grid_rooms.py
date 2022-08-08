@@ -30,7 +30,11 @@ from gym_sapientino.core.types import Colors, color2id, color2int, id2color
 from temprl.types import Interpretation
 
 from multinav.algorithms.agents import QFunctionModel
-from multinav.envs.env_abstract_rooms import AbstractPartyFluents, AbstractRooms
+from multinav.envs.env_abstract_rooms import (
+    AbstractOfficeFluents,
+    AbstractPartyFluents,
+    AbstractRooms,
+)
 from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import StateH, ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
@@ -63,7 +67,7 @@ class GridRoomsFluents(FluentExtractor):
         """All fluents."""
         return self.fluents
 
-    def __call__(self, obs: Mapping[str, Any], _action: int) -> Interpretation:
+    def __call__(self, obs: Mapping[str, Any], action: int) -> Interpretation:
         """Respect temprl.types.FluentExtractor interface.
 
         :param obs: assuming that the observation comes from a SapientinoDictSpace
@@ -84,6 +88,7 @@ class GridPartyFluents(FluentExtractor):
         self,
         map_config: str,
         rooms_and_locations: Sequence[Sequence[str]],
+        rooms_connectivity: Sequence[Sequence[str]],
         interact_action: int,
     ):
         """Initialize.
@@ -92,11 +97,12 @@ class GridPartyFluents(FluentExtractor):
             Each color denotes an interesting location. The rest of the space
             should be filled with another color.
         :param rooms_and_locations: see env_abstract_rooms.AbstractRoomsFluents.
+        :param rooms_connectivity: see AbstractRooms class.
         :param interact_action: the action associated to an interaction
             with the environment.
         """
         # Abstract fluents
-        self.mapping = Grid2Abs(rooms_and_locations)
+        self.mapping = Grid2Abs(rooms_connectivity=rooms_connectivity)
         self.abstract_fluents = AbstractPartyFluents(
             env=self.mapping.abstract_env,
             rooms_and_locations=rooms_and_locations,
@@ -119,6 +125,54 @@ class GridPartyFluents(FluentExtractor):
     def all(self):
         """All fluents."""
         return self.fluents
+
+    def __call__(self, obs: Mapping[str, Any], action: int) -> Interpretation:
+        """Respect temprl.types.FluentExtractor interface.
+
+        :param obs: assuming that the observation comes from a SapientinoDictSpace
+            wrapped in SingleAgentWrapper.
+        :param action: the last action.
+        :return: current propositional interpretation of fluents
+        """
+        abs_obs = self.mapping(obs)
+        return self.abstract_fluents(abs_obs, action)
+
+
+class GridOfficeFluents(FluentExtractor):
+    """Define propositions for Office task."""
+
+    def __init__(
+        self,
+        rooms_connectivity: Sequence[Sequence[str]],
+        rooms_and_colors: Sequence[Tuple[str, str, str]],
+        interact_action: int,
+        seed: int,
+    ):
+        """Initialize.
+
+        :param rooms_connectivity: see AbstractRooms class.
+        :param rooms_and_colors: see AbstractOfficeFluents.
+        :param interact_action: see AbstractOfficeFluents.
+        """
+        super().__init__()
+
+        # Abstract fluents
+        self.mapping = Grid2Abs(rooms_connectivity=rooms_connectivity)
+        self.abstract_fluents = AbstractOfficeFluents(
+            env=self.mapping.abstract_env,
+            rooms_and_colors=rooms_and_colors,
+            interact_action=interact_action,
+            seed=seed,
+        )
+
+    @property
+    def all(self):
+        """All fluents."""
+        return self.abstract_fluents.fluents
+
+    def on_episode_start(self):
+        """Call when episode starts."""
+        return self.abstract_fluents.on_episode_start()
 
     def __call__(self, obs: Mapping[str, Any], action: int) -> Interpretation:
         """Respect temprl.types.FluentExtractor interface.
@@ -234,7 +288,15 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         fluent_extractor = GridPartyFluents(
             map_config=params["map"],
             rooms_and_locations=params["rooms_and_locations"],
+            rooms_connectivity=params["rooms_connectivity"],
             interact_action=int(actions.GridCommand.BEEP.value),
+        )
+    elif params["fluents"] == "office":
+        fluent_extractor = GridOfficeFluents(
+            rooms_connectivity=params["rooms_connectivity"],
+            rooms_and_colors=params["rooms_and_colors"],
+            interact_action=env.action_space.n - 1,
+            seed=params["seed"],
         )
     else:
         raise ValueError(params["fluents"])

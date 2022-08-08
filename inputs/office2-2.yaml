@@ -1,0 +1,60 @@
+name: office2-2
+comment: "Office 2 rooms, abstract representation, q-learning"
+
+algorithm:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: 0.2.7
+  commit: null
+  diff: null
+  params:
+    resume_file: null
+    initialize_file: null
+    algorithm: Q
+    active_passive_agents: false
+    action_bias: null
+    action_bias_eps: 0.0
+    exploration_policy: null
+    learning_rate: 0.1
+    learning_rate_end: 0.02
+    gamma: 0.9
+    total_timesteps: 10000
+    q_eps: 1.0
+    epsilon_end: 0.0
+    log_interval: 2000
+    rollout_interval: 1000
+    rollout_episodes: 10
+
+environment:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2
+  version: 0.2.7
+  commit: ''
+  diff: ''
+  params:
+    env: rooms2
+    reward_shift: 0.0
+    episode_time_limit: 30
+    render: false
+    rooms_connectivity:
+      - [G, r]
+      - [G, b]
+      - [r, g]
+      - [b, y]
+    rooms_and_colors:
+      - ["1", r, g]
+      - ["2", b, y]
+      - ["none", G, G]
+    fail_p: 0.1
+    initial_room: G
+    shaping: null
+    fluents: office
+    rewards:
+      - ldlf: "<!out1*; (out1 & closed + (out1 & !closed; !in1*; ((in1 & !person; !bip) + (in1 & person; bip))))><!out2*; (out2 & closed + (out2 & !closed; !in2*; ((in2 & !person; !bip) + (in2 & person; bip))))>end"
+        reward: 1.0
+evaluation:
+  episodes: 0
+  frequency: 0
+n-runs: 1
+output-base: outputs
+run-command: "poetry run python -m multinav train"
