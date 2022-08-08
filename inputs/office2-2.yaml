@@ -1,5 +1,5 @@
-name: office-2
-comment: "Office rooms, abstract representation, q-learning"
+name: office2-2
+comment: "Office 2 rooms, abstract representation, q-learning"
 
 algorithm:
   name: multinav2
@@ -37,15 +37,16 @@ environment:
     episode_time_limit: 30
     render: false
     rooms_connectivity:
-      - [" ", r]
-      - [" ", b]
+      - [G, r]
+      - [G, b]
       - [r, g]
       - [b, y]
     rooms_and_colors:
       - ["1", r, g]
       - ["2", b, y]
+      - ["none", G, G]
     fail_p: 0.1
-    initial_room: " "
+    initial_room: G
     shaping: null
     fluents: office
     rewards:

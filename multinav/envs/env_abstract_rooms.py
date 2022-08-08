@@ -270,23 +270,29 @@ class AbstractOfficeFluents(FluentExtractor):
             There should be a connection between the two colors.
             Example ("1", "r", "y"), where "1" is the name of a room,
             and the other two are colors.
+            Also there must be a row as ("none", "g", "g") which indicates that
+            color "g" is used to represent being outside fo any room.
         :param interact_action: One of the action is assumed to be an interaction.
         """
         self._env: AbstractRooms = env.unwrapped
         self._interact = interact_action
         self._seed = seed
+        self._rng = random.Random(self._seed)
 
         # Check associations and collect map
-        self._common_color = " "
+        self._common_color = None
         self._colors2locations: Dict[str, str] = {}
         self._location2room: Dict[str, str] = {}
         for room, out_color, in_color in rooms_and_colors:
             assert out_color in self._env.rooms, "Every color should also in connections"
             assert in_color in self._env.rooms, "Every color should also in connections"
-            self._colors2locations[out_color] = "out" + room
-            self._colors2locations[in_color] = "in" + room
-            self._location2room["out" + room] = room
-            self._location2room["in" + room] = room
+            if room == "none":
+                self._common_color = out_color
+            else:
+                self._colors2locations[out_color] = "out" + room
+                self._colors2locations[in_color] = "in" + room
+                self._location2room["out" + room] = room
+                self._location2room["in" + room] = room
 
         # There should be one common room
         assert self._common_color is not None, (
@@ -294,14 +300,15 @@ class AbstractOfficeFluents(FluentExtractor):
         )
         # Are connections reflecting int room/out room/common room?
         for room, out_color, in_color in rooms_and_colors:
-            assert (out_color, in_color) in self._env.rooms_connections, f"{out_color, in_color}"
-            assert (self._common_color, out_color) in self._env.rooms_connections, f"{self._common_color, out_color}"
-            assert (self._common_color, in_color) not in self._env.rooms_connections, f"{self._common_color, in_color}"
-            for room2, out_color2, in_color2 in rooms_and_colors:
-                if room != room2:
-                    assert (out_color, out_color2) not in self._env.rooms_connections, f"{out_color}, {out_color2}"
-                    assert (out_color, in_color2) not in self._env.rooms_connections, f"{out_color}, {in_color2}"
-                    assert (in_color, in_color2) not in self._env.rooms_connections, f"{in_color}, {in_color2}"
+            if room != "none":
+                assert (out_color, in_color) in self._env.rooms_connections, f"{out_color, in_color}"
+                assert (self._common_color, out_color) in self._env.rooms_connections, f"{self._common_color, out_color}"
+                assert (self._common_color, in_color) not in self._env.rooms_connections, f"{self._common_color, in_color}"
+                for room2, out_color2, in_color2 in rooms_and_colors:
+                    if room != room2 and room2 != "none":
+                        assert (out_color, out_color2) not in self._env.rooms_connections, f"{out_color}, {out_color2}"
+                        assert (out_color, in_color2) not in self._env.rooms_connections, f"{out_color}, {in_color2}"
+                        assert (in_color, in_color2) not in self._env.rooms_connections, f"{in_color}, {in_color2}"
 
         # Store fluents
         self.fluents: Set[str] = set()
@@ -328,8 +335,8 @@ class AbstractOfficeFluents(FluentExtractor):
         self._episode_doors: Dict[str, bool] = {}
         self._episode_persons: Dict[str, bool] = {}
         for room in self._location2room.values():
-            self._episode_doors[room] = random.random() > 0.5
-            self._episode_persons[room] = random.random() > 0.5
+            self._episode_doors[room] = self._rng.random() > 0.5
+            self._episode_persons[room] = self._rng.random() > 0.5
 
     def __call__(self, obs: int, action: int) -> Interpretation:
         """Respect temprl.types.FluentExtractor interface.
