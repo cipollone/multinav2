@@ -28,14 +28,14 @@ algorithm:
 environment:
   name: gym-sapientino
   repository: https://github.com/whitemech/gym-sapientino.git
-  version: e219008
+  version: same as algorithm
   commit: ''
   diff: ''
   params:
     env: rooms1
     reward_shift: 0.0
     initial_position: [4, 6]
-    shaping: "./outputs/office2-2/0/models/model_20000.pickle"
+    shaping: "./outputs/office2-2/0/models/model_10000.pickle"
     shaping_gamma: 0.95
     return_invariant: false
     episode_time_limit: 100

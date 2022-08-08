@@ -28,7 +28,7 @@ algorithm:
 environment:
   name: gym-sapientino
   repository: https://github.com/whitemech/gym-sapientino.git
-  version: e219008
+  version: same as algorithm
   commit: ''
   diff: ''
   params:
