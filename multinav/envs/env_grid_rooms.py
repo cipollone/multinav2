@@ -67,7 +67,7 @@ class GridRoomsFluents(FluentExtractor):
         """All fluents."""
         return self.fluents
 
-    def __call__(self, obs: Mapping[str, Any], _action: int) -> Interpretation:
+    def __call__(self, obs: Mapping[str, Any], action: int) -> Interpretation:
         """Respect temprl.types.FluentExtractor interface.
 
         :param obs: assuming that the observation comes from a SapientinoDictSpace
@@ -141,14 +141,49 @@ class GridPartyFluents(FluentExtractor):
 class GridOfficeFluents(FluentExtractor):
     """Define propositions for Office task."""
 
-    def __init__(self) -> None:
-        """Initialize."""
+    def __init__(
+        self,
+        rooms_connectivity: Sequence[Sequence[str]],
+        rooms_and_colors: Sequence[Tuple[str, str, str]],
+        interact_action: int,
+        seed: int,
+    ):
+        """Initialize.
+
+        :param rooms_connectivity: see AbstractRooms class.
+        :param rooms_and_colors: see AbstractOfficeFluents.
+        :param interact_action: see AbstractOfficeFluents.
+        """
         super().__init__()
 
         # Abstract fluents
-        #self.mapping = Grid2Abs(
-        #self.abstract_fluents = AbstractOfficeFluents(
+        self.mapping = Grid2Abs(rooms_connectivity=rooms_connectivity)
+        self.abstract_fluents = AbstractOfficeFluents(
+            env=self.mapping.abstract_env,
+            rooms_and_colors=rooms_and_colors,
+            interact_action=interact_action,
+            seed=seed,
+        )
 
+    @property
+    def all(self):
+        """All fluents."""
+        return self.abstract_fluents.fluents
+
+    def on_episode_start(self):
+        """Call when episode starts."""
+        return self.abstract_fluents.on_episode_start()
+
+    def __call__(self, obs: Mapping[str, Any], action: int) -> Interpretation:
+        """Respect temprl.types.FluentExtractor interface.
+
+        :param obs: assuming that the observation comes from a SapientinoDictSpace
+            wrapped in SingleAgentWrapper.
+        :param action: the last action.
+        :return: current propositional interpretation of fluents
+        """
+        abs_obs = self.mapping(obs)
+        return self.abstract_fluents(abs_obs, action)
 
 
 class Grid2Abs:
@@ -255,6 +290,13 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
             rooms_and_locations=params["rooms_and_locations"],
             rooms_connectivity=params["rooms_connectivity"],
             interact_action=int(actions.GridCommand.BEEP.value),
+        )
+    elif params["fluents"] == "office":
+        fluent_extractor = GridOfficeFluents(
+            rooms_connectivity=params["rooms_connectivity"],
+            rooms_and_colors=params["rooms_and_colors"],
+            interact_action=env.action_space.n - 1,
+            seed=params["seed"],
         )
     else:
         raise ValueError(params["fluents"])
