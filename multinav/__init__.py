@@ -22,10 +22,23 @@
 
 """Multinav project."""
 
+# Store cwd (ray.tune can change it) 
+import pathlib
+starting_cwd = pathlib.Path.cwd()
+
 # Tensorflow2
 from ray.rllib.utils.framework import try_import_tf
 tf1, tf, tfv = try_import_tf()
 tf1.enable_eager_execution()
+
+# Gpu usage
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+  try:
+    for gpu in gpus:
+      tf.config.experimental.set_memory_growth(gpu, True)
+  except RuntimeError as e:
+    print(e)
 
 # Register custom classes
 from ray.rllib.models import ModelCatalog

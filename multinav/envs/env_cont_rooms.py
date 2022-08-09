@@ -1,25 +1,30 @@
 """Continuous control on rooms environment."""
 
 import logging
+from pathlib import Path
 from typing import Any, Mapping, Optional
 
 from gym.envs.registration import EnvSpec
 from gym.wrappers import TimeLimit
+from gym import Env
 from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core import actions, configurations
 
+from multinav import starting_cwd
 from multinav.algorithms.agents import QFunctionModel
+from multinav.envs.env_grid_rooms import GridOfficeFluents as ContOfficeFluents
 from multinav.envs.env_grid_rooms import GridRoomsFluents as ContRoomsFluents
-from multinav.envs.temporal_goals import with_nonmarkov_rewards
+from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
-from multinav.wrappers.sapientino import ContinuousRobotFeatures
+from multinav.wrappers.sapientino import ContinuousRobotFeatures, GridRobotFeatures
 from multinav.wrappers.utils import FailProbability, SingleAgentWrapper
 
 logger = logging.getLogger(__name__)
 
 
 def grid_rooms_shaper(
+    env: Env,
     path: str,
     gamma: float,
     return_invariant: bool,
@@ -29,6 +34,7 @@ def grid_rooms_shaper(
     This loads a saved agent for `GridRooms` then it uses it to
     compute the reward shaping to apply to this environment.
 
+    :param env: sapientino dict space environment.
     :param path: path to saved checkpoint.
     :param gamma: discount factor to apply for shaping.
     :param return_invariant: if true, we apply classic return-invariant reward shaping.
@@ -36,12 +42,19 @@ def grid_rooms_shaper(
     :return: reward shaper to apply.
     """
     # Trained agent on abstract environment
-    agent = QFunctionModel.load(path=path)
+    full_path = starting_cwd / Path(path)   # Rllib modifies path: restore
+    agent = QFunctionModel.load(path=str(full_path))
+
+    # Compute value according to grid agent
+    grid_env = GridRobotFeatures(env)
+
+    def grid_value(s) -> float:
+        grid_state = grid_env._process_state(s)
+        return agent.q_function[grid_state].max()
 
     # Shaper
-    # TODO: update mapping function: discard orientations
     shaper = ValueFunctionRS(
-        value_function=lambda s: agent.q_function[s].max(),
+        value_function=grid_value,
         mapping_function=lambda s: s,
         gamma=gamma,
         zero_terminal_state=return_invariant,
@@ -84,10 +97,18 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         env = FailProbability(env, fail_p=params["fail_p"], seed=params["seed"])
 
     # Fluents for this environment
+    fluent_extractor: FluentExtractor
     if params["fluents"] == "rooms":
         fluent_extractor = ContRoomsFluents(map_config=params["map"])
     elif params["fluents"] == "party":
         raise NotImplementedError
+    elif params["fluents"] == "office":
+        fluent_extractor = ContOfficeFluents(
+            rooms_connectivity=params["rooms_connectivity"],
+            rooms_and_colors=params["rooms_and_colors"],
+            interact_action=env.action_space.n - 1,
+            seed=params["seed"],
+        )
     else:
         raise ValueError(params["fluents"])
 
@@ -97,7 +118,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         rewards=params["rewards"],
         fluents=fluent_extractor,
         log_dir=log_dir,
-        #must_load=True,  # Debugging
+        must_load=True,
     )
 
     # Reward shift
@@ -111,6 +132,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
     # Reward shaping on previous envs
     if params["shaping"]:
         grid_shaper = grid_rooms_shaper(
+            env=env,
             path=params["shaping"],
             gamma=params["shaping_gamma"],
             return_invariant=params["return_invariant"],

@@ -58,16 +58,17 @@ environment:
       - ["2", b, y]
       - ["none", G, G]
     map: |-
-      |###############|
-      |#ggg#GGG#yyyyy#|
-      |#ggg#GGG#yyyyy#|
-      |#ggg#GGG#yyyyy#|
-      |##rr##GG##bb###|
-      |#GrrGGGGGGbbGG#|
-      |#GGGGGGGGGGGGG#|
-      |#GGGGGGGGGGGGG#|
-      |#GGGGGGGGGGGGG#|
-      |###############|
+      |###################|
+      |#ggggg#GGGG#yyyyyy#|
+      |#ggggg#GGGG#yyyyyy#|
+      |#ggggg#GGGG#yyyyyy#|
+      |####rr###GG###bb###|
+      |#GGGrrGGGGGGGGbbGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |###################|
 evaluation:
   episodes: 0
   frequency: 0
