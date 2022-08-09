@@ -11,10 +11,10 @@ algorithm:
     agent: DQN
     config:
       # Common
-      num_workers: 1
+      num_workers: 0
       num_envs_per_worker: 1
       log_level: WARN
-      num_gpus: 0.195
+      num_gpus: 0.095
       batch_mode: complete_episodes
       gamma: 0.99
       framework: tf2
@@ -51,7 +51,7 @@ algorithm:
     run:
       stop:
         timesteps_total: 700000
-      num_samples: 1
+      num_samples: 8
       checkpoint_freq: 50
       keep_checkpoints_num: 2
     tune:
