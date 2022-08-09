@@ -525,6 +525,10 @@ class TrainRllib(Trainer):
         self.agent_type: str = self.alg_params["agent"]
         self.agent_conf: dict = self.alg_params["config"]
 
+        # Env configs
+        self.agent_conf["env"] = self.env_class
+        self.agent_conf["env_config"] = self.env_params
+
         # Add choices to the configuration otherwise tune won't run (see with_grid_search docstring)
         self.with_grid_search(
             conf=self.agent_conf,
@@ -532,10 +536,6 @@ class TrainRllib(Trainer):
             just_first=agent_only,
         )
         print("tune conf: ", self.agent_conf)
-
-        # Env configs
-        self.agent_conf["env"] = self.env_class
-        self.agent_conf["env_config"] = self.env_params
 
         # Agent interface (used when restoring from checkpoint)
         self.agent = RllibAgentModel(self.agent_type, self.agent_conf)

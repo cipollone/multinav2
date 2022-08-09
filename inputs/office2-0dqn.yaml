@@ -51,7 +51,7 @@ algorithm:
     run:
       stop:
         timesteps_total: 700000
-      num_samples: 8
+      num_samples: 2
       checkpoint_freq: 50
       keep_checkpoints_num: 2
     tune:
@@ -67,7 +67,7 @@ environment:
   params:
     env: rooms0
     reward_shift: 0.0
-    initial_position: [4, 6]
+    initial_position: [5, 8]
     shaping: null
     shaping_gamma: 0.99
     return_invariant: false
@@ -96,16 +96,17 @@ environment:
       - ["2", b, y]
       - ["none", G, G]
     map: |-
-      |###############|
-      |#ggg#GGG#yyyyy#|
-      |#ggg#GGG#yyyyy#|
-      |#ggg#GGG#yyyyy#|
-      |##rr##GG##bb###|
-      |#GrrGGGGGGbbGG#|
-      |#GGGGGGGGGGGGG#|
-      |#GGGGGGGGGGGGG#|
-      |#GGGGGGGGGGGGG#|
-      |###############|
+      |###################|
+      |#ggggg#GGGG#yyyyyy#|
+      |#ggggg#GGGG#yyyyyy#|
+      |#ggggg#GGGG#yyyyyy#|
+      |####rr###GG###bb###|
+      |#GGGrrGGGGGGGGbbGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |###################|
 evaluation:
   episodes: 0
   frequency: 0
