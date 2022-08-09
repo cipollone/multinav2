@@ -57,11 +57,9 @@ algorithm:
     tune:
       env_config:
         shaping:
-          - null
           - "./outputs/office2-1sh/0/models/Extra_70000.pickle"
         return_invariant:
           - false
-          - true
 
 environment:
   name: multinav2
