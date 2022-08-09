@@ -1,0 +1,121 @@
+name: office2-0sh
+comment: "Office 2 rooms, continuous representation, Dueling DQN, our shaping"
+
+algorithm:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: 0.2.7
+  commit: null
+  diff: null
+  params:
+    agent: DQN
+    config:
+      # Common
+      num_workers: 0
+      num_envs_per_worker: 1
+      log_level: WARN
+      num_gpus: 0.11
+      batch_mode: complete_episodes
+      gamma: 0.99
+      framework: tf2
+      eager_tracing: true
+      eager_max_retraces: 12
+      evaluation_interval: 1
+      evaluation_duration: 1
+      evaluation_duration_unit: episodes
+      evaluation_num_workers: 0
+      evaluation_config:
+        explore: False
+      # DQN parameters
+      double_q: true
+      dueling: true
+      lr: 0.0001
+      _disable_preprocessor_api: true
+      model:
+        custom_model: composite_fc
+        layers: [64, 64, 64]
+        shared_layers: 1
+        activation: relu
+        batch_norm: true
+      exploration_config:
+        type: EpsilonGreedy
+        initial_epsilon: 1.0
+        final_epsilon: 0.0
+        epsilon_timesteps: 500000
+      replay_buffer_config:
+        capacity: 80000
+        learning_starts: 10000
+      shuffle_buffer_size: 10000
+      train_batch_size: 64
+      training_intensity: 256
+    run:
+      stop:
+        timesteps_total: 500000
+      num_samples: 2
+      checkpoint_freq: 50
+      keep_checkpoints_num: 2
+    tune:
+      env_config:
+        shaping:
+          - null
+          - "./outputs/office2-1sh/0/models/Extra_70000.pickle"
+        return_invariant:
+          - false
+          - true
+
+environment:
+  name: multinav2
+  repository: https://github.com/cipollone/multinav2/
+  version: same as algorithm
+  commit: ''
+  diff: ''
+  params:
+    env: rooms0
+    reward_shift: 0.0
+    initial_position: [5, 8]
+    shaping: tuned
+    shaping_gamma: 0.99
+    return_invariant: tuned
+    episode_time_limit: 400
+    fail_p: 0.03
+    render: false
+    reward_per_step: 0.0
+    reward_outside_grid: 0.0
+    reward_duplicate_beep: 0.0
+    angular_speed: 40
+    acceleration: 0.2
+    max_velocity: 0.6
+    min_velocity: 0
+    fluents: office
+    rewards:
+      - dfa: "./outputs/office2-2/0/logs/dfa-0.pickle"
+        reward: 1.0
+    fluents: office
+    rooms_connectivity:
+      - [G, r]
+      - [G, b]
+      - [r, g]
+      - [b, y]
+    rooms_and_colors:
+      - ["1", r, g]
+      - ["2", b, y]
+      - ["none", G, G]
+    map: |-
+      |###################|
+      |#ggggg#GGGG#yyyyyy#|
+      |#ggggg#GGGG#yyyyyy#|
+      |#ggggg#GGGG#yyyyyy#|
+      |####rr###GG###bb###|
+      |#GGGrrGGGGGGGGbbGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGG#|
+      |###################|
+evaluation:
+  episodes: 0
+  frequency: 0
+n-runs: 1
+output-base: outputs
+run-command: "poetry run python -m multinav train"
+  #run-command: "poetry-debugpy -m multinav train"
