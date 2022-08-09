@@ -14,6 +14,8 @@ from temprl.step_controllers.base import AbstractStepController
 from temprl.types import Action, Interpretation, Observation
 from temprl.wrapper import TemporalGoal, TemporalGoalWrapper
 
+from multinav import starting_cwd
+
 
 class FluentExtractor(ABC):
     """Base class for a fluents extractor.
@@ -102,7 +104,8 @@ def with_nonmarkov_rewards(
         else:
             assert "dfa" in reward_spec, (
                 "You must specify ldlf, ldlf, or dfa to pickled automaton")
-            with open(reward_spec["dfa"], "rb") as f:
+            dfa_path = Path(reward_spec["dfa"])
+            with open(starting_cwd / dfa_path, "rb") as f:
                 automaton = pickle.load(f)
 
         # Check

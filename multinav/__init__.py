@@ -22,6 +22,10 @@
 
 """Multinav project."""
 
+# Store cwd (ray.tune can change it) 
+import pathlib
+starting_cwd = pathlib.Path.cwd()
+
 # Tensorflow2
 from ray.rllib.utils.framework import try_import_tf
 tf1, tf, tfv = try_import_tf()

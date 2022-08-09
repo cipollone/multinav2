@@ -9,8 +9,9 @@ from gym_sapientino import SapientinoDictSpace
 from gym_sapientino.core import actions, configurations
 
 from multinav.algorithms.agents import QFunctionModel
+from multinav.envs.env_grid_rooms import GridOfficeFluents as ContOfficeFluents
 from multinav.envs.env_grid_rooms import GridRoomsFluents as ContRoomsFluents
-from multinav.envs.temporal_goals import with_nonmarkov_rewards
+from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import ValueFunctionRS
 from multinav.wrappers.reward_shaping import RewardShapingWrapper, RewardShift
 from multinav.wrappers.sapientino import ContinuousRobotFeatures
@@ -39,7 +40,6 @@ def grid_rooms_shaper(
     agent = QFunctionModel.load(path=path)
 
     # Shaper
-    # TODO: update mapping function: discard orientations
     shaper = ValueFunctionRS(
         value_function=lambda s: agent.q_function[s].max(),
         mapping_function=lambda s: s,
@@ -84,10 +84,18 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         env = FailProbability(env, fail_p=params["fail_p"], seed=params["seed"])
 
     # Fluents for this environment
+    fluent_extractor: FluentExtractor
     if params["fluents"] == "rooms":
         fluent_extractor = ContRoomsFluents(map_config=params["map"])
     elif params["fluents"] == "party":
         raise NotImplementedError
+    elif params["fluents"] == "office":
+        fluent_extractor = ContOfficeFluents(
+            rooms_connectivity=params["rooms_connectivity"],
+            rooms_and_colors=params["rooms_and_colors"],
+            interact_action=env.action_space.n - 1,
+            seed=params["seed"],
+        )
     else:
         raise ValueError(params["fluents"])
 
@@ -97,7 +105,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         rewards=params["rewards"],
         fluents=fluent_extractor,
         log_dir=log_dir,
-        #must_load=True,  # Debugging
+        must_load=True,
     )
 
     # Reward shift
