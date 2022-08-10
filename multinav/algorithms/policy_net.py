@@ -139,12 +139,12 @@ class CompositeFullyConnected(keras.Model):
                     )
                 )
 
+            # Activation
+            layers_list.append(ActivationLayer(activation))
+
             # Normalization
             if self._batch_norm:
                 layers_list.append(layers.BatchNormalization())
-
-            # Activation
-            layers_list.append(ActivationLayer(activation))
 
         # Output layer
         layers_list.append(
