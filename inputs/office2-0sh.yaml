@@ -14,7 +14,7 @@ algorithm:
       num_workers: 0
       num_envs_per_worker: 1
       log_level: WARN
-      num_gpus: 0.11
+      num_gpus: 0.14
       batch_mode: complete_episodes
       gamma: 0.99
       framework: tf2
@@ -34,7 +34,7 @@ algorithm:
       model:
         custom_model: composite_fc
         layers: [64, 64, 64]
-        shared_layers: 1
+        shared_layers: 2
         activation: relu
         batch_norm: true
       exploration_config:
@@ -48,7 +48,6 @@ algorithm:
       shuffle_buffer_size: 10000
       train_batch_size: 64
       training_intensity: 256
-      n_step: 4
     run:
       stop:
         timesteps_total: 500000
@@ -57,7 +56,7 @@ algorithm:
       keep_checkpoints_num: 2
     tune:
       model:
-        shared_layers: [0, 1, 2]
+        batch_norm: [false, true]
 
 environment:
   name: multinav2

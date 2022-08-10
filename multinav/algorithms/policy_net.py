@@ -119,8 +119,6 @@ class CompositeFullyConnected(keras.Model):
         self._shared_layers = shared_layers
         self._n_states = n_states
         self._batch_norm = batch_norm
-        self._activation_fn = activations.get(activation)
-        self._activation_fn_last = activations.get(activation_last)
         super().__init__()
 
         # Define layers
@@ -130,7 +128,7 @@ class CompositeFullyConnected(keras.Model):
             # Shared weights
             if i < self._shared_layers:
                 layers_list.append(
-                    layers.Dense(layer_size, activation=self._activation_fn)
+                    layers.Dense(layer_size)
                 )
             # Partitioned weights
             else:
@@ -138,7 +136,6 @@ class CompositeFullyConnected(keras.Model):
                     FullyConnectedBlock(
                         units=layer_size,
                         blocks=self._n_states,
-                        activation=self._activation_fn,
                     )
                 )
 
@@ -146,14 +143,17 @@ class CompositeFullyConnected(keras.Model):
             if self._batch_norm:
                 layers_list.append(layers.BatchNormalization())
 
+            # Activation
+            layers_list.append(ActivationLayer(activation))
+
         # Output layer
         layers_list.append(
             FullyConnectedBlock(
                 units=self._layers_spec[-1],
                 blocks=self._n_states,
-                activation=self._activation_fn_last,
             )
         )
+        layers_list.append(ActivationLayer(activation_last))
 
         # Store as sequential model
         self.forward_model = keras.Sequential(layers_list)
@@ -246,3 +246,19 @@ class FullyConnectedBlock(layers.Layer):
             inputs = self._activation(inputs)
 
         return inputs
+
+
+class ActivationLayer(layers.Layer):
+    """A wrapper for activation functions."""
+
+    def __init__(self, activation: Optional[str]) -> None:
+        """Initialize.
+
+        :param activation: identifier of an activation function.
+        """
+        super().__init__()
+        self._activation_fn = activations.get(activation)
+
+    def call(self, inputs):
+        """Forward."""
+        return self._activation_fn(inputs)
