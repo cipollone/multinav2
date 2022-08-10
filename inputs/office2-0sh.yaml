@@ -40,7 +40,7 @@ algorithm:
       exploration_config:
         type: EpsilonGreedy
         initial_epsilon: 1.0
-        final_epsilon: 0.0
+        final_epsilon: 0.04
         epsilon_timesteps: 500000
       replay_buffer_config:
         capacity: 80000
@@ -48,18 +48,16 @@ algorithm:
       shuffle_buffer_size: 10000
       train_batch_size: 64
       training_intensity: 256
+      n_step: 4
     run:
       stop:
         timesteps_total: 500000
-      num_samples: 8
+      num_samples: 2
       checkpoint_freq: 50
       keep_checkpoints_num: 2
     tune:
-      env_config:
-        shaping:
-          - "./outputs/office2-1sh/0/models/Extra_70000.pickle"
-        return_invariant:
-          - false
+      model:
+        shared_layers: [0, 1, 2]
 
 environment:
   name: multinav2
@@ -71,9 +69,9 @@ environment:
     env: rooms0
     reward_shift: 0.0
     initial_position: [5, 8]
-    shaping: tuned
+    shaping: "./outputs/office2-1sh/0/models/Extra_70000.pickle"
     shaping_gamma: 0.99
-    return_invariant: tuned
+    return_invariant: false
     episode_time_limit: 400
     fail_p: 0.03
     render: false

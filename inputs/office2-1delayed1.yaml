@@ -12,7 +12,7 @@ algorithm:
     initialize_file: null
     algorithm: DelayedQ
     active_passive_agents: false
-    gamma: 0.97
+    gamma: 0.95
     eps1: 0.005
     delta: 0.1
     maxr: 1.0
@@ -34,10 +34,10 @@ environment:
     reward_shift: 0.0
     initial_position: [4, 6]
     shaping: null
-    shaping_gamma: 0.97
+    shaping_gamma: 0.95
     return_invariant: false
     episode_time_limit: 100
-    fail_p: 0.04
+    fail_p: 0.05
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
