@@ -297,7 +297,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         fluent_extractor = GridOfficeFluents(
             rooms_connectivity=params["rooms_connectivity"],
             rooms_and_colors=params["rooms_and_colors"],
-            interact_action=env.action_space.n - 1,
+            interact_action=int(actions.GridCommand.BEEP.value),
             seed=params["seed"],
         )
     else:
