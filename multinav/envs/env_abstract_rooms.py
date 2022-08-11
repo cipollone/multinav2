@@ -73,10 +73,10 @@ class AbstractRooms(MyDiscreteEnv):
         self._room2id = {char: i for i, char in enumerate(sorted(self.rooms))}
         self._id2room = {i: char for char, i in self._room2id.items()}
 
-        logger.debug(f"rooms: {self.rooms}")
-        logger.debug(f"room2id: {self._room2id}")
-        logger.debug(f"n_states: {self.nb_states}")
-        logger.debug(f"n_actions: {self.nb_actions}")
+        logger.debug("rooms: %s", self.rooms)
+        logger.debug("room2id: %s", self._room2id)
+        logger.debug("n_states: %d", self.nb_states)
+        logger.debug("n_actions: %d", self.nb_actions)
 
         # Store
         self.p_failure = p_failure
@@ -211,8 +211,8 @@ class AbstractPartyFluents(FluentExtractor):
         self._interact = interact_action
         self.fluents = {"at_" + loc for loc in self._rooms2locations.values()}
 
-        logger.debug(f"Party Fluents, rooms2locations: {self._rooms2locations}")
-        logger.debug(f"Party Fluents, fluents: {self.fluents}")
+        logger.debug("Party Fluents, rooms2locations: %s", self._rooms2locations)
+        logger.debug("Party Fluents, fluents: %s", self.fluents)
 
     @property
     def all(self):
@@ -317,8 +317,8 @@ class AbstractOfficeFluents(FluentExtractor):
         self.fluents.add("closed")  # The door is closed
         self.fluents.add("bip")     # Just executed the interact action
 
-        logger.debug(f"Office Fluents, colors2locations: {self._colors2locations}")
-        logger.debug(f"Office Fluents, fluents: {self.fluents}")
+        logger.debug("Office Fluents, colors2locations: %s", self._colors2locations)
+        logger.debug("Office Fluents, fluents: %s", self.fluents)
 
     @property
     def all(self):

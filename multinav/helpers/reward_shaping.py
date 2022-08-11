@@ -90,7 +90,7 @@ class PotentialRewardShaper(RewardShaper):
         """See super."""
         self._last_potential = self.potential_function(state)
 
-        logger.debug(f"Initial state: {state}, potential: {self._last_potential}")
+        logger.debug("Initial state: %s, potential: %f", state, self._last_potential)
 
     def step(self, state: State, reward: float, done: bool) -> float:
         """See super."""
@@ -102,7 +102,8 @@ class PotentialRewardShaper(RewardShaper):
         shaping_reward = self._gamma * potential - self._last_potential
 
         logger.debug(
-            f"State: {state}, potential: {potential}, shaping: {shaping_reward}"
+            "State: %s, potential: %f, shaping: %f",
+            state, potential, shaping_reward,
         )
 
         self._last_potential = potential

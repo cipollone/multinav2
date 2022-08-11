@@ -85,17 +85,27 @@ class DelayedQAgent(Learner):
         logger.info(
             f"""DelayedQAgent initialized
             params:
-                gamma = {self.gamma}
-                eps1 = {self.eps1}
-                delta = {self.delta}
-                maxr = {self.maxr}
-                minr = {self.minr}
+                gamma = %f
+                eps1 = %f
+                delta = %f
+                maxr = %f
+                minr = %f
 
-                n_states = {self.n_states}
-                n_actions = {self.n_actions}
-                maxv = {self.maxv}
-                m = {self.m}
-            """)
+                n_states = %d
+                n_actions = %d
+                maxv = %f
+                m = %d
+            """,
+            self.gamma,
+            self.eps1,
+            self.delta,
+            self.maxr,
+            self.minr,
+            self.n_states,
+            self.n_actions,
+            self.maxv,
+            self.m
+        )
 
         # Dict from training step to evaluation metrics
         self.eval_stats: Dict[int, List[List[float]]] = {}
@@ -203,9 +213,11 @@ class DelayedQAgent(Learner):
             if self._last_attempt[(obs, action)] < self._last_update:
                 self._learn[(obs, action)] = True
                 logger.debug(
-                    f"Learning true for ({obs}, {action});"
-                    f" attempt {self._last_attempt[(obs, action)]},"
-                    f" update {self._last_update}"
+                    "Learning true for (%s, %d); attempt %d, update %d",
+                    obs,
+                    action,
+                    self._last_attempt[(obs, action)],
+                    self._last_update,
                 )
             return dict()
 
@@ -222,10 +234,16 @@ class DelayedQAgent(Learner):
         if count < self.m:
             return dict()
 
-        logger.debug(f"""\
-            Attempting update at step {step} for ({obs}, {action}):
-                old value {self.Q[obs][action]},
-                new value {self._u[(obs, action)]}""")
+        logger.debug("""\
+            Attempting update at step %d for (%s, %d):
+                old value %f,
+                new value %f""",
+            step,
+            obs,
+            action,
+            self.Q[obs][action],
+            self._u[(obs, action)],
+        )
 
         # Maybe update
         self._last_attempt[(obs, action)] = step
@@ -238,7 +256,7 @@ class DelayedQAgent(Learner):
         # Maybe stop learning
         elif self._last_attempt[(obs, action)] >= self._last_update:
             self._learn[(obs, action)] = False
-            logger.debug(f"Learning false for {obs}, {action}")
+            logger.debug("Learning false for %s, %d", obs, action)
 
         # Clear after attempted updates
         self._u[(obs, action)] = 0.0

@@ -20,8 +20,8 @@ algorithm:
       framework: tf2
       eager_tracing: true
       eager_max_retraces: 12
-      evaluation_interval: 1
-      evaluation_duration: 1
+      evaluation_interval: 2
+      evaluation_duration: 2
       evaluation_duration_unit: episodes
       evaluation_num_workers: 0
       evaluation_config:
@@ -29,17 +29,17 @@ algorithm:
       # DQN parameters
       double_q: true
       dueling: true
-      lr: 0.0001
+      lr: 0.0002
       _disable_preprocessor_api: true
       model:
         custom_model: composite_fc
         layers: [64, 64, 64]
         shared_layers: 2
         activation: relu
-        batch_norm: false
+        batch_norm: tuned
       exploration_config:
         type: EpsilonGreedy
-        initial_epsilon: 1.0
+        initial_epsilon: 0.9
         final_epsilon: 0.0
         epsilon_timesteps: 500000
       replay_buffer_config:
@@ -51,15 +51,13 @@ algorithm:
     run:
       stop:
         timesteps_total: 500000
-      num_samples: 7
+      num_samples: 2
       checkpoint_freq: 50
       keep_checkpoints_num: 2
     tune:
-      env_config:
-        shaping:
-          - "./outputs/office2-1sh/0/models/Extra_70000.pickle"
-        return_invariant:
-          - false
+      model:
+        batch_norm: [false, true]
+      lr: [0.001, 0.0005, 0.0002]
 
 environment:
   name: multinav2
@@ -71,9 +69,9 @@ environment:
     env: rooms0
     reward_shift: 0.0
     initial_position: [5, 8]
-    shaping: tuned
+    shaping: "./outputs/office2-1sh/0/models/Extra_70000.pickle"
     shaping_gamma: 0.99
-    return_invariant: tuned
+    return_invariant: false
     episode_time_limit: 300
     fail_p: 0.03
     render: false

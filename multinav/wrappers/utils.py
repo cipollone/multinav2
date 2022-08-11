@@ -136,7 +136,9 @@ class MyStatsRecorder(gym.Wrapper):
         if done:
             self.save_complete()
 
-        logger.debug(f"action {action}, state {state}, reward {reward}, done {done}, info {info}")
+        logger.debug("action %d, state %s, reward %f, done %s, info %s",
+            action, state, reward, done, info,
+        )
 
         return state, reward, done, info
 
@@ -161,7 +163,7 @@ class MyStatsRecorder(gym.Wrapper):
 
         self._td_max = 0.0
 
-        logger.debug(f"reset state {result}")
+        logger.debug("reset state %s", result)
 
         return result
 

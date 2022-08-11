@@ -80,7 +80,7 @@ class QFunctionModel(AgentModel):
 
     def predict(self, observation: State) -> Action:
         """Compute best action from q function."""
-        logger.debug("value: {}".format(np.max(self.q_function[observation])))
+        logger.debug("value: %s", np.max(self.q_function[observation]))
         return np.argmax(self.q_function[observation]).item()
 
     def save(self, path: str) -> str:

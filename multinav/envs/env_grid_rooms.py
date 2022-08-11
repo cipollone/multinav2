@@ -183,7 +183,9 @@ class GridOfficeFluents(FluentExtractor):
         :return: current propositional interpretation of fluents
         """
         abs_obs = self.mapping(obs)
-        return self.abstract_fluents(abs_obs, action)
+        fluents = self.abstract_fluents(abs_obs, action)
+        logger.debug("Fluents: %s", fluents)
+        return fluents
 
 
 class Grid2Abs:

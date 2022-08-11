@@ -93,7 +93,7 @@ class RosPartyFluents(FluentExtractor):
                 if self._closeto(state=obs, location=location):
                     fluents.add("at_" + location)
         assert fluents.issubset(self.fluents)
-        logger.debug(f"Fluents for observation {obs}:\n" + str(fluents))
+        logger.debug("Fluents for observation %s: %s\n", obs, fluents)
         return fluents
 
 

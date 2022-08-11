@@ -285,8 +285,9 @@ class QLearning(Learner):
         td_update = reward + gamma * np.max(Q[state2]) - Q[state][action]
 
         logger.debug(
-            f"Q[{state}][{action}] = {Q[state][action]} "
-            f"-> {reward + gamma * np.max(Q[state2])}"
+            "Q[{state}][{action}] = %f-> %f",
+            Q[state][action],
+            reward + gamma * np.max(Q[state2])
         )
 
         # Apply
