@@ -62,6 +62,7 @@ class QLearning(Learner):
         learning_rate_end: float = 0.0,
         epsilon_decay: bool = False,
         epsilon_end: float = 0.0,
+        epsilon_end_decay: int = 1000,
         action_bias: Optional[QTableType] = None,
         action_bias_eps: float = 0.0,
         exploration_policy: Optional[QTableType] = None,
@@ -86,6 +87,8 @@ class QLearning(Learner):
         :param learning_rate_end: last value of alpha.
         :param epsilon_decay: whether epsilon should decay to epsilon_end.
         :param epsilon_end: last value of epsilon.
+        :param epsilon_end_decay: the number of training steps over which
+            epsilon decay occurs.
         :param action_bias: A Q function that is used just as bias to select
             the actions during exploration. If you find this too deterministic
             it's possible to use action_bias_eps.
@@ -129,6 +132,7 @@ class QLearning(Learner):
         self.learning_rate_end = learning_rate_end
         self.epsilon_decay = epsilon_decay
         self.epsilon_end = epsilon_end
+        self.epsilon_end_decay = epsilon_end_decay
         self.action_bias = action_bias
         self.action_bias_eps = action_bias_eps
         self.exploration_policy = exploration_policy
@@ -260,11 +264,16 @@ class QLearning(Learner):
 
         :param step: current step.
         """
-        frac = step / self.max_steps
+        global_frac = step / self.max_steps
         if self.learning_rate_decay:
-            self.alpha = self.alpha0 * (1 - frac) + self.learning_rate_end * frac
+            self.alpha = self.alpha0 * (1 - global_frac) + self.learning_rate_end * global_frac
+
+        eps_frac = step / self.epsilon_end_decay
         if self.epsilon_decay:
-            self.eps = self.eps0 * (1 - frac) + self.epsilon_end * frac
+            if eps_frac >= 1.0:
+                self.eps = self.epsilon_end
+            else:
+                self.eps = self.eps0 * (1 - eps_frac) + self.epsilon_end * eps_frac
 
     @staticmethod
     def _optimize_q_step(

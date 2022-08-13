@@ -268,6 +268,7 @@ class TrainQ(Trainer):
             learning_rate_end=params["learning_rate_end"],
             epsilon_decay=True,
             epsilon_end=params["epsilon_end"],
+            epsilon_end_decay=params.get("epsilon_end_decay", params["total_timesteps"]),
             action_bias=self.biased_Q,
             action_bias_eps=params["action_bias_eps"],
             exploration_policy=self.exploration_Q,
