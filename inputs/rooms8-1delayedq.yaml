@@ -1,10 +1,10 @@
 name: rooms8-1delayedq
-comment: "Reach a specific location in the map: gridworld"
+comment: "Reach task, 8 rooms, gridworld, delayed q-learning"
 
 algorithm:
   name: multinav2
   repository: https://github.com/cipollone/multinav2/
-  version: 0.2.5
+  version: 0.2.7
   commit: null
   diff: null
   params:
@@ -17,16 +17,16 @@ algorithm:
     delta: 0.1
     maxr: 1.0
     minr: 0.0
-    m: 30
+    m: 15
     log_interval: 10000
-    total_timesteps: 500000
-    rollout_interval: 5000
+    total_timesteps: 200000
+    rollout_interval: 1000
     rollout_episodes: 10
 
 environment:
   name: gym-sapientino
   repository: https://github.com/whitemech/gym-sapientino.git
-  version: develop
+  version: same as algorithm
   commit: ''
   diff: ''
   params:
@@ -35,9 +35,9 @@ environment:
     initial_position: [2, 3]
     shaping: null
     shaping_gamma: 0.98
-    return_invariant: true
-    episode_time_limit: 100
-    fail_p: 0.05
+    return_invariant: false
+    episode_time_limit: 70
+    fail_p: 0.04
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
@@ -52,6 +52,7 @@ environment:
       - [r, y]
       - [y, p]
       - [p, o]
+      - [o, B]
       - [p, B]
       - [B, G]
     map: |-
