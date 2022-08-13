@@ -14,14 +14,14 @@ algorithm:
       num_workers: 0
       num_envs_per_worker: 1
       log_level: WARN
-      num_gpus: 0.095
+      num_gpus: 0.12
       batch_mode: complete_episodes
       gamma: 0.99
       framework: tf2
       eager_tracing: true
       eager_max_retraces: 12
-      evaluation_interval: 1
-      evaluation_duration: 1
+      evaluation_interval: 2
+      evaluation_duration: 2
       evaluation_duration_unit: episodes
       evaluation_num_workers: 0
       evaluation_config:
@@ -34,29 +34,28 @@ algorithm:
       model:
         custom_model: composite_fc
         layers: [64, 64, 64]
-        shared_layers: 1
+        shared_layers: 2
         activation: relu
-        batch_norm: true
+        batch_norm: false
       exploration_config:
         type: EpsilonGreedy
-        initial_epsilon: 1.0
+        initial_epsilon: 0.9
         final_epsilon: 0.0
-        epsilon_timesteps: tuned
+        epsilon_timesteps: 500000
       replay_buffer_config:
-        capacity: 100000
+        capacity: 80000
         learning_starts: 10000
       shuffle_buffer_size: 10000
       train_batch_size: 64
       training_intensity: 256
     run:
       stop:
-        timesteps_total: 700000
-      num_samples: 2
+        timesteps_total: 500000
+      num_samples: 1
       checkpoint_freq: 50
       keep_checkpoints_num: 2
     tune:
-      exploration_config:
-        epsilon_timesteps: [700000]
+      lr: [0.001]
 
 environment:
   name: multinav2
@@ -71,7 +70,7 @@ environment:
     shaping: null
     shaping_gamma: 0.99
     return_invariant: false
-    episode_time_limit: 400
+    episode_time_limit: 300
     fail_p: 0.03
     render: false
     reward_per_step: 0.0

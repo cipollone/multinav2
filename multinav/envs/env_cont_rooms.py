@@ -106,7 +106,7 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
         fluent_extractor = ContOfficeFluents(
             rooms_connectivity=params["rooms_connectivity"],
             rooms_and_colors=params["rooms_and_colors"],
-            interact_action=actions.ContinuousCommand.beep().value,
+            interact_action=int(actions.ContinuousCommand.BEEP.value),
             seed=params["seed"],
         )
     else:
