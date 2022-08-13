@@ -1,10 +1,10 @@
 name: rooms4-1delayedq
-comment: "4 rooms, gridworld, delayed q-learning"
+comment: "Reach task, 4 rooms, gridworld, delayed q-learning"
 
 algorithm:
   name: multinav2
   repository: https://github.com/cipollone/multinav2/
-  version: 0.2.5
+  version: 0.2.7
   commit: null
   diff: null
   params:
@@ -12,32 +12,32 @@ algorithm:
     initialize_file: null
     algorithm: DelayedQ
     active_passive_agents: false
-    gamma: 0.95
+    gamma: 0.98
     eps1: 0.01
     delta: 0.1
     maxr: 1.0
     minr: 0.0
     m: 15
     log_interval: 10000
-    total_timesteps: 50000
+    total_timesteps: 60000
     rollout_interval: 1000
     rollout_episodes: 10
 
 environment:
   name: gym-sapientino
   repository: https://github.com/whitemech/gym-sapientino.git
-  version: develop
+  version: same as algorithm
   commit: ''
   diff: ''
   params:
     env: rooms1
     reward_shift: 0.0
-    initial_position: [2, 3]
+    initial_position: [1, 9]
     shaping: null
-    shaping_gamma: 0.95
-    return_invariant: true
+    shaping_gamma: 0.98
+    return_invariant: false
     episode_time_limit: 50
-    fail_p: 0.05
+    fail_p: 0.04
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0

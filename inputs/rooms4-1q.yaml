@@ -1,24 +1,24 @@
 name: rooms4-1q
-comment: "4 rooms, gridworld, q-learning"
+comment: "Reach task, 4 rooms, gridworld, q-learning"
 
 algorithm:
   name: multinav2
   repository: https://github.com/cipollone/multinav2/
-  version: 0.2.5
+  version: 0.2.7
   commit: null
   diff: null
   params:
     resume_file: null
     initialize_file: null
-    active_passive_agents: false
     algorithm: Q
+    active_passive_agents: false
     action_bias: null
     action_bias_eps: 0.0
     exploration_policy: null
     learning_rate: 0.1
-    learning_rate_end: 0.01
-    gamma: 0.95
-    total_timesteps: 50000
+    learning_rate_end: 0.02
+    gamma: 0.98
+    total_timesteps: 60000
     q_eps: 1.0
     epsilon_end: 0.0
     log_interval: 500
@@ -28,7 +28,7 @@ algorithm:
 environment:
   name: gym-sapientino
   repository: https://github.com/whitemech/gym-sapientino.git
-  version: develop
+  version: same as algorithm
   commit: ''
   diff: ''
   params:
@@ -36,10 +36,10 @@ environment:
     reward_shift: 0.0
     initial_position: [1, 9]
     shaping: null
-    shaping_gamma: 0.95
+    shaping_gamma: 0.98
     return_invariant: false
     episode_time_limit: 50
-    fail_p: 0.05
+    fail_p: 0.04
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
