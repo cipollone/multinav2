@@ -1,26 +1,27 @@
 name: rooms8-1sh-2error
-comment: "8 rooms, gridworld, q-learning and our shaping, 2 model mistakes"
+comment: "Reach task, 8 rooms, gridworld, q-learning and our shaping, 2 model mistakes"
 
 algorithm:
   name: multinav2
   repository: https://github.com/cipollone/multinav2/
-  version: 0.2.5
+  version: 0.2.7
   commit: null
   diff: null
   params:
     resume_file: null
     initialize_file: null
-    active_passive_agents: true
     algorithm: Q
+    active_passive_agents: true
     action_bias: null
     action_bias_eps: 0.0
     exploration_policy: null
-    learning_rate: 0.02
-    learning_rate_end: 0.002
+    learning_rate: 0.05
+    learning_rate_end: 0.01
     gamma: 0.98
-    total_timesteps: 500000
-    q_eps: 0.9
+    total_timesteps: 400000
+    q_eps: 1.0
     epsilon_end: 0.1
+    epsilon_end_decay: 300000
     log_interval: 500
     rollout_interval: 2000
     rollout_episodes: 10
@@ -28,18 +29,18 @@ algorithm:
 environment:
   name: gym-sapientino
   repository: https://github.com/whitemech/gym-sapientino.git
-  version: develop
+  version: same as algorithm
   commit: ''
   diff: ''
   params:
     env: rooms1
     reward_shift: 0.0
     initial_position: [2, 3]
-    shaping: "./outputs/rooms8-2-2error/0/models/model_50000.pickle"
+    shaping: "./outputs/rooms8-2-2error/0/models/model_10000.pickle"
     shaping_gamma: 0.98
     return_invariant: false
     episode_time_limit: 100
-    fail_p: 0.05
+    fail_p: 0.04
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
