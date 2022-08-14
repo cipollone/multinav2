@@ -21,6 +21,7 @@
 #
 """Grid control on rooms environment."""
 import logging
+from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Tuple
 
 from gym.wrappers import TimeLimit
@@ -29,6 +30,7 @@ from gym_sapientino.core import actions, configurations
 from gym_sapientino.core.types import Colors, color2id, color2int, id2color
 from temprl.types import Interpretation
 
+from multinav import starting_cwd
 from multinav.algorithms.agents import QFunctionModel
 from multinav.envs.env_abstract_rooms import (
     AbstractOfficeFluents,
@@ -231,7 +233,8 @@ def abs_rooms_shaper(
     :return: reward shaper to apply.
     """
     # Trained agent on abstract environment
-    agent = QFunctionModel.load(path=path)
+    full_path = starting_cwd / Path(path)   # Rllib modifies path: restore
+    agent = QFunctionModel.load(path=str(full_path))
 
     # Map
     mapping = Grid2Abs(rooms_connectivity)

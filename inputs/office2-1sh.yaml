@@ -18,10 +18,10 @@ algorithm:
     learning_rate: 0.1
     learning_rate_end: 0.05
     gamma: 0.98
-    total_timesteps: 120000
+    total_timesteps: 130000
     q_eps: 1.0
     epsilon_end: 0.1
-    epsilon_end_decay: 90000
+    epsilon_end_decay: 100000
     log_interval: 500
     rollout_interval: 1000
     rollout_episodes: 10
@@ -35,7 +35,7 @@ environment:
   params:
     env: rooms1
     reward_shift: 0.0
-    initial_position: [4, 6]
+    initial_position: [9, 1]
     shaping: "./outputs/office2-2/0/models/model_10000.pickle"
     shaping_gamma: 0.98
     return_invariant: false
@@ -59,17 +59,17 @@ environment:
       - ["2", b, y]
       - ["none", G, G]
     map: |-
-      |###################|
-      |#ggggg#GGGG#yyyyyy#|
-      |#ggggg#GGGG#yyyyyy#|
-      |#ggggg#GGGG#yyyyyy#|
-      |####rr###GG###bb###|
-      |#GGGrrGGGGGGGGbbGG#|
-      |#GGGGGGGGGGGGGGGGG#|
-      |#GGGGGGGGGGGGGGGGG#|
-      |#GGGGGGGGGGGGGGGGG#|
-      |#GGGGGGGGGGGGGGGGG#|
-      |###################|
+      |#####################|
+      |#gggggg#GGGGG#yyyyyy#|
+      |#gggggg#GGGGG#yyyyyy#|
+      |#gggggg#GGGGG#yyyyyy#|
+      |####rr####GG####bb###|
+      |#GGGrrGGGGGGGGGGbbGG#|
+      |#GGGGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGGGG#|
+      |#####################|
 evaluation:
   episodes: 0
   frequency: 0

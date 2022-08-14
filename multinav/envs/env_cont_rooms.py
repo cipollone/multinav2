@@ -12,7 +12,7 @@ from gym_sapientino.core import actions, configurations
 
 from multinav import starting_cwd
 from multinav.algorithms.agents import QFunctionModel
-from multinav.envs.env_grid_rooms import GridOfficeFluents as ContOfficeFluents
+from multinav.envs.env_grid_rooms import GridOfficeFluents as ContOfficeFluents, abs_rooms_shaper
 from multinav.envs.env_grid_rooms import GridRoomsFluents as ContRoomsFluents
 from multinav.envs.temporal_goals import FluentExtractor, with_nonmarkov_rewards
 from multinav.helpers.reward_shaping import ValueFunctionRS
@@ -131,11 +131,11 @@ def make(params: Mapping[str, Any], log_dir: Optional[str] = None):
 
     # Reward shaping on previous envs
     if params["shaping"]:
-        grid_shaper = grid_rooms_shaper(
-            env=env,
+        grid_shaper = abs_rooms_shaper(
             path=params["shaping"],
             gamma=params["shaping_gamma"],
             return_invariant=params["return_invariant"],
+            rooms_connectivity=params["rooms_connectivity"],
         )
         env = RewardShapingWrapper(env, reward_shaper=grid_shaper)
 
