@@ -14,7 +14,7 @@ algorithm:
       num_workers: 0
       num_envs_per_worker: 1
       log_level: WARN
-      num_gpus: 0.12
+      num_gpus: 0.164
       batch_mode: complete_episodes
       gamma: 0.99
       framework: tf2
@@ -29,33 +29,33 @@ algorithm:
       # DQN parameters
       double_q: true
       dueling: true
-      lr: 0.0001
+      lr: 0.0002
       _disable_preprocessor_api: true
       model:
         custom_model: composite_fc
         layers: [64, 64, 64]
         shared_layers: 2
         activation: relu
-        batch_norm: false
+        batch_norm: true
       exploration_config:
         type: EpsilonGreedy
         initial_epsilon: 0.9
-        final_epsilon: 0.0
-        epsilon_timesteps: 500000
+        final_epsilon: 0.1
+        epsilon_timesteps: 600000
       replay_buffer_config:
-        capacity: 80000
+        capacity: 50000
         learning_starts: 10000
       shuffle_buffer_size: 10000
       train_batch_size: 64
-      training_intensity: 256
+      training_intensity: 64
     run:
       stop:
-        timesteps_total: 500000
-      num_samples: 3
+        timesteps_total: 700000
+      num_samples: 6
       checkpoint_freq: 50
       keep_checkpoints_num: 2
     tune:
-      lr: [0.005, 0.001, 0.0005, 0.0002]
+      lr: [0.0002]
 
 environment:
   name: multinav2
@@ -67,11 +67,11 @@ environment:
     env: rooms0
     reward_shift: 0.0
     initial_position: [5, 8]
-    shaping: "./outputs/office2-1sh/0/models/Extra_70000.pickle"
+    shaping: "./outputs/office2-1sh/0/models/Extra_120000.pickle"
     shaping_gamma: 0.99
     return_invariant: false
     episode_time_limit: 300
-    fail_p: 0.03
+    fail_p: 0.02
     render: false
     reward_per_step: 0.0
     reward_outside_grid: 0.0
