@@ -14,14 +14,14 @@ algorithm:
       num_workers: 0
       num_envs_per_worker: 1
       log_level: WARN
-      num_gpus: 0.19
+      num_gpus: 0.195
       batch_mode: complete_episodes
       gamma: 0.99
       framework: tf2
       eager_tracing: true
       eager_max_retraces: 12
-      evaluation_interval: 1
-      evaluation_duration: 1
+      evaluation_interval: 5
+      evaluation_duration: 2
       evaluation_duration_unit: episodes
       evaluation_num_workers: 0
       evaluation_config:
@@ -29,28 +29,32 @@ algorithm:
       # DQN parameters
       double_q: true
       dueling: true
-      lr: 0.0001
+      lr: 0.0005
       _disable_preprocessor_api: true
       model:
         custom_model: composite_fc
         layers: [64, 64, 64]
         shared_layers: 2
         activation: relu
-        batch_norm: false
+        batch_norm: true
       exploration_config:
         type: EpsilonGreedy
-        initial_epsilon: 1.0
-        final_epsilon: 0.0
-        epsilon_timesteps: 580000
+        initial_epsilon: 0.85
+        final_epsilon: 0.05
+        epsilon_timesteps: 700000
       replay_buffer_config:
+        _enable_replay_buffer_api: true
+        type: MultiAgentPrioritizedReplayBuffer
         capacity: 80000
-        learning_starts: 10000
-      shuffle_buffer_size: 10000
+          #prioritized_replay_alpha: 0.6
+          #prioritized_replay_beta: 0.4
+          #prioritized_replay_eps: 1e-6
       train_batch_size: 64
       training_intensity: 256
+      target_network_update_freq: 1000
     run:
       stop:
-        timesteps_total: 580000
+        timesteps_total: 840000
       num_samples: 5
       checkpoint_freq: 50
       keep_checkpoints_num: 2
@@ -58,8 +62,6 @@ algorithm:
       env_config:
         shaping:
           - null
-        return_invariant:
-          - false
 
 environment:
   name: multinav2
@@ -70,11 +72,11 @@ environment:
   params:
     env: rooms0
     reward_shift: 0.0
-    initial_position: [5, 8]
+    initial_position: [16, 6]
     shaping: tuned
     shaping_gamma: 0.99
-    return_invariant: tuned
-    episode_time_limit: 300
+    return_invariant: false
+    episode_time_limit: 200
     fail_p: 0.03
     render: false
     reward_per_step: 0.0
@@ -99,17 +101,17 @@ environment:
       - ["2", b, y]
       - ["none", G, G]
     map: |-
-      |###################|
-      |#ggggg#GGGG#yyyyyy#|
-      |#ggggg#GGGG#yyyyyy#|
-      |#ggggg#GGGG#yyyyyy#|
-      |####rr###GG###bb###|
-      |#GGGrrGGGGGGGGbbGG#|
-      |#GGGGGGGGGGGGGGGGG#|
-      |#GGGGGGGGGGGGGGGGG#|
-      |#GGGGGGGGGGGGGGGGG#|
-      |#GGGGGGGGGGGGGGGGG#|
-      |###################|
+      |#####################|
+      |#gggggg#GGGGG#yyyyyy#|
+      |#gggggg#GGGGG#yyyyyy#|
+      |#gggggg#GGGGG#yyyyyy#|
+      |####rr####GG####bb###|
+      |#GGGrrGGGGGGGGGGbbGG#|
+      |#GGGGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGGGG#|
+      |#GGGGGGGGGGGGGGGGGGG#|
+      |#####################|
 evaluation:
   episodes: 0
   frequency: 0

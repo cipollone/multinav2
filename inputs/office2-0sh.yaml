@@ -14,7 +14,7 @@ algorithm:
       num_workers: 0
       num_envs_per_worker: 1
       log_level: WARN
-      num_gpus: 0.24
+      num_gpus: 0.195
       batch_mode: complete_episodes
       gamma: 0.99
       framework: tf2
@@ -41,25 +41,27 @@ algorithm:
         type: EpsilonGreedy
         initial_epsilon: 0.85
         final_epsilon: 0.05
-        epsilon_timesteps: 500000
+        epsilon_timesteps: 700000
       replay_buffer_config:
+        _enable_replay_buffer_api: true
+        type: MultiAgentPrioritizedReplayBuffer
         capacity: 80000
-        learning_starts: 10000
+          #prioritized_replay_alpha: 0.6
+          #prioritized_replay_beta: 0.4
+          #prioritized_replay_eps: 1e-6
       train_batch_size: 64
       training_intensity: 256
+      target_network_update_freq: 1000
     run:
       stop:
-        timesteps_total: 500000
-      num_samples: 2
+        timesteps_total: 700000
+      num_samples: 5
       checkpoint_freq: 50
       keep_checkpoints_num: 2
     tune:
       env_config:
         shaping:
           - "./outputs/office2-2/0/models/model_10000.pickle"
-          - null
-        return_invariant:
-          - false
 
 environment:
   name: multinav2
@@ -73,8 +75,8 @@ environment:
     initial_position: [16, 6]
     shaping: tuned
     shaping_gamma: 0.99
-    return_invariant: tuned
-    episode_time_limit: 250
+    return_invariant: false
+    episode_time_limit: 200
     fail_p: 0.03
     render: false
     reward_per_step: 0.0
