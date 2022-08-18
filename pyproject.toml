@@ -16,7 +16,6 @@ logaut = "^0.1.1"
 ray = {version = "^1.13.0", extras = ["default", "rllib"]}
 tensorflow = "^2.8.0"
 GPUtil = "^1.4.0"
-rosstagerl = {git = "https://github.com/cipollone/ros-stage-rl.git", rev = "47231a9"}
 tensorflow-probability = "^0.16.0"
 
 [tool.poetry.dev-dependencies]

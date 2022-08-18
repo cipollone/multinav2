@@ -1622,25 +1622,6 @@ python-versions = "*"
 dev = ["pytest"]
 
 [[package]]
-name = "rosstagerl"
-version = "0.1.0"
-description = "RL experiments on a running instance of ROS Stage"
-category = "main"
-optional = false
-python-versions = "^3.7"
-develop = false
-
-[package.dependencies]
-gym = ">=0.17.3,<1.0.0"
-numpy = "^1.19.4"
-
-[package.source]
-type = "git"
-url = "https://github.com/cipollone/ros-stage-rl.git"
-reference = "47231a9"
-resolved_reference = "47231a96c4515abf27f629b7e2f2b895e9aaaa8d"
-
-[[package]]
 name = "rsa"
 version = "4.9"
 description = "Pure-Python RSA implementation"
@@ -2139,7 +2120,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.11" # <3.11 just because tensorflow-io-gcs-filesystem requires it
-content-hash = "b7a381a32ad6cd01a3f4f72403601530054fb8cc6fa6f9ee779237ad0f17c7bc"
+content-hash = "874c4044e32589e33bd9d48ac2477bd2abcb020750c45be0c7ef8b1da071050f"
 
 [metadata.files]
 absl-py = [
@@ -3436,7 +3417,6 @@ requests-oauthlib = [
 rope = [
     {file = "rope-0.18.0.tar.gz", hash = "sha256:786b5c38c530d4846aa68a42604f61b4e69a493390e3ca11b88df0fbfdc3ed04"},
 ]
-rosstagerl = []
 rsa = [
     {file = "rsa-4.9-py3-none-any.whl", hash = "sha256:90260d9058e514786967344d0ef75fa8727eed8a7d2e43ce9f4bcf1b536174f7"},
     {file = "rsa-4.9.tar.gz", hash = "sha256:e38464a49c6c85d7f1351b0126661487a7e0a14a50f1675ec50eb34d4f20ef21"},
