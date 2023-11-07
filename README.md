@@ -17,6 +17,7 @@
   </a>
 </p>
 
-This software is the reference implementation of: *Exploiting Multiple Abstractions in Episodic RL via Reward Shaping* by Roberto Cipollone, Giuseppe De Giacomo, Marco Favorito, Luca Iocchi and Fabio Patrizi. The full paper is (or will be soon) publicly available on the AAAI-23 website.
+This software is the reference implementation of: *Exploiting Multiple Abstractions in Episodic RL via Reward Shaping* by Roberto Cipollone, Giuseppe De Giacomo, Marco Favorito, Luca Iocchi and Fabio Patrizi.
+The full paper is available here: [https://doi.org/10.1609/aaai.v37i6.25881](https://doi.org/10.1609/aaai.v37i6.25881).
 
-Intructions on how to run and use the sofware are provided in [docs/software-appendix.pdf](docs/software-appendix.pdf).
+Instructions on how to run and use the software are provided in the appendix of [https://arxiv.org/abs/2303.00516](https://arxiv.org/abs/2303.00516).
